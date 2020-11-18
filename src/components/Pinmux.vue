@@ -59,7 +59,7 @@
               fullscreen
               transition="dialog-bottom-transition"
             >
-              <v-card>
+              <v-card min-width="1920px">
                 <v-toolbar
                   dark
                   color="primary"
@@ -74,7 +74,7 @@
                   <v-toolbar-title>Diff</v-toolbar-title>
                   <v-spacer></v-spacer>
                 </v-toolbar>
-                <p v-html="diffHtml"></p>
+                <div v-html="diffHtml"></div>
               </v-card>
             </v-dialog>
           </v-toolbar>
@@ -132,6 +132,9 @@ export default {
 
   watch: {
     async selected (val) {
+      if (val.length >= 3) {
+        this.selected = []
+      }
       if (val.length === 2) {
         await this.$http.get(this.$urls.pinmux_get, {
         params: {
@@ -146,7 +149,7 @@ export default {
           this.diffHtml = response.data
           // console.log(this.diffHtml)
         })
-      } 
+      }
     },
   },
 
@@ -178,7 +181,7 @@ export default {
           const blob = new Blob([response.data], { type: 'application/txt' })
           const link = document.createElement('a')
           link.href = URL.createObjectURL(blob)
-          link.download = item.TemplateName + '.txt'
+          link.download = item.TemplateName + '.dts'
           link.click()
           URL.revokeObjectURL(link.href)
         })
