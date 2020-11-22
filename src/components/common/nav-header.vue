@@ -17,7 +17,7 @@
                   height='64'
                   )
                   v-icon(color='grey') mdi-account-circle
-              span HHH
+              span {{ username }}
           v-list(nav)
             v-list-item(@click='logout')
               v-list-item-action: v-icon(color='red') mdi-logout
@@ -28,11 +28,12 @@
             v-btn(icon, color='grey darken-3', @click='goLogin')
               v-icon(color='grey') mdi-account-circle
           span Login
-    Login(ref="login" @login-success-event='loginSuccess')
+    Login(ref="login")
 </template>
 
 <script>
 import Login from './login.vue'
+import { get, sync } from 'vuex-pathify'
 
 export default {
   components: {
@@ -40,16 +41,19 @@ export default {
   },
   data() {
     return {
-      username: '',
-      isAuthenticated: false,
     }
   },
+  computed: {
+    username: sync('username'),
+    isAuthenticated: sync('isAuthenticated')
+  },
   methods: {
-    loginSuccess() {
-      this.isAuthenticated = true
-    },
     goLogin() {
       this.$refs['login'].dialog = true
+    },
+    logout() {
+      this.isAuthenticated = false
+      this.username = ''
     }
   }
 }

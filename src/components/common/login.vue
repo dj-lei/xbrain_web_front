@@ -139,6 +139,7 @@ export default {
       this.screen = 'login'
       this.password = ''
       this.confirmPassword = ''
+      this.isLoading = false
     }
   },
   methods: {
@@ -157,13 +158,15 @@ export default {
       await this.$http.post(this.$urls.admin_login, formData, config).then(
         (response)=>{
           this.info = 'Hi ' + this.username + ',welcome!'
+          this.$store.set('groups', response.data.groups)
       }, (error) => {
         console.log(error)
       })
       setTimeout(() =>{
         this.dialog = false
         this.snackbar = true
-        this.$emit('login-success-event')
+        this.$store.set('username', this.username)
+        this.$store.set('isAuthenticated', true)
       },1000)
     },
     goRegister() {
@@ -185,13 +188,15 @@ export default {
       await this.$http.post(this.$urls.admin_register, formData, config).then(
         (response)=>{
           this.info = 'Hi ' + this.username + ',welcome!'
+          this.$store.set('groups', response.data.groups)
       }, (error) => {
         console.log(error)
       })
       setTimeout(() =>{
         this.dialog = false
         this.snackbar = true
-        this.$emit('login-success-event')
+        this.$store.set('username', this.username)
+        this.$store.set('isAuthenticated', true)
       },1000)
     },
     forgotPassword() {

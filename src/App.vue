@@ -1,21 +1,18 @@
 <template>
   <div id="app">
     <v-app id="inspire">
-      <NavHeader>
-      </NavHeader>
-
+      <Page>
+      </Page>
     </v-app>
   </div>
 </template>
 
 <script>
-// import TroubleShooting from './components/TroubleShooting'
-// import Pinmux from './components/Pinmux'
-import NavHeader from './components/common/nav-header'
+import Page from './components/common/page'
 
 export default {
   components: {
-    NavHeader
+    Page
   },
   data () {
     return {

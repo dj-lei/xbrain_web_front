@@ -1,9 +1,7 @@
-<template>
-  <div class="mind">
-    <v-app id="mind">
-      <div id="map" style="width:100%;height:500px"></div>
-    </v-app>
-  </div>
+<template lang="pug">
+  .mind
+    v-app
+      div(id="map" style="width:100%;height:500px")
 </template>
 
 <script>
