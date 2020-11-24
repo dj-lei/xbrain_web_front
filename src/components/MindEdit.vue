@@ -11,7 +11,9 @@
             v-spacer
             v-toolbar-items
               v-btn(dark, text, @click="save") Save
-          v-data-table(v-model="selected", :headers="headers", :items="data", show-select, class="elevation-1")
+          v-data-table(v-model='selected', show-select, :headers="headers", :items="data", class="elevation-1")
+            template(v-slot:item.data-table-select="{ isSelected, select, item }")
+              v-simple-checkbox(color="green", :disabled='item.Status === "close"', :value='item.Status === "close" ? true : isSelected', @input="select($event)")
             template(v-slot:item.Status="{ item }")
               v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
 </template>
@@ -119,7 +121,6 @@ export default {
       }
       await this.$http.post(this.$urls.trouble_shooting_save, formData, config).then(
         (response)=>{
-          // console.log(response.data)
         this.mind.nodeData = response.data.content.nodeData
         this.mind.init()
       }, (error) => {
