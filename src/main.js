@@ -23,13 +23,14 @@ Vue.prototype.$urls = urls
 Vue.prototype.$common = common
 
 const routes = [
+  { path: '/', component: Pinmux },
   { path: '/pinmux', component: Pinmux },
   { path: '/trouble_shooting_template_edit', component: TroubleShootingTemplateEdit },
   { path: '/trouble_shooting_task', component: TroubleShootingTask }
 ]
 
 const router = new VueRouter({
-  routes 
+  routes
 })
 
 new Vue({

@@ -7,7 +7,7 @@
       v-flex(xs1)
         v-menu(v-if='isAuthenticated', offset-y, bottom, min-width='200', transition='slide-y-transition', left)
           template(v-slot:activator='{ on: menu, attrs }')
-            v-tooltip(bottom)
+            v-tooltip(left)
               template(v-slot:activator='{ on: tooltip }')
                 v-btn(
                   icon
@@ -22,10 +22,9 @@
             v-list-item(@click='logout')
               v-list-item-action: v-icon(color='red') mdi-logout
               v-list-item-title Logout
-
         v-tooltip(v-else, left)
           template(v-slot:activator='{ on }')
-            v-btn(icon, color='grey darken-3', @click='goLogin')
+            v-btn(icon, v-on='on', color='grey darken-3', @click='goLogin')
               v-icon(color='grey') mdi-account-circle
           span Login
     Login(ref="login")
@@ -54,6 +53,7 @@ export default {
     logout() {
       this.isAuthenticated = false
       this.username = ''
+      this.$router.push('/')
     }
   }
 }

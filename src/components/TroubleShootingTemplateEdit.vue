@@ -1,5 +1,5 @@
 <template lang="pug">
-  div(id="app") 
+  div(id="app")
     v-app(id="inspire")
       template
         v-card(color="grey lighten-4", dark, flat, height="50px")
@@ -10,7 +10,7 @@
             v-spacer
             v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
               v-card
-                v-toolbar(dark, color="primary")
+                v-toolbar(dark)
                   v-btn(icon, dark, @click="dialog = false")
                     v-icon mdi-close
                   v-toolbar-title Edit Template
@@ -26,7 +26,7 @@
                   v-container
                     v-row
                       v-col(cols="12", sm="6", md="4")
-                        v-text-field(v-model='templateName', label="Template name") 
+                        v-text-field(v-model='templateName', label="Template name")
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1", text, @click="close") Cancel
@@ -47,7 +47,7 @@
                   v-btn(color="blue darken-1" text @click="closeRelease") Cancel
                   v-btn(color="blue darken-1" text @click="releaseTaskConfirm") OK
                   v-spacer
-      v-data-table(:headers="headers", :items="data", sort-by="TemplateName", class="elevation-1")    
+      v-data-table(:headers="headers", :items="data", sort-by="TemplateName", class="elevation-1")
         template(v-slot:item.actions="{ item }")
           v-icon(small, class="mr-2", @click="editItem(item)") mdi-pencil
           v-icon(small, class="mr-2", @click="deleteItem(item)") mdi-delete

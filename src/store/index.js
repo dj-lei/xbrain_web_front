@@ -7,6 +7,7 @@ Vue.use(Vuex)
 
 const state = {
   username: '',
+  pages: [],
   groups: [],
   isAuthenticated: false,
 }

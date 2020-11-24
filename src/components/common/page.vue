@@ -29,7 +29,7 @@ export default {
     }
   },
   mounted() {
-    this.$router.push('/trouble_shooting_template_edit')
+    this.$router.push('/')
   }
 }
 </script>

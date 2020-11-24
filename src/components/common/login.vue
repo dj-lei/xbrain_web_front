@@ -144,60 +144,86 @@ export default {
   },
   methods: {
     async login() {
-      this.isLoading = true
+      if (this.username !== '' || this.password !== ''){
+        this.isLoading = true
 
-      let formData = new FormData()
-      formData.append("username", this.username)
-      formData.append("password", this.password)
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
+        let formData = new FormData()
+        formData.append("username", this.username)
+        formData.append("password", this.password)
+        let config = {
+          headers: {
+          'Content-Type': 'multipart/form-data'
+          }
         }
-      }
 
-      await this.$http.post(this.$urls.admin_login, formData, config).then(
-        (response)=>{
-          this.info = 'Hi ' + this.username + ',welcome!'
-          this.$store.set('groups', response.data.groups)
-      }, (error) => {
-        console.log(error)
-      })
-      setTimeout(() =>{
-        this.dialog = false
-        this.snackbar = true
-        this.$store.set('username', this.username)
-        this.$store.set('isAuthenticated', true)
-      },1000)
+        await this.$http.post(this.$urls.admin_login, formData, config).then(
+          (response)=>{
+            this.info = 'Hi ' + this.username + ',welcome!'
+            this.$store.set('pages', response.data.content)
+            this.$store.set('groups', response.data.groups)
+            setTimeout(() =>{
+              this.dialog = false
+              this.snackbar = true
+              this.$store.set('username', this.username)
+              this.$store.set('isAuthenticated', true)
+            },1000)
+        }, (error) => {
+          this.errorMsg = 'Your account or password is not correct.'
+          this.errorShown = true
+          this.isLoading = false
+          setTimeout(() =>{
+            this.errorShown = false
+          },4000)
+        })
+      }else{
+        this.errorMsg = 'You must fill in your account and password.'
+        this.errorShown = true
+        setTimeout(() =>{
+          this.errorShown = false
+        },4000)
+      }
     },
     goRegister() {
       this.title = 'Register'
       this.screen = 'register'
     },
     async confirmRegister() {
-      this.isLoading = true
+      if (this.username !== '' || this.password !== ''){
+        this.isLoading = true
 
-      let formData = new FormData()
-      formData.append("username", this.username)
-      formData.append("password", this.password)
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
+        let formData = new FormData()
+        formData.append("username", this.username)
+        formData.append("password", this.password)
+        let config = {
+          headers: {
+          'Content-Type': 'multipart/form-data'
+          }
         }
-      }
 
-      await this.$http.post(this.$urls.admin_register, formData, config).then(
-        (response)=>{
-          this.info = 'Hi ' + this.username + ',welcome!'
-          this.$store.set('groups', response.data.groups)
-      }, (error) => {
-        console.log(error)
-      })
-      setTimeout(() =>{
-        this.dialog = false
-        this.snackbar = true
-        this.$store.set('username', this.username)
-        this.$store.set('isAuthenticated', true)
-      },1000)
+        await this.$http.post(this.$urls.admin_register, formData, config).then(
+          (response)=>{
+            this.info = 'Hi ' + this.username + ',welcome!'
+            setTimeout(() =>{
+              this.dialog = false
+              this.snackbar = true
+              this.$store.set('username', this.username)
+              this.$store.set('isAuthenticated', true)
+            },1000)
+        }, (error) => {
+          this.errorMsg = 'Your account has logined,please change another account.'
+          this.errorShown = true
+          this.isLoading = false
+          setTimeout(() =>{
+            this.errorShown = false
+          },4000)
+        })
+      }else{
+        this.errorMsg = 'You must fill in your account and password.'
+        this.errorShown = true
+        setTimeout(() =>{
+          this.errorShown = false
+        },4000)
+      }
     },
     forgotPassword() {
       // this.$refs['login'].dialog = true

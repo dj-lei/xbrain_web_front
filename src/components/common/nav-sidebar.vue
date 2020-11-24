@@ -1,48 +1,49 @@
 <template lang="pug">
   div
     v-list.py-2(dense, dark)
-      template(v-for='item of items')
+      template(v-for='item of pages')
         v-list-item(
           v-if='item.k === `link`'
           :href='item.t'
           )
           v-list-item-title {{ item.l }}
-        v-divider.my-2(v-else-if='item.k === `divider`')
-        v-subheader.pl-4(v-else-if='item.k === `header`') {{ item.l }}
+        v-divider(v-else-if='item.k === `divider`')
+        v-subheader(v-else-if='item.k === `header`') {{ item.l }}
 </template>
 
 <script>
+import { get, sync } from 'vuex-pathify'
+
 export default {
   data() {
     return {
-      items: [
-        {
-          'l': 'tools',
-          'k': 'header',
-          't': '',
-        },
-        {
-          'l': '',
-          'k': 'divider',
-          't': '',
-        },
-        {
-          'l': 'pinmux',
-          'k': 'link',
-          't': '#/pinmux',
-        },
-        {
-          'l': 'trouble_shooting_edit',
-          'k': 'link',
-          't': '#/trouble_shooting_template_edit',
-        },
-        {
-          'l': 'trouble_shooting_task',
-          'k': 'link',
-          't': '#/trouble_shooting_task',
-        }
-      ]
     }
   },
+  computed: {
+    pages: sync('pages'),
+    isAuthenticated: sync('isAuthenticated')
+  },
+  created () {
+    this.initialize()
+  },
+  watch:{
+    isAuthenticated(val) {
+      if (val === false) {
+        this.initialize()
+      }
+    }
+  },
+  methods: {
+    async initialize () {
+      await this.$http.get(this.$urls.admin_get, {
+        params: {
+            operate: 'get_common_pages',
+        },
+        })
+        .then(response => {
+          this.pages = response.data.content
+        })
+    },
+  }
 }
 </script>

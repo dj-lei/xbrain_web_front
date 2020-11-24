@@ -5,6 +5,7 @@ export const urls = {
     pinmux_save: "pinmux/save",
     admin_register: "admin/register",
     admin_login: "admin/login",
+    admin_get: "admin/get",
   }
 
 export default urls
