@@ -38,7 +38,7 @@
           v-icon(small, class="mr-2", @click="editItem(item)") mdi-pencil
           template(v-if='role === "administrator"')
             v-icon(small, class="mr-2", @click="deleteItem(item)") mdi-delete
-            v-icon(small, @click="closeTask(item)") mdi-close
+            v-icon(small, @click="closeTask(item)") mdi-checkbox-marked-circle
 </template>
 
 <script>
@@ -67,6 +67,7 @@ export default {
       ],
       data: [],
       template_id: '',
+      tempData: '',
     }
   },
   created () {
@@ -154,7 +155,7 @@ export default {
 
     getColor (status) {
       if (status === 'close') return 'green'
-      else return 'red'
+      else return 'orange'
     },
   },
 }

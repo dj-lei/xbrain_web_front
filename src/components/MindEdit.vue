@@ -11,11 +11,21 @@
             v-spacer
             v-toolbar-items
               v-btn(dark, text, @click="save") Save
+          v-dialog(v-model="dialogShooting" max-width="500px")
+            v-card
+              v-card-title(class="headline") Are you sure this item is the cause of the damage?
+              v-card-actions
+                v-spacer
+                v-btn(color="blue darken-1" text @click="dialogShooting = false") Cancel
+                v-btn(color="blue darken-1" text @click="shootingConfirm") OK
+                v-spacer
           v-data-table(v-model='selected', show-select, :headers="headers", :items="data", class="elevation-1")
             template(v-slot:item.data-table-select="{ isSelected, select, item }")
-              v-simple-checkbox(color="green", :disabled='item.Status === "close"', :value='item.Status === "close" ? true : isSelected', @input="select($event)")
+              v-simple-checkbox(color="green", :disabled='item.Status !== "active"', :value='item.Status !== "active" ? true : isSelected', @input="select($event)")
             template(v-slot:item.Status="{ item }")
               v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
+            template(v-slot:item.actions="{ item }")
+              v-icon(small, class="mr-2", @click="shooting(item)") mdi-access-point
 </template>
 
 <script>
@@ -42,6 +52,8 @@ export default {
   data () {
     return {
       dialog: false,
+      dialogShooting: false,
+      tempData: '',
       selected: [],
       data: [],
       mind: '',
@@ -50,6 +62,7 @@ export default {
         { text: 'Task', align: 'start', value: 'Task'},
         { text: 'Status', value: 'Status' },
         { text: 'Executor', value: 'Executor' },
+        { text: 'Actions', value: 'actions', sortable: false },
       ],
     }
   },
@@ -128,10 +141,37 @@ export default {
       })
       setTimeout(() =>{
         this.dialog = false
-      },1000)
+      },500)
+    },
+    shooting(item) {
+      this.tempData = item
+      this.dialogShooting = true
+    },
+    async shootingConfirm () {
+      let formData = new FormData()
+      formData.append("operate", 'shooting')
+      formData.append("template_id", this.template_id)
+      formData.append("username", this.username)
+      formData.append("selected", JSON.stringify(this.tempData))
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+      await this.$http.post(this.$urls.trouble_shooting_save, formData, config).then(
+        (response)=>{
+        this.mind.nodeData = response.data.content.nodeData
+        this.mind.init()
+      }, (error) => {
+        console.log(error)
+      })
+      setTimeout(() =>{
+        this.dialog = false
+      },500)
     },
     getColor (status) {
       if (status === 'close') return 'green'
+      else if (status === 'active') return 'orange'
       else return 'red'
     },
   },
