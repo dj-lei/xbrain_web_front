@@ -21,7 +21,7 @@
                 dense
                 icon='mdi-alert'
               >
-                Must select asic , fill in template name and select pinmux xlsx!
+                {{ errorInfo }}
               </v-alert>
               <v-row>
                   <v-col
@@ -103,6 +103,7 @@ export default {
     return {
       dialog: false,
       errorShown: false,
+      errorInfo: '',
       asic: ['xenon', 'radon'],
       asicSelect: '',
       templateName: '',
@@ -115,6 +116,7 @@ export default {
     },
     async upload () {
       if (this.asicSelect === '' || this.templateName === '' || this.files.length === 0) {
+        this.errorInfo = 'Must select asic , fill in template name and select pinmux xlsx!'
         this.errorShown = true
         setTimeout(() =>{
           this.errorShown = false
@@ -133,14 +135,18 @@ export default {
 
         await this.$http.post(this.$urls.pinmux_save, formData, config).then(
           (response)=>{
-            console.log(response.data)
+          setTimeout(() =>{
+            this.$emit('initialize')
+            this.dialog = false
+          },1000)
         }, (error) => {
-          console.log(error)
+          this.errorInfo = 'Wrong file format or Pinmux Gpio is not on the first sheet!'
+          this.errorShown = true
+          setTimeout(() =>{
+            this.errorShown = false
+          },4000)
         })
-        setTimeout(() =>{
-          this.$emit('initialize')
-          this.dialog = false
-        },1000)
+
       }
     },
   },

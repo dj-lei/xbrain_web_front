@@ -141,7 +141,7 @@ export default {
       })
       setTimeout(() =>{
         this.dialog = false
-      },500)
+      },1000)
     },
     shooting(item) {
       this.tempData = item
@@ -167,7 +167,7 @@ export default {
       })
       setTimeout(() =>{
         this.dialog = false
-      },500)
+      },1000)
     },
     getColor (status) {
       if (status === 'close') return 'green'

@@ -144,7 +144,7 @@ export default {
   },
   methods: {
     async login() {
-      if (this.username !== '' || this.password !== ''){
+      if (this.username !== '' && this.password !== ''){
         this.isLoading = true
 
         let formData = new FormData()
@@ -168,7 +168,7 @@ export default {
               this.$store.set('isAuthenticated', true)
             },1000)
         }, (error) => {
-          this.errorMsg = 'Your account or password is not correct.'
+          this.errorMsg = 'Your account or password is not correct!'
           this.errorShown = true
           this.isLoading = false
           setTimeout(() =>{
@@ -176,7 +176,7 @@ export default {
           },4000)
         })
       }else{
-        this.errorMsg = 'You must fill in your account and password.'
+        this.errorMsg = 'You must fill in your account and password!'
         this.errorShown = true
         setTimeout(() =>{
           this.errorShown = false
@@ -188,7 +188,7 @@ export default {
       this.screen = 'register'
     },
     async confirmRegister() {
-      if (this.username !== '' || this.password !== ''){
+      if (this.username !== '' && this.password !== '' && this.confirmPassword !== '' && this.password === this.confirmPassword){
         this.isLoading = true
 
         let formData = new FormData()
@@ -218,7 +218,7 @@ export default {
           },4000)
         })
       }else{
-        this.errorMsg = 'You must fill in your account and password.'
+        this.errorMsg = 'You must fill in your account and password,Or password is not equal to confirmPassword!'
         this.errorShown = true
         setTimeout(() =>{
           this.errorShown = false
