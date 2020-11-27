@@ -9,8 +9,6 @@
       NavSidebar
     v-main(ref='content')
       v-container
-        //- v-layout(row)
-        //- v-flex
         <router-view></router-view>
 </template>
 

@@ -8,9 +8,35 @@
             v-divider(class="mx-4", inset, vertical)
             v-btn(color="primary", dark, @click="newItem") New Template
             v-spacer
-            v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
+            v-dialog(v-model="dialog", transition="dialog-bottom-transition", max-width="400px")
               v-card
-                PinmuxEdit(ref="pinmuxEdit", @initialize="initialize")
+                v-col
+                  v-card-text
+                    v-alert(v-model='errorShown', transition='slide-y-reverse-transition', color='red darken-2', tile, dark, dense, icon='mdi-alert') {{ errorInfo }}
+                    v-text-field(
+                      ref="templateName"
+                      v-model="templateName"
+                      :rules="[() => !!templateName || 'This field is required']"
+                      label="Template Name"
+                      placeholder="New name"
+                      required
+                    )
+                    v-autocomplete(
+                      ref="asicSelect"
+                      v-model="asicSelect"
+                      :rules="[() => !!asicSelect || 'This field is required']"
+                      :items="asic"
+                      label="Asic"
+                      placeholder="Select... asic"
+                      required
+                    )
+                    v-spacer(class="mt-3")
+                    v-file-input(ref="files", v-model="files", :rules="[() => !!files || 'This field is required']", label="Pinmux Gpio file input", placeholder="Select your pinmux xlsx", required)
+                  v-divider(class="mt-12")
+                  v-card-actions
+                    v-btn(color="blue darken-1", text, @click="dialog = false") Cancel
+                    v-spacer
+                    v-btn(color="blue darken-1", text, @click="upload") Submit
             v-dialog(v-model="dialogDelete" max-width="500px")
               v-card
                 v-card-title(class="headline") Are you sure you want to delete this item?
@@ -34,12 +60,7 @@
 </template>
 
 <script>
-import PinmuxEdit from './PinmuxEdit.vue'
-
 export default {
-  components: {
-    PinmuxEdit
-  },
   data () {
     return {
       selected: [],
@@ -53,17 +74,30 @@ export default {
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
+      templateName: null,
+      asicSelect: null,
+      files: null,
+      asic: ['xenon', 'radon'],
       templateData: [],
       tempData: '',
-      templateName: 'new name',
       diffHtml: '',
+      formHasErrors: false,
+      errorShown: false,
+      errorInfo: '',
     }
   },
-
   created () {
     this.initialize()
   },
-
+  computed: {
+    form () {
+      return {
+        templateName: this.templateName,
+        asicSelect: this.asicSelect,
+        files: this.files,
+      }
+    },
+  },
   watch: {
     async selected (val) {
       if (val.length >= 3) {
@@ -86,7 +120,6 @@ export default {
       }
     },
   },
-
   methods: {
     async initialize () {
       await this.$http.get(this.$urls.pinmux_get, {
@@ -98,11 +131,9 @@ export default {
           this.templateData = response.data.content
         })
     },
-
     newItem () {
-      this.$refs['pinmuxEdit'].dialog = true
+      this.dialog = true
     },
-
     async downloadItem (item) {
       await this.$http.get(this.$urls.pinmux_get, {
         params: {
@@ -120,12 +151,10 @@ export default {
           URL.revokeObjectURL(link.href)
         })
     },
-
     deleteItem (item) {
       this.tempData = item
       this.dialogDelete = true
     },
-
     async deleteItemConfirm () {
       await this.$http.get(this.$urls.pinmux_get, {
         params: {
@@ -142,9 +171,44 @@ export default {
           },1000)
         })
     },
+    validate () {
+      this.formHasErrors = false
 
-    async diff () {
+      Object.keys(this.form).forEach(f => {
+        if (!this.form[f]) {
+          this.formHasErrors = true
+          this.$refs[f].validate(true)
+        }
+      })
+      return this.formHasErrors
+    },
+    async upload () {
+      if (!this.validate()) {
+        let formData = new FormData()
+        formData.append("files", this.files);
+        formData.append("asic", this.asicSelect)
+        formData.append("file_name", this.templateName)
+        formData.append("date", this.$common.getTime())
+        let config = {
+          headers: {
+          'Content-Type': 'multipart/form-data'
+          }
+        }
 
+        await this.$http.post(this.$urls.pinmux_save, formData, config).then(
+          (response)=>{
+          setTimeout(() =>{
+            this.initialize()
+            this.dialog = false
+          },1000)
+        }, (error) => {
+          this.errorInfo = 'Wrong file format or Pinmux Gpio is not on the first sheet!'
+          this.errorShown = true
+          setTimeout(() =>{
+            this.errorShown = false
+          },4000)
+        })
+      }
     },
   },
 }

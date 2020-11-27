@@ -5,111 +5,123 @@
         v-card-title
           span {{ title }}
         v-card-text
-          v-container
-            v-alert(
-              v-model='errorShown'
-              transition='slide-y-reverse-transition'
-              color='red darken-2'
-              tile
-              dark
-              dense
-              icon='mdi-alert'
-            ) {{ errorMsg }}
-            template(v-if='screen === `login`')
-              v-text-field(
-                solo
-                flat
-                outlined
-                prepend-inner-icon='mdi-clipboard-account'
-                background-color='white'
+          v-alert(
+            v-model='errorShown'
+            transition='slide-y-reverse-transition'
+            color='red darken-2'
+            tile
+            dark
+            dense
+            icon='mdi-alert'
+          ) {{ errorMsg }}
+          template(v-if='screen === `login`')
+            v-text-field(
+              ref="username"
+              v-model="username"
+              flat
+              outlined
+              :rules="[() => !!username || 'This field is required']"
+              label="username"
+              placeholder="username"
+              prepend-inner-icon='mdi-clipboard-account'
+              background-color='white'
+              color='blue darken-2'
+              required
+              light
+            )
+            v-text-field(
+              ref="password"
+              v-model='password'
+              flat
+              outlined
+              :rules="[() => !!password || 'This field is required']"
+              prepend-inner-icon='mdi-clipboard-account'
+              background-color='white'
+              color='blue darken-2'
+              type="password"
+              label="password"
+              placeholder='password'
+              required
+              light
+              )
+            v-spacer(class="mt-8")
+            v-btn(
+                width='100%'
+                large
                 color='blue darken-2'
-                hide-details
-                v-model="username"
-                placeholder='username'
-                light
-                )
-              v-text-field(
-                solo
-                flat
-                outlined
-                prepend-inner-icon='mdi-clipboard-account'
-                background-color='white'
-                color='blue darken-2'
-                hide-details
-                v-model='password'
-                type="password"
-                placeholder='password'
-                light
-                )
+                dark
+                @click='login'
+                :loading='isLoading'
+                ) Login
+            v-toolbar(flat)
               v-btn(
-                  width='100%'
-                  large
-                  color='blue darken-2'
-                  dark
-                  @click='login'
-                  :loading='isLoading'
-                  ) Login
-              v-toolbar(flat)
-                v-btn(
-                  text
-                  rounded
-                  color='indigo darken-2'
-                  @click='forgotPassword'
-                  ): .caption ForgotPassword
-                v-divider(class="mx-4", inset, vertical)
-                v-btn(
-                  text
-                  rounded
-                  color='indigo darken-2'
-                  @click='goRegister'
-                  ): .caption Register
-            template(v-if='screen === `register`')
-              v-text-field(
-                solo
-                flat
-                outlined
-                prepend-inner-icon='mdi-clipboard-account'
-                background-color='white'
-                color='blue darken-2'
-                hide-details
-                v-model="username"
-                placeholder='username'
-                light
-                )
-              v-text-field(
-                solo
-                flat
-                outlined
-                prepend-inner-icon='mdi-clipboard-account'
-                background-color='white'
-                color='blue darken-2'
-                hide-details
-                v-model='password'
-                type="password"
-                placeholder='password'
-                light
-                )
-              v-text-field(
-                solo
-                flat
-                outlined
-                prepend-inner-icon='mdi-clipboard-account'
-                background-color='white'
-                color='blue darken-2'
-                hide-details
-                v-model='confirmPassword'
-                type="password"
-                placeholder='confirm password'
-                light
-                )
+                text
+                rounded
+                color='indigo darken-2'
+                @click='forgotPassword'
+                ): .caption ForgotPassword
+              v-divider(class="mx-4", inset, vertical)
+              v-spacer
               v-btn(
-                  width='100%'
-                  large
-                  color='blue darken-2'
-                  dark
-                  @click='confirmRegister'
-                  :loading='isLoading'
-                  ) Register
+                text
+                rounded
+                color='indigo darken-2'
+                @click='goRegister'
+                ): .caption Register
+          template(v-if='screen === `register`')
+            v-text-field(
+              ref="username"
+              v-model="username"
+              flat
+              outlined
+              :rules="[() => !!username || 'This field is required']"
+              label="username"
+              placeholder="username"
+              prepend-inner-icon='mdi-clipboard-account'
+              background-color='white'
+              color='blue darken-2'
+              required
+              light
+            )
+            v-text-field(
+              ref="password"
+              v-model='password'
+              flat
+              outlined
+              :rules="[() => !!password || 'This field is required']"
+              prepend-inner-icon='mdi-clipboard-account'
+              background-color='white'
+              color='blue darken-2'
+              type="password"
+              label="password"
+              placeholder='password'
+              required
+              light
+              )
+            v-text-field(
+              ref="confirmPassword"
+              v-model='confirmPassword'
+              flat
+              outlined
+              :rules="[() => !!confirmPassword || 'This field is required']"
+              prepend-inner-icon='mdi-clipboard-account'
+              background-color='white'
+              color='blue darken-2'
+              type="password"
+              label="Confirm Password"
+              placeholder='confirm password'
+              required
+              light
+              )
+            v-spacer(class="mt-8")
+            v-btn(
+                width='100%'
+                large
+                color='blue darken-2'
+                dark
+                @click='confirmRegister'
+                :loading='isLoading'
+                ) Register
     v-snackbar(v-model="snackbar", :timeout="timeout") {{ info }}
       template(v-slot:action="{ attrs }")
         v-btn(color="blue", text, v-bind="attrs", @click="snackbar = false") Close
@@ -133,13 +145,26 @@ export default {
       timeout: 4000,
     }
   },
+  computed: {
+    form () {
+      return {
+        username: this.username,
+        password: this.password,
+        confirmPassword: this.confirmPassword,
+      }
+    },
+  },
   watch: {
     dialog (val) {
-      this.title = 'Login'
-      this.screen = 'login'
-      this.password = ''
-      this.confirmPassword = ''
-      this.isLoading = false
+      if (val === false) {
+        this.title = 'Login'
+        this.screen = 'login'
+        this.password = ''
+        this.confirmPassword = ''
+        this.isLoading = false
+        this.$refs['username'].reset()
+        this.$refs['password'].reset()
+      }
     }
   },
   methods: {
@@ -176,11 +201,8 @@ export default {
           },4000)
         })
       }else{
-        this.errorMsg = 'You must fill in your account and password!'
-        this.errorShown = true
-        setTimeout(() =>{
-          this.errorShown = false
-        },4000)
+        this.$refs['username'].validate(true)
+        this.$refs['password'].validate(true)
       }
     },
     goRegister() {
@@ -217,13 +239,16 @@ export default {
             this.errorShown = false
           },4000)
         })
-      }else{
+      }else if (this.password !== this.confirmPassword) {
         this.errorMsg = 'You must fill in your account and password,Or password is not equal to confirmPassword!'
         this.errorShown = true
         setTimeout(() =>{
           this.errorShown = false
         },4000)
       }
+      this.$refs['username'].validate(true)
+      this.$refs['password'].validate(true)
+      this.$refs['confirmPassword'].validate(true)
     },
     forgotPassword() {
       // this.$refs['login'].dialog = true

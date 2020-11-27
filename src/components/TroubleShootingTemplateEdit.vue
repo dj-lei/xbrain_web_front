@@ -39,14 +39,23 @@
                   v-btn(color="blue darken-1" text @click="closeDelete") Cancel
                   v-btn(color="blue darken-1" text @click="deleteItemConfirm") OK
                   v-spacer
-            v-dialog(v-model="dialogReleaseTask" max-width="550px")
+            v-dialog(v-model="dialogReleaseTask" max-width="700px")
               v-card
-                v-card-title(class="headline") Are you sure you want to release this task?
+                v-card-title(class="headline") Damage Detail
+                v-card-text
+                  v-container
+                    v-textarea(v-model="desc", auto-grow, filled, color="deep-purple", label="Detailed damage text description", placeholder="description",rows="5")
+                    v-row
+                      v-file-input(v-model="images",  solo,  accept="image/*",  prepend-icon="mdi-camera", counter, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Upload damage images", outlined, :show-size="1000")
+                      v-btn(class="mt-2", :disabled='images.length === 0', color="blue darken-1" text @click="showImages") Show
+                    v-row
+                      v-file-input(v-model="logs", solo, color="deep-purple accent-4",  label="Upload logs",  placeholder="Upload damage logs", prepend-icon="mdi-paperclip", outlined, :show-size="1000")
                 v-card-actions
                   v-spacer
-                  v-btn(color="blue darken-1" text @click="closeRelease") Cancel
-                  v-btn(color="blue darken-1" text @click="releaseTaskConfirm") OK
+                  v-btn(color="blue darken-1" text @click="releaseTaskConfirm") Release
                   v-spacer
+            v-dialog(v-model='dialogImages', dark, max-width="700px")
+              Images(ref="images", v-bind:images='uploadImages')
       v-data-table(:headers="headers", :items="data", sort-by="TemplateName", class="elevation-1")
         template(v-slot:item.actions="{ item }")
           v-icon(small, class="mr-2", @click="editItem(item)") mdi-pencil
@@ -56,10 +65,12 @@
 
 <script>
 import MindEdit from './MindEdit.vue'
+import Images from './common/images'
 
 export default {
   components: {
-    MindEdit
+    MindEdit,
+    Images
   },
   data () {
     return {
@@ -68,6 +79,8 @@ export default {
       dialogDelete: false,
       dialogSaveTemplate: false,
       dialogReleaseTask: false,
+      dialogImages: false,
+      errorShown: false,
       headers: [
         { text: 'Id', value: 'id' },
         { text: 'TemplateName', align: 'start', sortable: false, value: 'TemplateName'},
@@ -75,6 +88,10 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
+      desc: null,
+      images: [],
+      uploadImages: [],
+      logs: [],
       tempData: '',
       templateName: 'new name',
       flagUpdateOrAdd: false,
@@ -90,6 +107,9 @@ export default {
     dialogDelete (val) {
       val || this.closeDelete()
     },
+    dialogReleaseTask (val) {
+      val || this.closeRelease()
+    }
   },
 
   created () {
@@ -190,7 +210,21 @@ export default {
     },
 
     closeRelease () {
-      this.dialogReleaseTask = false
+      this.desc = null
+      this.images = []
+    },
+
+    showImages () {
+      const temp = []
+      this.images.forEach(image => {
+        const reader = new FileReader()
+        reader.readAsDataURL(image)
+        reader.onload = function () {
+          temp.push(reader.result)
+        }
+      })
+      this.uploadImages = temp
+      this.dialogImages = true
     },
 
     save () {
