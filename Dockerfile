@@ -8,7 +8,6 @@ ENV ftp_proxy "http://100.98.146.3:8080"
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
-RUN npm i axios -S
 COPY . .
 RUN npm run build
 

@@ -14,7 +14,7 @@
                   v-icon mdi-close
                 v-toolbar-title Execute Task
                 v-spacer
-              MindEdit(ref="mindEdit", v-bind:nodeData='nodeData', v-bind:contextMenu='contextMenu', v-bind:template_id='template_id')
+              MindEdit(ref="mindEdit", v-bind:desc='desc', v-bind:nodeData='nodeData', v-bind:contextMenu='contextMenu', v-bind:template_id='template_id')
           v-dialog(v-model="dialogDelete" max-width="500px")
             v-card
               v-card-title(class="headline") Are you sure you want to delete this item?
@@ -53,6 +53,7 @@ export default {
     return {
       project: 'TroubleShooting',
       role: '',
+      desc: '',
       nodeData: {},
       contextMenu: false,
       dialog: false,
@@ -104,6 +105,7 @@ export default {
         })
         .then(response => {
           this.nodeData = response.data.content.nodeData
+          this.desc = response.data.content.Description
           this.template_id = item.id
           this.dialog = true
         })

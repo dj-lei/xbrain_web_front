@@ -7,7 +7,7 @@
       transition="fade-transition"
     >
       <v-img
-      max-height="500"
+      max-height="700"
       contain
       :src="item"
       >

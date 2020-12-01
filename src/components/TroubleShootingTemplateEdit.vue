@@ -170,7 +170,6 @@ export default {
         },
         })
         .then(response => {
-          console.log(response.data.content)
           this.tempData = ''
           setTimeout(() =>{
             this.dialogDelete = false
@@ -185,14 +184,23 @@ export default {
     },
 
     async releaseTaskConfirm () {
-      await this.$http.get(this.$urls.trouble_shooting_get, {
-        params: {
-            operate: 'release_task',
-            template_id: this.tempData.id,
-        },
-        })
+      let formData = new FormData()
+      formData.append("operate", 'release_task')
+      formData.append("template_id", this.tempData.id)
+      formData.append("description", this.desc)
+      formData.append("logs", this.logs)
+      formData.append("size", this.images.length)
+      this.images.forEach((image, index) => {
+        formData.append(`images_${index}`, image)
+      })
+
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+      await this.$http.post(this.$urls.trouble_shooting_save, formData, config)
         .then(response => {
-          console.log(response.data.content)
           this.tempData = ''
           setTimeout(() =>{
             this.dialogReleaseTask = false
@@ -215,15 +223,7 @@ export default {
     },
 
     showImages () {
-      const temp = []
-      this.images.forEach(image => {
-        const reader = new FileReader()
-        reader.readAsDataURL(image)
-        reader.onload = function () {
-          temp.push(reader.result)
-        }
-      })
-      this.uploadImages = temp
+      this.uploadImages = this.$common.readImages(this.images)
       this.dialogImages = true
     },
 
