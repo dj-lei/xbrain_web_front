@@ -39,18 +39,30 @@
                 v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
               template(v-slot:item.actions="{ item }")
                 v-icon(small, class="mr-2", @click="shooting(item)") mdi-access-point
-        v-dialog(v-model='dialogImages', dark, max-width="700px")
-          Images(ref="images", v-bind:images='downloadImages')
+        v-dialog(v-model='dialogImages', max-width="600px")
+          Images(v-bind:images='downloadImages')
+        v-dialog(v-model='dialogCheckTabs', dark, max-width="1000px")
+          CT(
+            v-on:uploadChecklistImages="uploadChecklistImages"
+            v-on:uploadChecklistLogs="uploadChecklistLogs"
+            v-on:downloadChecklistLog="downloadChecklistLog"
+            v-on:uploadChecklistComments="uploadChecklistComments"
+            v-bind:images='checklistImages'
+            v-bind:logs='checklistLogs'
+            v-bind:comments='checklistComments'
+          )
 </template>
 
 <script>
 import MindElixir from "mind-elixir"
 import { get, sync } from 'vuex-pathify'
 import Images from './common/images'
+import CT from './TroubleShootingCheckTabs'
 
 export default {
   components: {
-    Images
+    Images,
+    CT
   },
   props: {
     desc: {
@@ -80,7 +92,12 @@ export default {
       dialogShooting: false,
       dialogImages: false,
       dialogDesc: false,
+      dialogCheckTabs: false,
+      nodeId: '',
       downloadImages: [],
+      checklistImages: [],
+      checklistLogs: [],
+      checklistComments: [],
       tempData: '',
       selected: [],
       data: [],
@@ -116,7 +133,11 @@ export default {
 
     if (this.contextMenu === false) {
       this.mind.bus.addListener('selectNode', node => {
-        this.getNodeDetails(node)
+        if (node.hasOwnProperty('children')) {
+          this.getNodeDetails(node)
+        }else {
+          this.getChecklistDetails(node)
+        }
       })
     }
   },
@@ -130,11 +151,145 @@ export default {
         this.selected = []
         this.data = []
       }
+    },
+    dialogCheckTabs(val){
+      if (val === false){
+        this.checklistImages = []
+        this.checklistLogs = []
+      }
     }
   },
   methods: {
     getAllData () {
       return this.mind.getAllData()
+    },
+    getChecklistDetails (val) {
+      this.nodeId = val.id
+      this.getChecklistComments()
+      this.getChecklistImages()
+      this.getChecklistLogs()
+      this.dialogCheckTabs = true
+    },
+    async getChecklistComments () {
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'get_checklist_comments',
+            template_id: this.template_id,
+            node_id: this.nodeId,
+        },
+        })
+        .then(response => {
+          this.checklistComments = response.data.content
+        })
+    },
+    async uploadChecklistComments (newcomment) {
+      let formData = new FormData()
+      formData.append("operate", 'upload_checklist_comments')
+      formData.append("username", this.username)
+      formData.append("template_id", this.template_id)
+      formData.append("node_id", this.nodeId)
+      formData.append("comments", newcomment)
+
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+      await this.$http.post(this.$urls.trouble_shooting_save, formData, config)
+      .then(response => {
+        setTimeout(() =>{
+          this.getChecklistComments()
+        },1000)
+      })
+    },
+    async getChecklistImages () {
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'get_checklist_images',
+            template_id: this.template_id,
+            node_id: this.nodeId,
+        },
+        })
+        .then(response => {
+          this.checklistImages = response.data.content
+        })
+    },
+    async uploadChecklistImages (addImages) {
+      let formData = new FormData()
+      formData.append("operate", 'upload_checklist_images')
+      formData.append("username", this.username)
+      formData.append("template_id", this.template_id)
+      formData.append("node_id", this.nodeId)
+      formData.append("size", addImages.length)
+      addImages.forEach((image, index) => {
+        formData.append(`images_${index}`, image)
+      })
+
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+      await this.$http.post(this.$urls.trouble_shooting_save, formData, config)
+      .then(response => {
+        setTimeout(() =>{
+          this.getChecklistImages()
+        },1000)
+      })
+    },
+    async getChecklistLogs () {
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'get_checklist_logs',
+            template_id: this.template_id,
+            node_id: this.nodeId,
+        },
+        })
+        .then(response => {
+          this.checklistLogs = response.data.content
+        })
+    },
+    async uploadChecklistLogs (addLogs) {
+      let formData = new FormData()
+      formData.append("operate", 'upload_checklist_logs')
+      formData.append("username", this.username)
+      formData.append("template_id", this.template_id)
+      formData.append("node_id", this.nodeId)
+      formData.append("size", addLogs.length)
+      addLogs.forEach((log, index) => {
+        formData.append(`logs_${index}`, log)
+      })
+
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+      await this.$http.post(this.$urls.trouble_shooting_save, formData, config)
+      .then(response => {
+        setTimeout(() =>{
+          this.getChecklistLogs()
+        },1000)
+      })
+    },
+    async downloadChecklistLog (item){
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'get_checklist_log',
+            template_id: this.template_id,
+            node_id: this.nodeId,
+            uuid_id: item.uuid,
+        },
+        responseType: 'blob' ,
+        })
+        .then(response => {
+          const blob = new Blob([response.data], { type: 'application/txt' })
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(blob)
+          link.download = response.headers['content-disposition']
+          link.click()
+          URL.revokeObjectURL(link.href)
+        })
     },
     async getNodeDetails (val) {
       await this.$http.get(this.$urls.trouble_shooting_get, {
