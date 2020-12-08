@@ -3,17 +3,17 @@
     v-container(fluid)
       v-item-group
         v-row(dense)
-          v-col(v-for="(item,i) in images" :key="i" :cols="3")
+          v-col(v-for="item in images" :key="item.uuid" :cols="3")
             v-hover(v-slot="{ hover }")
               v-card(:elevation="hover ? 16 : 2" :class="{ 'on-hover': hover }"  @click="showCarousel")
                 v-item(v-slot="{ active, toggle }")
-                  v-img(height="100px" class="text-right" contain :src="item")
-                    v-btn(icon class="mt-16")
+                  v-img(height="100px" class="text-right" contain :src='`data:image/png;base64,` + item.content')
+                    v-btn(icon, class="mt-16", @click.stop="deleteItem(item)")
                       v-icon mdi-close
     v-dialog(v-model='dialogImages', max-width="700px")
       v-carousel
-        v-carousel-item(v-for="(item,i) in images" :key="i")
-          v-img(contain :src="item")
+        v-carousel-item(v-for="item in images" :key="item.uuid")
+          v-img(contain :src='`data:image/png;base64,` + item.content')
 </template>
 
 <script>
@@ -32,6 +32,9 @@ export default {
   methods: {
     showCarousel () {
       this.dialogImages = true
+    },
+    deleteItem (item) {
+      this.$emit('deleteChecklistImage', item)
     }
   }
 }

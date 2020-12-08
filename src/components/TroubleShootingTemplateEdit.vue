@@ -10,14 +10,11 @@
             v-spacer
             v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
               v-card
-                v-toolbar(dark)
-                  v-btn(icon, dark, @click="dialog = false")
-                    v-icon mdi-close
-                  v-toolbar-title Edit Template
-                  v-spacer
-                  v-toolbar-items
-                    v-btn(dark, text, @click="save") Save
-                MindEdit(ref="mindEdit", v-bind:nodeData='nodeData')
+                MindEdit(ref="mindEdit"
+                v-bind:nodeData='nodeData'
+                v-on:dialogClose="dialogClose"
+                v-on:saveToServer="save"
+                )
             v-dialog(v-model="dialogSaveTemplate", max-width="500px")
               v-card
                 v-card-title
@@ -25,8 +22,7 @@
                 v-card-text
                   v-container
                     v-row
-                      v-col(cols="12", sm="6", md="4")
-                        v-text-field(v-model='templateName', label="Template name")
+                      v-text-field(v-model='templateName', label="Template name")
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1", text, @click="close") Cancel
@@ -49,7 +45,7 @@
                       v-file-input(v-model="images",  solo,  accept="image/*",  prepend-icon="mdi-camera", counter, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Upload damage images", outlined, :show-size="1000")
                       v-btn(class="mt-2", :disabled='images.length === 0', color="blue darken-1" text @click="showImages") Show
                     v-row
-                      v-file-input(v-model="logs", solo, color="deep-purple accent-4",  label="Upload logs",  placeholder="Upload damage logs", prepend-icon="mdi-paperclip", outlined, :show-size="1000")
+                      v-file-input(v-model="logs", solo, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Upload damage logs", prepend-icon="mdi-paperclip", outlined, :show-size="1000")
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1" text @click="releaseTaskConfirm") Release
@@ -66,11 +62,15 @@
 <script>
 import MindEdit from './MindEdit.vue'
 import Images from './common/images'
+import { get, sync } from 'vuex-pathify'
 
 export default {
   components: {
     MindEdit,
     Images
+  },
+  computed: {
+    username: sync('username')
   },
   data () {
     return {
@@ -127,7 +127,9 @@ export default {
           this.data = response.data.content
         })
     },
-
+    dialogClose () {
+      this.dialog = false
+    },
     newItem () {
       this.nodeData = {
         'id': 'root',
@@ -163,6 +165,7 @@ export default {
     },
 
     async deleteItemConfirm () {
+      this.$store.set('progress', true)
       await this.$http.get(this.$urls.trouble_shooting_get, {
         params: {
             operate: 'delete_template',
@@ -174,6 +177,7 @@ export default {
           setTimeout(() =>{
             this.dialogDelete = false
             this.initialize()
+            this.$store.set('progress', false)
           },1000)
         })
     },
@@ -184,12 +188,19 @@ export default {
     },
 
     async releaseTaskConfirm () {
+      this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'release_task')
+      formData.append("username", this.username)
       formData.append("template_id", this.tempData.id)
       formData.append("description", this.desc)
-      formData.append("logs", this.logs)
-      formData.append("size", this.images.length)
+      formData.append("logs_size", this.logs.length)
+      formData.append("images_size", this.images.length)
+
+      this.logs.forEach((log, index) => {
+        formData.append(`logs_${index}`, log)
+      })
+
       this.images.forEach((image, index) => {
         formData.append(`images_${index}`, image)
       })
@@ -203,6 +214,7 @@ export default {
         .then(response => {
           this.tempData = ''
           setTimeout(() =>{
+            this.$store.set('progress', false)
             this.dialogReleaseTask = false
           },1000)
         })
@@ -232,6 +244,7 @@ export default {
     },
 
     async saveToServer () {
+      this.$store.set('progress', true)
       let formData = new FormData()
       let saveDate = Object.assign({'TemplateName': this.templateName, 'Date': this.$common.getTime()}, this.$refs['mindEdit'].getAllData())
       formData.append("data", JSON.stringify(saveDate))
@@ -259,6 +272,7 @@ export default {
         this.dialogSaveTemplate = false
         this.dialog = false
         this.initialize()
+        this.$store.set('progress', false)
       },1000)
     },
   },

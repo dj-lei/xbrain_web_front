@@ -10,6 +10,15 @@
     v-main(ref='content')
       v-container
         <router-view></router-view>
+        v-dialog(v-model='progress', persistent, width='200px')
+          div(class="text-center")
+            v-progress-circular(
+            indeterminate
+            size='100'
+            width='15'
+            color='green lighten-3'
+            ) Waiting
+
 </template>
 
 <script>
@@ -22,6 +31,9 @@ export default {
     NavHeader,
     NavSidebar
   },
+  computed: {
+    progress: sync('progress')
+  },
   data() {
     return {
     }
@@ -33,6 +45,10 @@ export default {
 </script>
 
 <style lang="scss">
+
+.v-progress-circular {
+margin: 2rem;
+}
 
 .breadcrumbs-nav {
   .v-btn {

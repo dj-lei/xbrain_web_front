@@ -40,8 +40,9 @@
         v-card.elevation-1
           v-card-text
             .comments-post-name.caption: strong {{cm.username}}
-            .comments-post-date.overline.grey--text {{ cm.created_time }}]
-            .comments-post-content.mt-3 {{ cm.comment }}
+            .comments-post-date.overline.grey--text {{ cm.created_time }}
+            div(v-for="(text, index) in cm.comment.split('\\n')", :key="index")
+              .comments-post-content.mt-3 {{ text }}
 </template>
 
 <script>
@@ -84,6 +85,7 @@ export default {
      */
     async postComment () {
       this.$emit('uploadChecklistComments', this.newcomment)
+      this.newcomment = ''
     },
     /**
      * Show Comment Editing Form

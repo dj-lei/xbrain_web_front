@@ -9,12 +9,13 @@
             v-spacer
           v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
             v-card
-              v-toolbar(dark)
-                v-btn(icon, dark, @click="dialog = false")
-                  v-icon mdi-close
-                v-toolbar-title Execute Task
-                v-spacer
-              MindEdit(ref="mindEdit", v-bind:desc='desc', v-bind:nodeData='nodeData', v-bind:contextMenu='contextMenu', v-bind:template_id='template_id')
+              MindEdit(ref="mindEdit"
+              v-bind:desc='desc'
+              v-bind:nodeData='nodeData'
+              v-bind:contextMenu='contextMenu'
+              v-bind:template_id='template_id'
+              v-on:dialogClose="dialogClose"
+              )
           v-dialog(v-model="dialogDelete" max-width="500px")
             v-card
               v-card-title(class="headline") Are you sure you want to delete this item?
@@ -38,7 +39,8 @@
           v-icon(small, class="mr-2", @click="editItem(item)") mdi-pencil
           template(v-if='role === "administrator"')
             v-icon(small, class="mr-2", @click="deleteItem(item)") mdi-delete
-            v-icon(small, @click="closeTask(item)") mdi-checkbox-marked-circle
+            v-icon(small, class="mr-2", @click="closeTask(item)") mdi-checkbox-marked-circle
+            v-icon(small, @click="exportTask(item)") mdi-export
 </template>
 
 <script>
@@ -95,7 +97,9 @@ export default {
           }
         })
     },
-
+    dialogClose () {
+      this.dialog = false
+    },
     async editItem (item) {
       await this.$http.get(this.$urls.trouble_shooting_get, {
         params: {
@@ -117,6 +121,7 @@ export default {
     },
 
     async deleteItemConfirm () {
+      this.$store.set('progress', true)
       await this.$http.get(this.$urls.trouble_shooting_get, {
         params: {
             operate: 'delete_task',
@@ -129,6 +134,7 @@ export default {
           setTimeout(() =>{
             this.dialogDelete = false
             this.initialize()
+            this.$store.set('progress', false)
           },1000)
         })
     },
@@ -139,6 +145,7 @@ export default {
     },
 
     async closeTaskConfirm () {
+      this.$store.set('progress', true)
       await this.$http.get(this.$urls.trouble_shooting_get, {
         params: {
             operate: 'close_task',
@@ -146,12 +153,30 @@ export default {
         },
         })
         .then(response => {
-          console.log(response.data.content)
           this.tempData = ''
           setTimeout(() =>{
             this.dialogCloseTask = false
             this.initialize()
+            this.$store.set('progress', false)
           },1000)
+        })
+    },
+
+    async exportTask (item) {
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'export_task',
+            template_id: item.id,
+        },
+        responseType: 'blob' ,
+        })
+        .then(response => {
+          const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' })
+          const link = document.createElement('a')
+          link.href = URL.createObjectURL(blob)
+          link.download = item.TaskName + '.xlsx'
+          link.click()
+          URL.revokeObjectURL(link.href)
         })
     },
 

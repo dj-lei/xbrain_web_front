@@ -2,19 +2,20 @@
   .mind
     v-app
       v-card
-        div(id="map" style="width:100%;height:630px")
-        template(v-if='contextMenu === false')
-          v-bottom-navigation(color="primary")
-            v-btn(@click="dialogDesc = true") Description
-              v-icon mdi-book
-            v-btn(@click="showImages") Images
-              v-icon mdi-image
-            v-btn(@click="downloadLogs") Logs
-              v-icon mdi-download
-        v-dialog(v-model="dialogDesc", width="500")
-          v-card
-            v-card-title(class="headline grey lighten-2") Description
-            v-card-text {{ desc }}
+        v-toolbar(dark)
+          v-btn(icon, dark, @click="$emit('dialogClose')")
+            v-icon mdi-close
+          template(v-if='contextMenu === false')
+            v-toolbar-title Executor Task
+            v-spacer
+            v-toolbar-items
+              v-btn(dark, @click="details") DETAILS
+          template(v-else)
+            v-toolbar-title Edit Template
+            v-spacer
+            v-toolbar-items
+              v-btn(dark, text, @click="$emit('saveToServer')") SAVE
+        div(id="map" :style='`width:100%;height:`+ screeHeight +`px`')
         v-dialog(v-model="dialog" max-width="1000px")
           v-card
             v-toolbar(dark)
@@ -39,17 +40,20 @@
                 v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
               template(v-slot:item.actions="{ item }")
                 v-icon(small, class="mr-2", @click="shooting(item)") mdi-access-point
-        v-dialog(v-model='dialogImages', max-width="600px")
-          Images(v-bind:images='downloadImages')
-        v-dialog(v-model='dialogCheckTabs', dark, max-width="1000px")
+        v-dialog(v-model='dialogCheckTabs', persistent, dark, max-width="1000px")
           CT(
             v-on:uploadChecklistImages="uploadChecklistImages"
+            v-on:deleteChecklistImage="deleteChecklistImage"
             v-on:uploadChecklistLogs="uploadChecklistLogs"
             v-on:downloadChecklistLog="downloadChecklistLog"
+            v-on:deleteChecklistLog="deleteChecklistLog"
             v-on:uploadChecklistComments="uploadChecklistComments"
+            v-on:closeDialogCheckTabs="closeDialogCheckTabs"
+            v-bind:desc='desc'
             v-bind:images='checklistImages'
             v-bind:logs='checklistLogs'
             v-bind:comments='checklistComments'
+            v-bind:isRoot='isRoot'
           )
 </template>
 
@@ -90,14 +94,13 @@ export default {
     return {
       dialog: false,
       dialogShooting: false,
-      dialogImages: false,
-      dialogDesc: false,
       dialogCheckTabs: false,
+      isRoot: true,
       nodeId: '',
-      downloadImages: [],
       checklistImages: [],
       checklistLogs: [],
       checklistComments: [],
+      screeHeight: (document.body.clientHeight-155).toString(),
       tempData: '',
       selected: [],
       data: [],
@@ -123,6 +126,7 @@ export default {
       // or set as data that is return from `.getAllData()`
       draggable: true, // default true
       contextMenu: this.contextMenu, // default true
+      overflowHidden: true,
       toolBar: false, // default true
       nodeMenu: false, // default true
       keypress: true, // default true
@@ -152,18 +156,25 @@ export default {
         this.data = []
       }
     },
-    dialogCheckTabs(val){
-      if (val === false){
-        this.checklistImages = []
-        this.checklistLogs = []
-      }
-    }
   },
   methods: {
     getAllData () {
       return this.mind.getAllData()
     },
+    closeDialogCheckTabs () {
+      this.dialogCheckTabs = false
+      this.checklistImages = []
+      this.checklistLogs = []
+    },
+    details () {
+      this.isRoot = true
+      this.nodeId = 'root'
+      this.getChecklistImages()
+      this.getChecklistLogs()
+      this.dialogCheckTabs = true
+    },
     getChecklistDetails (val) {
+      this.isRoot = false
       this.nodeId = val.id
       this.getChecklistComments()
       this.getChecklistImages()
@@ -183,6 +194,7 @@ export default {
         })
     },
     async uploadChecklistComments (newcomment) {
+      this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'upload_checklist_comments')
       formData.append("username", this.username)
@@ -199,6 +211,7 @@ export default {
       .then(response => {
         setTimeout(() =>{
           this.getChecklistComments()
+          this.$store.set('progress', false)
         },1000)
       })
     },
@@ -215,12 +228,13 @@ export default {
         })
     },
     async uploadChecklistImages (addImages) {
+      this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'upload_checklist_images')
       formData.append("username", this.username)
       formData.append("template_id", this.template_id)
       formData.append("node_id", this.nodeId)
-      formData.append("size", addImages.length)
+      formData.append("images_size", addImages.length)
       addImages.forEach((image, index) => {
         formData.append(`images_${index}`, image)
       })
@@ -234,8 +248,27 @@ export default {
       .then(response => {
         setTimeout(() =>{
           this.getChecklistImages()
+          this.$store.set('progress', false)
         },1000)
       })
+    },
+    async deleteChecklistImage (item){
+      this.$store.set('progress', true)
+      const temp_nodeId = this.isRoot ? 'root' : this.nodeId
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'delete_checklist_image',
+            template_id: this.template_id,
+            node_id: temp_nodeId,
+            uuid_id: item.uuid,
+        },
+        })
+        .then(response => {
+          setTimeout(() =>{
+            this.getChecklistImages()
+            this.$store.set('progress', false)
+          },1000)
+        })
     },
     async getChecklistLogs () {
       await this.$http.get(this.$urls.trouble_shooting_get, {
@@ -250,12 +283,13 @@ export default {
         })
     },
     async uploadChecklistLogs (addLogs) {
+      this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'upload_checklist_logs')
       formData.append("username", this.username)
       formData.append("template_id", this.template_id)
       formData.append("node_id", this.nodeId)
-      formData.append("size", addLogs.length)
+      formData.append("logs_size", addLogs.length)
       addLogs.forEach((log, index) => {
         formData.append(`logs_${index}`, log)
       })
@@ -269,6 +303,7 @@ export default {
       .then(response => {
         setTimeout(() =>{
           this.getChecklistLogs()
+          this.$store.set('progress', false)
         },1000)
       })
     },
@@ -291,6 +326,24 @@ export default {
           URL.revokeObjectURL(link.href)
         })
     },
+    async deleteChecklistLog (item){
+      this.$store.set('progress', true)
+      const temp_nodeId = this.isRoot ? 'root' : this.nodeId
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'delete_checklist_log',
+            template_id: this.template_id,
+            node_id: temp_nodeId,
+            uuid_id: item.uuid,
+        },
+        })
+        .then(response => {
+          setTimeout(() =>{
+            this.getChecklistLogs()
+            this.$store.set('progress', false)
+          },1000)
+        })
+    },
     async getNodeDetails (val) {
       await this.$http.get(this.$urls.trouble_shooting_get, {
         params: {
@@ -305,6 +358,7 @@ export default {
         })
     },
     async save () {
+      this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'update_task')
       formData.append("template_id", this.template_id)
@@ -319,18 +373,20 @@ export default {
         (response)=>{
         this.mind.nodeData = response.data.content.nodeData
         this.mind.init()
+        setTimeout(() =>{
+          this.$store.set('progress', false)
+          this.dialog = false
+        },1000)
       }, (error) => {
         console.log(error)
       })
-      setTimeout(() =>{
-        this.dialog = false
-      },1000)
     },
     shooting(item) {
       this.tempData = item
       this.dialogShooting = true
     },
     async shootingConfirm () {
+      this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'shooting')
       formData.append("template_id", this.template_id)
@@ -345,41 +401,13 @@ export default {
         (response)=>{
         this.mind.nodeData = response.data.content.nodeData
         this.mind.init()
+        setTimeout(() =>{
+          this.dialog = false
+          this.$store.set('progress', false)
+        },1000)
       }, (error) => {
         console.log(error)
       })
-      setTimeout(() =>{
-        this.dialog = false
-      },1000)
-    },
-    async showImages () {
-      await this.$http.get(this.$urls.trouble_shooting_get, {
-        params: {
-            operate: 'get_task_images',
-            template_id: this.template_id,
-        },
-        })
-        .then(response => {
-          this.downloadImages = response.data.content
-          this.dialogImages = true
-        })
-    },
-    async downloadLogs () {
-      await this.$http.get(this.$urls.trouble_shooting_get, {
-        params: {
-            operate: 'get_task_logs',
-            template_id: this.template_id,
-        },
-        responseType: 'blob' ,
-        })
-        .then(response => {
-          const blob = new Blob([response.data], { type: 'application/txt' })
-          const link = document.createElement('a')
-          link.href = URL.createObjectURL(blob)
-          link.download = response.headers['content-disposition']
-          link.click()
-          URL.revokeObjectURL(link.href)
-        })
     },
     getColor (status) {
       if (status === 'close') return 'green'

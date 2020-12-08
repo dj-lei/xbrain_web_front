@@ -1,11 +1,18 @@
 <template lang="pug">
   v-card
     v-toolbar(flat dark)
+      v-btn(icon, dark, @click="close")
+        v-icon mdi-close
       v-toolbar-title Checkpoint Details
     v-tabs(vertical, centered)
-      v-tab
-        v-icon(left) mdi-message-text
-        span Comment
+      template(v-if='isRoot === true')
+        v-tab(class="me-10")
+          v-icon(left) mdi-book
+          span Desc
+      template(v-else)
+        v-tab
+          v-icon(left) mdi-message-text
+          span Comment
       v-tab(class="me-5")
         v-icon(left) mdi-image
         span Images
@@ -14,13 +21,17 @@
         span Logs
       v-tab-item
         v-card(color='grey lighten-3' class="overflow-hidden")
-          Comment(v-on:uploadChecklistComments="uploadChecklistComments", v-bind:comments='comments')
+          template(v-if='isRoot === true')
+            v-card-text(class="body-2 pl-2")
+              div(v-for="(text, index) in desc.split('\\n')", :key="index") {{ text }}
+          template(v-else)
+            Comment(v-on:uploadChecklistComments="uploadChecklistComments", v-bind:comments='comments')
       v-tab-item
         v-card(class="mx-auto")
-          Images(v-bind:images='images')
+          Images(v-bind:images='images', v-on:deleteChecklistImage="deleteChecklistImage")
           v-bottom-navigation(color="primary")
             v-file-input(v-model="addImages", prepend-icon="mdi-upload", solo, accept="image/*", hide-details, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Add images", outlined)
-            v-btn(class="mt-2", :disabled='addImages.length === 0', color="blue darken-1" text @click="uploadChecklistImages") Upload
+            v-btn(:disabled='addImages.length === 0', color="blue darken-1" text @click="uploadChecklistImages") Upload
       v-tab-item
         v-card
           v-data-table(:headers="headers", :items="logs", sort-by="created_time", class="elevation-1")
@@ -29,7 +40,7 @@
               v-icon(small, @click="deleteItem(item)") mdi-delete
           v-bottom-navigation(color="primary")
             v-file-input(v-model="addLogs", prepend-icon="mdi-upload", solo, hide-details, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Add logs", outlined)
-            v-btn(class="mt-2", :disabled='addLogs.length === 0', color="blue darken-1" text @click="uploadChecklistLogs") Upload
+            v-btn(:disabled='addLogs.length === 0', color="blue darken-1" text @click="uploadChecklistLogs") Upload
 </template>
 
 <script>
@@ -42,6 +53,18 @@ export default {
     Comment
   },
   props: {
+    isRoot: {
+      type: Boolean,
+      default () {
+        return true
+      }
+    },
+    desc: {
+      type: String,
+      default () {
+        return ''
+      }
+    },
     images: {
       type: Array,
       default: () => ([])
@@ -70,9 +93,11 @@ export default {
   methods: {
     uploadChecklistImages () {
       this.$emit('uploadChecklistImages', this.addImages)
+      this.addImages = []
     },
     uploadChecklistLogs () {
       this.$emit('uploadChecklistLogs', this.addLogs)
+      this.addLogs = []
     },
     uploadChecklistComments (newcomment) {
       this.$emit('uploadChecklistComments', newcomment)
@@ -80,9 +105,17 @@ export default {
     downloadItem (item) {
       this.$emit('downloadChecklistLog', item)
     },
-    deleteItem () {
-
+    deleteItem (item) {
+      this.$emit('deleteChecklistLog', item)
     },
+    deleteChecklistImage(item) {
+      this.$emit('deleteChecklistImage', item)
+    },
+    close(){
+      this.addImages = []
+      this.addLogs = []
+      this.$emit('closeDialogCheckTabs')
+    }
   }
 }
 </script>

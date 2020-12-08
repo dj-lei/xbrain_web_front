@@ -156,6 +156,7 @@ export default {
       this.dialogDelete = true
     },
     async deleteItemConfirm () {
+      this.$store.set('progress', true)
       await this.$http.get(this.$urls.pinmux_get, {
         params: {
             operate: 'delete_template',
@@ -163,11 +164,11 @@ export default {
         },
         })
         .then(response => {
-          console.log(response.data.content)
           this.tempData = ''
           setTimeout(() =>{
             this.dialogDelete = false
             this.initialize()
+            this.$store.set('progress', false)
           },1000)
         })
     },
@@ -184,6 +185,7 @@ export default {
     },
     async upload () {
       if (!this.validate()) {
+        this.$store.set('progress', true)
         let formData = new FormData()
         formData.append("files", this.files);
         formData.append("asic", this.asicSelect)
@@ -200,6 +202,7 @@ export default {
           setTimeout(() =>{
             this.initialize()
             this.dialog = false
+            this.$store.set('progress', false)
           },1000)
         }, (error) => {
           this.errorInfo = 'Wrong file format or Pinmux Gpio is not on the first sheet!'

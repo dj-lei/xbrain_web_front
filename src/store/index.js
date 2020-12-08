@@ -9,6 +9,7 @@ const state = {
   username: '',
   pages: [],
   groups: [],
+  progress: false,
   isAuthenticated: false,
 }
 
