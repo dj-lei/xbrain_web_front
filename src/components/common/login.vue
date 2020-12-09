@@ -54,7 +54,7 @@
                 :loading='isLoading'
                 ) Login
             v-toolbar(flat)
-              v-btn(
+              //- v-btn(
                 text
                 rounded
                 color='indigo darken-2'
