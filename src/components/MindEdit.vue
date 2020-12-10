@@ -153,9 +153,9 @@ export default {
 
     if (this.contextMenu === false) {
       this.mind.bus.addListener('selectNode', node => {
-        if (node.hasOwnProperty('children')) {
+        if (node.hasOwnProperty('children') && this.role !== 'visitor') {
           this.getNodeDetails(node)
-        }else {
+        }else if (node.hasOwnProperty('children') !== true) {
           this.getChecklistDetails(node)
         }
       })
