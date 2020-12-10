@@ -9,8 +9,9 @@
             v-toolbar-title Executor Task
             v-spacer
             v-toolbar-items
-              v-btn(dark, @click="details") DETAILS
-              v-btn(dark, @click="shareUrl") SHARE URL
+              v-btn(color="grey darken-3" @click="details") DETAILS
+              v-btn(color="grey darken-3" @click="shareUrl") SHARE
+              //- button(type="button" @click="shareUrl") SHARE
           template(v-else)
             v-toolbar-title Edit Template
             v-spacer
@@ -57,9 +58,10 @@
             v-bind:comments='checklistComments'
             v-bind:isRoot='isRoot'
           )
-        v-snackbar(v-model="snackbar", timeout=3000) Hi,the shared URL has been pasted on the clipboard!
-          template(v-slot:action="{ attrs }")
-            v-btn(color="blue", text, v-bind="attrs", @click="snackbar = false") Close
+        v-dialog(v-model="dialogShareUrl" max-width="600px")
+          v-card
+            v-card-text {{ addrShareUrl }}
+
 </template>
 
 <script>
@@ -106,10 +108,11 @@ export default {
       dialog: false,
       dialogShooting: false,
       dialogCheckTabs: false,
-      snackbar: false,
+      dialogShareUrl: false,
       isRoot: true,
       nodeId: '',
       nodeTopic: '',
+      addrShareUrl: '',
       checklistImages: [],
       checklistLogs: [],
       checklistComments: [],
@@ -197,8 +200,8 @@ export default {
       this.dialogCheckTabs = true
     },
     shareUrl () {
-      navigator.clipboard.writeText('http://'+window.location.host+'/trouble_shooting_task/'+this.template_id)
-      this.snackbar = true
+      this.addrShareUrl = 'http://'+window.location.host+'/trouble_shooting_task/'+this.template_id
+      this.dialogShareUrl = true
     },
     getChecklistDetails (val) {
       this.isRoot = false
