@@ -200,7 +200,7 @@ export default {
       this.dialogCheckTabs = true
     },
     shareUrl () {
-      this.addrShareUrl = 'http://'+window.location.host+'/trouble_shooting_task/'+this.template_id
+      this.addrShareUrl = 'http://'+window.location.host+'/?trouble_shooting_task_id='+this.template_id
       this.dialogShareUrl = true
     },
     getChecklistDetails (val) {
