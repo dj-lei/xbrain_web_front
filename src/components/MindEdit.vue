@@ -10,6 +10,7 @@
             v-spacer
             v-toolbar-items
               v-btn(dark, @click="details") DETAILS
+              v-btn(dark, @click="shareUrl") SHARE URL
           template(v-else)
             v-toolbar-title Edit Template
             v-spacer
@@ -49,12 +50,16 @@
             v-on:deleteChecklistLog="deleteChecklistLog"
             v-on:uploadChecklistComments="uploadChecklistComments"
             v-on:closeDialogCheckTabs="closeDialogCheckTabs"
+            v-bind:role='role'
             v-bind:desc='desc'
             v-bind:images='checklistImages'
             v-bind:logs='checklistLogs'
             v-bind:comments='checklistComments'
             v-bind:isRoot='isRoot'
           )
+        v-snackbar(v-model="snackbar", timeout=3000) Hi,the shared URL has been pasted on the clipboard!
+          template(v-slot:action="{ attrs }")
+            v-btn(color="blue", text, v-bind="attrs", @click="snackbar = false") Close
 </template>
 
 <script>
@@ -69,6 +74,12 @@ export default {
     CT
   },
   props: {
+    role: {
+      type: String,
+      default () {
+        return 'visitor'
+      }
+    },
     desc: {
       type: String,
       default () {
@@ -95,12 +106,14 @@ export default {
       dialog: false,
       dialogShooting: false,
       dialogCheckTabs: false,
+      snackbar: false,
       isRoot: true,
       nodeId: '',
+      nodeTopic: '',
       checklistImages: [],
       checklistLogs: [],
       checklistComments: [],
-      screeHeight: (document.body.clientHeight-155).toString(),
+      screeHeight: (document.documentElement.clientHeight-65).toString(),
       tempData: '',
       selected: [],
       data: [],
@@ -162,7 +175,17 @@ export default {
       return this.mind.getAllData()
     },
     closeDialogCheckTabs () {
+      if (this.checklistImages.length > 0 || this.checklistLogs.length > 0 || this.checklistComments.length > 0) {
+        if (this.nodeTopic.indexOf("(*)") === -1){
+          this.updateChecklistAsterisk()
+        }
+      }else if (this.checklistImages.length === 0 && this.checklistLogs.length === 0 && this.checklistComments.length === 0) {
+        if (this.nodeTopic.indexOf("(*)") >= 0 ){
+          this.updateChecklistAsterisk()
+        }
+      }
       this.dialogCheckTabs = false
+      this.checklistComments = []
       this.checklistImages = []
       this.checklistLogs = []
     },
@@ -173,13 +196,31 @@ export default {
       this.getChecklistLogs()
       this.dialogCheckTabs = true
     },
+    shareUrl () {
+      navigator.clipboard.writeText('http://'+window.location.host+'/trouble_shooting_task/'+this.template_id)
+      this.snackbar = true
+    },
     getChecklistDetails (val) {
       this.isRoot = false
       this.nodeId = val.id
+      this.nodeTopic = val.topic
       this.getChecklistComments()
       this.getChecklistImages()
       this.getChecklistLogs()
       this.dialogCheckTabs = true
+    },
+    async updateChecklistAsterisk () {
+      await this.$http.get(this.$urls.trouble_shooting_get, {
+        params: {
+            operate: 'update_checklist_asterisk',
+            template_id: this.template_id,
+            node_id: this.nodeId,
+        },
+        })
+        .then(response => {
+          this.mind.nodeData = response.data.content.nodeData
+          this.mind.init()
+        })
     },
     async getChecklistComments () {
       await this.$http.get(this.$urls.trouble_shooting_get, {
@@ -363,7 +404,14 @@ export default {
       formData.append("operate", 'update_task')
       formData.append("template_id", this.template_id)
       formData.append("username", this.username)
-      formData.append("selected", JSON.stringify(this.selected))
+
+      let sel = []
+      this.selected.forEach((select) => {
+        if (select.Status !== "shooting"){
+          sel.push(select)
+        }
+      })
+      formData.append("selected", JSON.stringify(sel))
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'

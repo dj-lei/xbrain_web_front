@@ -69,6 +69,14 @@
                 @click='goRegister'
                 ): .caption Register
           template(v-if='screen === `register`')
+            v-alert(
+              transition='slide-y-reverse-transition'
+              color='yellow darken-2'
+              tile
+              dark
+              dense
+              icon='mdi-alert'
+            ) Please enter Skype's user name for us to contact!
             v-text-field(
               ref="username"
               v-model="username"
@@ -189,6 +197,7 @@ export default {
             setTimeout(() =>{
               this.dialog = false
               this.snackbar = true
+              this.$router.push('/')
               this.$store.set('username', this.username)
               this.$store.set('isAuthenticated', true)
             },1000)

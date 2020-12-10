@@ -50,8 +50,9 @@
                   v-spacer
                   v-btn(color="blue darken-1" text @click="releaseTaskConfirm") Release
                   v-spacer
-            v-dialog(v-model='dialogImages', dark, max-width="700px")
-              Images(ref="images", v-bind:images='uploadImages')
+            v-dialog(v-model='dialogImages', max-width="700px")
+              v-card(class="mx-auto")
+                Images(ref="images", v-bind:images='uploadImages')
       v-data-table(:headers="headers", :items="data", sort-by="TemplateName", class="elevation-1")
         template(v-slot:item.actions="{ item }")
           v-icon(small, class="mr-2", @click="editItem(item)") mdi-pencil

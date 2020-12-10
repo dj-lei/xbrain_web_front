@@ -25,22 +25,33 @@
             v-card-text(class="body-2 pl-2")
               div(v-for="(text, index) in desc.split('\\n')", :key="index") {{ text }}
           template(v-else)
-            Comment(v-on:uploadChecklistComments="uploadChecklistComments", v-bind:comments='comments')
+            Comment(
+              v-on:uploadChecklistComments="uploadChecklistComments"
+              v-bind:comments='comments'
+              v-bind:role='role'
+            )
       v-tab-item
         v-card(class="mx-auto")
-          Images(v-bind:images='images', v-on:deleteChecklistImage="deleteChecklistImage")
-          v-bottom-navigation(color="primary")
-            v-file-input(v-model="addImages", prepend-icon="mdi-upload", solo, accept="image/*", hide-details, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Add images", outlined)
-            v-btn(:disabled='addImages.length === 0', color="blue darken-1" text @click="uploadChecklistImages") Upload
+          Images(
+            v-bind:role='role'
+            v-bind:images='images'
+            v-on:deleteChecklistImage="deleteChecklistImage"
+          )
+          template(v-if='role !== "visitor"')
+            v-bottom-navigation(color="primary")
+              v-file-input(v-model="addImages", prepend-icon="mdi-upload", solo, accept="image/*", hide-details, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Add images", outlined)
+              v-btn(:disabled='addImages.length === 0', color="blue darken-1" text @click="uploadChecklistImages") Upload
       v-tab-item
         v-card
           v-data-table(:headers="headers", :items="logs", sort-by="created_time", class="elevation-1")
             template(v-slot:item.actions="{ item }")
               v-icon(small, class="mr-2", @click="downloadItem(item)") mdi-download
-              v-icon(small, @click="deleteItem(item)") mdi-delete
-          v-bottom-navigation(color="primary")
-            v-file-input(v-model="addLogs", prepend-icon="mdi-upload", solo, hide-details, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Add logs", outlined)
-            v-btn(:disabled='addLogs.length === 0', color="blue darken-1" text @click="uploadChecklistLogs") Upload
+              template(v-if='role !== "visitor"')
+                v-icon(small, @click="deleteItem(item)") mdi-delete
+          template(v-if='role !== "visitor"')
+            v-bottom-navigation(color="primary")
+              v-file-input(v-model="addLogs", prepend-icon="mdi-upload", solo, hide-details, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Add logs", outlined)
+              v-btn(:disabled='addLogs.length === 0', color="blue darken-1" text @click="uploadChecklistLogs") Upload
 </template>
 
 <script>
@@ -53,6 +64,12 @@ export default {
     Comment
   },
   props: {
+    role: {
+      type: String,
+      default () {
+        return 'visitor'
+      }
+    },
     isRoot: {
       type: Boolean,
       default () {

@@ -1,32 +1,33 @@
 <template lang="pug">
   v-container
-    v-textarea(
-      outlined
-      flat
-      placeholder="Write a new comment..."
-      auto-grow
-      dense
-      rows='3'
-      hide-details
-      v-model='newcomment'
-      color='blue-grey darken-2'
-      background-color='white'
-    )
-    v-row.mt-2(dense)
-    .d-flex.align-center.pt-3
-      v-spacer
-      .caption.mr-3
-        span Posting As_
-          strong(place='name') {{ username }}
-      v-btn(
-        dark
+    template(v-if='role !== "visitor"')
+      v-textarea(
+        outlined
+        flat
+        placeholder="Write a new comment..."
+        auto-grow
+        dense
+        rows='3'
+        hide-details
+        v-model='newcomment'
         color='blue-grey darken-2'
-        @click='postComment'
-        depressed
-        aria-label='Post Comment'
-        )
-        v-icon(left) mdi-comment
-        span.text-none Post Comment
+        background-color='white'
+      )
+      v-row.mt-2(dense)
+      .d-flex.align-center.pt-3
+        v-spacer
+        .caption.mr-3
+          span Posting As_
+            strong(place='name') {{ username }}
+        v-btn(
+          dark
+          color='blue-grey darken-2'
+          @click='postComment'
+          depressed
+          aria-label='Post Comment'
+          )
+          v-icon(left) mdi-comment
+          span.text-none Post Comment
     v-divider.mt-3
     v-timeline(dense)
       v-timeline-item.comments-post(
@@ -50,6 +51,12 @@ import { sync } from 'vuex-pathify'
 
 export default {
   props: {
+    role: {
+      type: String,
+      default () {
+        return 'visitor'
+      }
+    },
     comments: {
       type: Array,
       default: () => ([])

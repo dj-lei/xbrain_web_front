@@ -39,7 +39,12 @@ export default {
     }
   },
   mounted() {
-    this.$router.push('/')
+    let pathname = window.location.pathname
+    if (pathname.indexOf("trouble_shooting_task/") >= 0){
+      this.$router.push({ path: '/trouble_shooting_task', query: { taskId: pathname.split('/')[2] }})
+    }else {
+      this.$router.push('/')
+    }
   }
 }
 </script>

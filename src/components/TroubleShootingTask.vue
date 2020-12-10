@@ -10,6 +10,7 @@
           v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
             v-card
               MindEdit(ref="mindEdit"
+              v-bind:role='role'
               v-bind:desc='desc'
               v-bind:nodeData='nodeData'
               v-bind:contextMenu='contextMenu'
@@ -54,7 +55,7 @@ export default {
   data () {
     return {
       project: 'TroubleShooting',
-      role: '',
+      role: 'visitor',
       desc: '',
       nodeData: {},
       contextMenu: false,
@@ -88,14 +89,16 @@ export default {
         })
         .then(response => {
           this.data = response.data.content
-          if (this.groups.length > 1){
-            for (let key in this.groups){
-              if (this.groups[key]['project'] === this.project) {
-                this.role = this.groups[key]['role']
-              }
+          for (let key in this.groups){
+            if (this.groups[key]['project'] === this.project) {
+              this.role = this.groups[key]['role']
             }
           }
         })
+      if (this.$route.query.taskId) {
+        let item = {'id': this.$route.query.taskId}
+        this.editItem(item)
+      }
     },
     dialogClose () {
       this.dialog = false

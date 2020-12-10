@@ -7,18 +7,25 @@
             v-hover(v-slot="{ hover }")
               v-card(:elevation="hover ? 16 : 2" :class="{ 'on-hover': hover }"  @click="showCarousel")
                 v-item(v-slot="{ active, toggle }")
-                  v-img(height="100px" class="text-right" contain :src='`data:image/png;base64,` + item.content')
-                    v-btn(icon, class="mt-16", @click.stop="deleteItem(item)")
-                      v-icon mdi-close
+                  v-img(height="100px" class="text-right" contain :src='item.content.indexOf("data:image/png;base64") >= 0 ? item.content : "data:image/png;base64," + item.content')
+                    template(v-if='role !== "visitor"')
+                      v-btn(icon, class="mt-16", @click.stop="deleteItem(item)")
+                        v-icon mdi-close
     v-dialog(v-model='dialogImages', max-width="700px")
       v-carousel
         v-carousel-item(v-for="item in images" :key="item.uuid")
-          v-img(contain :src='`data:image/png;base64,` + item.content')
+          v-img(contain :src='item.content.indexOf("data:image/png;base64") >= 0 ? item.content : "data:image/png;base64," + item.content')
 </template>
 
 <script>
 export default {
   props: {
+    role: {
+      type: String,
+      default () {
+        return 'visitor'
+      }
+    },
     images: {
       type: Array,
       default: () => ([])
