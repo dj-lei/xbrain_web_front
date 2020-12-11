@@ -55,9 +55,18 @@
                 Images(ref="images", v-bind:images='uploadImages')
       v-data-table(:headers="headers", :items="data", sort-by="TemplateName", class="elevation-1")
         template(v-slot:item.actions="{ item }")
-          v-icon(small, class="mr-2", @click="editItem(item)") mdi-pencil
-          v-icon(small, class="mr-2", @click="deleteItem(item)") mdi-delete
-          v-icon(small, @click="releaseTask(item)") mdi-download
+          v-tooltip(bottom)
+            template(v-slot:activator="{ on,attrs }")
+              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
+            span edit
+          v-tooltip(bottom)
+            template(v-slot:activator="{ on,attrs }")
+              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+            span delete
+          v-tooltip(bottom)
+            template(v-slot:activator="{ on,attrs }")
+              v-icon(small, v-bind="attrs", v-on="on", @click="releaseTask(item)") mdi-antenna
+            span release
 </template>
 
 <script>

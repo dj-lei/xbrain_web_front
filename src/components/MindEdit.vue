@@ -35,13 +35,28 @@
                   v-btn(color="blue darken-1" text @click="dialogShooting = false") Cancel
                   v-btn(color="blue darken-1" text @click="shootingConfirm") OK
                   v-spacer
+            v-dialog(v-model="dialogSaving" max-width="500px")
+              v-card
+                v-card-title(class="headline") Are you sure this item is normal?
+                v-card-actions
+                  v-spacer
+                  v-btn(color="blue darken-1" text @click="dialogSaving = false") Cancel
+                  v-btn(color="blue darken-1" text @click="savingConfirm") OK
+                  v-spacer
             v-data-table(v-model='selected', show-select, :headers="headers", :items="data", class="elevation-1")
               template(v-slot:item.data-table-select="{ isSelected, select, item }")
                 v-simple-checkbox(color="green", :disabled='item.Status !== "active"', :value='item.Status !== "active" ? true : isSelected', @input="select($event)")
               template(v-slot:item.Status="{ item }")
                 v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
               template(v-slot:item.actions="{ item }")
-                v-icon(small, class="mr-2", @click="shooting(item)") mdi-access-point
+                v-tooltip(bottom)
+                  template(v-slot:activator="{ on,attrs }")
+                    v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="shooting(item)") mdi-access-point
+                  span shooting
+                v-tooltip(bottom)
+                  template(v-slot:activator="{ on,attrs }")
+                    v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="save(item)") mdi-checkbox-marked-circle
+                  span close
         v-dialog(v-model='dialogCheckTabs', persistent, dark, max-width="1000px")
           CT(
             v-on:uploadChecklistImages="uploadChecklistImages"
@@ -109,6 +124,7 @@ export default {
       dialogShooting: false,
       dialogCheckTabs: false,
       dialogShareUrl: false,
+      dialogSaving: false,
       isRoot: true,
       nodeId: '',
       nodeTopic: '',
@@ -126,7 +142,7 @@ export default {
         { text: 'Task', align: 'start', value: 'Task'},
         { text: 'Status', value: 'Status' },
         { text: 'Executor', value: 'Executor' },
-        { text: 'Actions', value: 'actions', sortable: false },
+        { text: 'Shooting/Close', value: 'actions', sortable: false },
       ],
     }
   },
@@ -401,7 +417,11 @@ export default {
           this.dialog = true
         })
     },
-    async save () {
+    save (item) {
+      this.tempData = item
+      this.dialogSaving = true
+    },
+    async savingConfirm () {
       this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'update_task')
@@ -409,11 +429,12 @@ export default {
       formData.append("username", this.username)
 
       let sel = []
-      this.selected.forEach((select) => {
-        if (select.Status !== "shooting"){
-          sel.push(select)
-        }
-      })
+      sel.push(this.tempData)
+      // this.selected.forEach((select) => {
+      //   if (select.Status !== "shooting"){
+      //     sel.push(select)
+      //   }
+      // })
       formData.append("selected", JSON.stringify(sel))
       let config = {
         headers: {

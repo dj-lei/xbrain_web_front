@@ -37,11 +37,23 @@
         template(v-slot:item.Status="{ item }")
           v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
         template(v-slot:item.actions="{ item }")
-          v-icon(small, class="mr-2", @click="editItem(item)") mdi-pencil
+          v-tooltip(bottom)
+            template(v-slot:activator="{ on,attrs }")
+              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
+            span edit
           template(v-if='role === "administrator"')
-            v-icon(small, class="mr-2", @click="deleteItem(item)") mdi-delete
-            v-icon(small, class="mr-2", @click="closeTask(item)") mdi-checkbox-marked-circle
-            v-icon(small, @click="exportTask(item)") mdi-export
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+              span delete
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="closeTask(item)") mdi-checkbox-marked-circle
+              span close
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, v-bind="attrs", v-on="on", @click="exportTask(item)") mdi-export
+              span export
 </template>
 
 <script>

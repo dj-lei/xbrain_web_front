@@ -55,8 +55,14 @@
                 div(v-html="diffHtml")
       v-data-table(v-model="selected", :headers="headers", :items="templateData", show-select, sort-by="Date", class="elevation-1")
           template(v-slot:item.actions="{ item }")
-            v-icon(small, class="mr-2", @click="downloadItem(item)") mdi-download
-            v-icon(small, @click="deleteItem(item)") mdi-delete
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="downloadItem(item)") mdi-download
+              span download
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+              span delete
 </template>
 
 <script>
