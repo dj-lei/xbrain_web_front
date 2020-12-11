@@ -43,9 +43,9 @@
                   v-btn(color="blue darken-1" text @click="dialogSaving = false") Cancel
                   v-btn(color="blue darken-1" text @click="savingConfirm") OK
                   v-spacer
-            v-data-table(v-model='selected', show-select, :headers="headers", :items="data", class="elevation-1")
-              template(v-slot:item.data-table-select="{ isSelected, select, item }")
-                v-simple-checkbox(color="green", :disabled='item.Status !== "active"', :value='item.Status !== "active" ? true : isSelected', @input="select($event)")
+            v-data-table(v-model='selected', :headers="headers", :items="data", class="elevation-1")
+              //- template(v-slot:item.data-table-select="{ isSelected, select, item }")
+              //-   v-simple-checkbox(color="green", :disabled='item.Status !== "active"', :value='item.Status !== "active" ? true : isSelected', @input="select($event)")
               template(v-slot:item.Status="{ item }")
                 v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
               template(v-slot:item.actions="{ item }")
