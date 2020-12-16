@@ -4,7 +4,7 @@
       template
         v-card(color="grey lighten-4", dark, flat)
           v-toolbar(dense)
-            v-toolbar-title Trouble Shooting Task
+            v-toolbar-title MineSweeper Task
             v-divider(class="mx-4", inset, vertical)
             v-spacer
           v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
@@ -75,8 +75,8 @@ export default {
       dialogDelete: false,
       dialogCloseTask: false,
       headers: [
-        { text: 'Id', value: 'id' },
-        { text: 'TaskName', align: 'start', sortable: false, value: 'TaskName'},
+        // { text: 'Id', value: 'id' },
+        { text: 'TaskName', align: 'start', value: 'TaskName'},
         { text: 'Status', value: 'Status' },
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },

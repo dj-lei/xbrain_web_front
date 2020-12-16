@@ -4,7 +4,7 @@
       template
         v-card(color="grey lighten-4", dark, flat, height="50px")
           v-toolbar(dense)
-            v-toolbar-title Trouble Shooting Template
+            v-toolbar-title MineSweeper Template
             v-divider(class="mx-4", inset, vertical)
             v-btn(color="primary", dark, @click="newItem") New Template
             v-spacer
@@ -92,8 +92,8 @@ export default {
       dialogImages: false,
       errorShown: false,
       headers: [
-        { text: 'Id', value: 'id' },
-        { text: 'TemplateName', align: 'start', sortable: false, value: 'TemplateName'},
+        // { text: 'Id', value: 'id' },
+        { text: 'TemplateName', align: 'start', value: 'TemplateName'},
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],

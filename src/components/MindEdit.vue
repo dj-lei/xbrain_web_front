@@ -26,10 +26,11 @@
               v-toolbar-title Task
               v-spacer
               v-toolbar-items
-                v-btn(dark, text, @click="save") Save
+                v-btn(class="mr-2", dark, text, @click="shooting") Shooting
+                v-btn(dark, text, @click="save") Close
             v-dialog(v-model="dialogShooting" max-width="500px")
               v-card
-                v-card-title(class="headline") Are you sure this item is the cause of the damage?
+                v-card-title(class="headline") Are you sure these items is the cause of the damage?
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1" text @click="dialogShooting = false") Cancel
@@ -37,18 +38,18 @@
                   v-spacer
             v-dialog(v-model="dialogSaving" max-width="500px")
               v-card
-                v-card-title(class="headline") Are you sure this item is normal?
+                v-card-title(class="headline") Are you sure these items is normal?
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1" text @click="dialogSaving = false") Cancel
                   v-btn(color="blue darken-1" text @click="savingConfirm") OK
                   v-spacer
-            v-data-table(v-model='selected', :headers="headers", :items="data", class="elevation-1")
+            v-data-table(v-model='selected', show-select, :headers="headers", :items="data", class="elevation-1")
               //- template(v-slot:item.data-table-select="{ isSelected, select, item }")
               //-   v-simple-checkbox(color="green", :disabled='item.Status !== "active"', :value='item.Status !== "active" ? true : isSelected', @input="select($event)")
               template(v-slot:item.Status="{ item }")
                 v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
-              template(v-slot:item.actions="{ item }")
+              //- template(v-slot:item.actions="{ item }")
                 v-tooltip(bottom)
                   template(v-slot:activator="{ on,attrs }")
                     v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="shooting(item)") mdi-access-point
@@ -138,11 +139,11 @@ export default {
       data: [],
       mind: '',
       headers: [
-        { text: 'Id', value: 'id' },
-        { text: 'Task', align: 'start', value: 'Task'},
+        // { text: 'Id', value: 'id' },
+        { text: 'TaskName', align: 'start', value: 'Task'},
         { text: 'Status', value: 'Status' },
         { text: 'Executor', value: 'Executor' },
-        { text: 'Shooting/Close', value: 'actions', sortable: false },
+        // { text: 'Shooting/Close', value: 'actions', sortable: false },
       ],
     }
   },
@@ -417,8 +418,7 @@ export default {
           this.dialog = true
         })
     },
-    save (item) {
-      this.tempData = item
+    save () {
       this.dialogSaving = true
     },
     async savingConfirm () {
@@ -428,14 +428,14 @@ export default {
       formData.append("template_id", this.template_id)
       formData.append("username", this.username)
 
-      let sel = []
-      sel.push(this.tempData)
+      // let sel = []
+      // sel.push(this.tempData)
       // this.selected.forEach((select) => {
       //   if (select.Status !== "shooting"){
       //     sel.push(select)
       //   }
       // })
-      formData.append("selected", JSON.stringify(sel))
+      formData.append("selected", JSON.stringify(this.selected))
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
@@ -453,8 +453,7 @@ export default {
         console.log(error)
       })
     },
-    shooting(item) {
-      this.tempData = item
+    shooting() {
       this.dialogShooting = true
     },
     async shootingConfirm () {
@@ -463,7 +462,7 @@ export default {
       formData.append("operate", 'shooting')
       formData.append("template_id", this.template_id)
       formData.append("username", this.username)
-      formData.append("selected", JSON.stringify(this.tempData))
+      formData.append("selected", JSON.stringify(this.selected))
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
