@@ -8,7 +8,11 @@
           )
           v-list-item-title {{ item.l }}
         v-divider(v-else-if='item.k === `divider`')
-        v-subheader(v-else-if='item.k === `header`') {{ item.l }}
+        v-subheader(v-else-if='item.k === `header`')
+          template(v-if='item.l === `TroubleShooting`')
+            span MineSweeper
+          template(v-else)
+            span {{ item.l }}
 </template>
 
 <script>
