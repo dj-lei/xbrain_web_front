@@ -163,7 +163,7 @@ export default {
       nodeMenu: false, // default true
       keypress: true, // default true
       locale: 'en', // [zh_CN,zh_TW,en,ja]
-      allowUndo: false,
+      allowUndo: true,
     })
     this.mind.init()
 
