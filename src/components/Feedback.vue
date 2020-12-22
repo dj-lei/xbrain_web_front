@@ -68,7 +68,9 @@
                           outlined
                           dense
                         )
-                ckeditor(:editor="editor" v-model="editorData" :config="editorConfig" @ready="onReady")
+                //- ckeditor(:editor="editor" v-model="editorData" :config="editorConfig" @ready="onReady")
+                v-card
+                  RichText(ref="richText")
       v-data-table(:headers="headers", :items="data", sort-by="Date", class="elevation-1")
         template(v-slot:item.Status="{ item }")
           v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
@@ -84,10 +86,14 @@
 </template>
 
 <script>
-import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
+// import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
+import RichText from './common/rich-text.vue'
 import { get, sync } from 'vuex-pathify'
 
 export default {
+  components: {
+    RichText
+  },
   data () {
     return {
       dialogRichTextEdit: false,
@@ -109,11 +115,11 @@ export default {
       path: [],
       type: ['BUG', 'SUGGEST'],
       data: [],
-      editor: ClassicEditor,
-      editorData: '<p>Content of the editor.</p>',
-      editorConfig: {
-        // The configuration of the editor.
-      },
+      // editor: ClassicEditor,
+      // editorData: '<p>Content of the editor.</p>',
+      // editorConfig: {
+      //   // The configuration of the editor.
+      // },
     }
   },
   computed: {
@@ -195,7 +201,8 @@ export default {
       this.dialogRichTextEdit = true
     },
     save () {
-      this.dialogSaving = true
+      // this.dialogSaving = true
+      this.$refs.richText.getData()
     },
     async savingConfirm () {
       this.$store.set('progress', true)

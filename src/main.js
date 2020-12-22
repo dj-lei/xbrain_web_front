@@ -3,7 +3,7 @@ import App from './App.vue'
 import store from './store'
 import Vuetify from 'vuetify'
 import VueRouter from 'vue-router'
-import CKEditor from '@ckeditor/ckeditor5-vue2'
+import Editor from 'vue-editor-js'
 import 'vuetify/dist/vuetify.min.css'
 import 'material-design-icons-iconfont/dist/material-design-icons.css'
 
@@ -18,7 +18,7 @@ import Feedback from './components/Feedback'
 
 Vue.config.productionTip = false
 Vue.use(Vuetify)
-Vue.use(CKEditor)
+Vue.use(Editor)
 
 const originalPush = VueRouter.prototype.push
 VueRouter.prototype.push = function push(location) {
