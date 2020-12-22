@@ -3,6 +3,7 @@ import App from './App.vue'
 import store from './store'
 import Vuetify from 'vuetify'
 import VueRouter from 'vue-router'
+import CKEditor from '@ckeditor/ckeditor5-vue2'
 import 'vuetify/dist/vuetify.min.css'
 import 'material-design-icons-iconfont/dist/material-design-icons.css'
 
@@ -13,9 +14,11 @@ import common from '@/plugins/common'
 import TroubleShootingTemplateEdit from './components/TroubleShootingTemplateEdit'
 import TroubleShootingTask from './components/TroubleShootingTask'
 import Pinmux from './components/Pinmux'
+import Feedback from './components/Feedback'
 
 Vue.config.productionTip = false
 Vue.use(Vuetify)
+Vue.use(CKEditor)
 
 const originalPush = VueRouter.prototype.push
 VueRouter.prototype.push = function push(location) {
@@ -31,7 +34,8 @@ const routes = [
   { path: '/', component: Pinmux },
   { path: '/pinmux', component: Pinmux },
   { path: '/trouble_shooting_template_edit', component: TroubleShootingTemplateEdit },
-  { path: '/trouble_shooting_task', component: TroubleShootingTask }
+  { path: '/trouble_shooting_task', component: TroubleShootingTask },
+  { path: '/feedback', component: Feedback }
 ]
 
 const router = new VueRouter({

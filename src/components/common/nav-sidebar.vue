@@ -45,6 +45,7 @@ export default {
         },
         })
         .then(response => {
+          // console.log(response.data.groups)
           this.pages = response.data.content
           this.$store.set('groups', response.data.groups)
           this.$store.set('username', 'visitor')

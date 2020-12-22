@@ -6,6 +6,10 @@ export const urls = {
     admin_register: "admin/register",
     admin_login: "admin/login",
     admin_get: "admin/get",
+    images_upload: "images/upload",
+    images_get: "images/get",
+    feedback_save: "feedback/save",
+    feedback_get: "feedback/get",
   }
 
 export default urls

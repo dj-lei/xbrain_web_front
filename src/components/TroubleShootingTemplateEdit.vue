@@ -92,7 +92,7 @@ export default {
       dialogImages: false,
       errorShown: false,
       headers: [
-        // { text: 'Id', value: 'id' },
+        { text: 'Id', value: 'id' },
         { text: 'TemplateName', align: 'start', value: 'TemplateName'},
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },
