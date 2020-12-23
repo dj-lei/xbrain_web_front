@@ -136,9 +136,12 @@
 </template>
 
 <script>
+import {JSEncrypt} from 'jsencrypt'
+
 export default {
   data () {
     return {
+      publicKey: '',
       dialog: false,
       screen: 'login',
       title: 'Login',
@@ -151,6 +154,8 @@ export default {
       errorMsg: '',
       info: '',
       timeout: 4000,
+      pulicKey:'MFwwDQYJKoZIhvcNAQEBBQADSwAwSAJBANL378k3RiZHWx5AfJqdH9xRNBmD9wGD\n' +
+  '2iRe41HdTNF8RUhNnHit5NpMNtGL0NPTSSpPjjI1kJfVorRvaQerUgkCAwEAAQ=='
     }
   },
   computed: {
@@ -175,8 +180,22 @@ export default {
       }
     }
   },
+  // created() {
+  //   // let encryptor = new JSEncrypt()
+  //   this.encryptor.setPublicKey(this.publicKey)
+  // },
   methods: {
     async login() {
+      var public_key = '-----BEGIN PUBLIC KEY-----\n';
+      public_key += 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDlOJu6TyygqxfWT7eLtGDwajtN\n';
+      public_key += 'FOb9I5XRb6khyfD1Yt3YiCgQWMNW649887VGJiGr/L5i2osbl8C9+WJTeucF+S76\n';
+      public_key += 'xFxdU6jE0NQ+Z+zEdhUTooNRaY5nZiu5PgDB0ED/ZKBUSLKL7eibMxZtMlUDHjm4\n';
+      public_key += 'gwQco1KRMDSmXSMkDwIDAQAB\n';
+      public_key += '-----END PUBLIC KEY-----';
+
+      let encryptor = new JSEncrypt()
+      encryptor.setPublicKey('aaaaaaaaaaaaaaaaaaaaa')
+      // console.log(encryptor, encryptor.encrypt(this.username))
       if (this.username !== '' && this.password !== ''){
         this.isLoading = true
 

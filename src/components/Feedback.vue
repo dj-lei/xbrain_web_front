@@ -70,7 +70,11 @@
                         )
                 //- ckeditor(:editor="editor" v-model="editorData" :config="editorConfig" @ready="onReady")
                 v-card
-                  RichText(ref="richText")
+                  RichText(
+                    ref="richText"
+                    v-bind:data='editorData'
+                    v-on:uploadDataFunction="uploadDataFunction"
+                    )
       v-data-table(:headers="headers", :items="data", sort-by="Date", class="elevation-1")
         template(v-slot:item.Status="{ item }")
           v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
@@ -86,7 +90,6 @@
 </template>
 
 <script>
-// import ClassicEditor from '@ckeditor/ckeditor5-build-classic'
 import RichText from './common/rich-text.vue'
 import { get, sync } from 'vuex-pathify'
 
@@ -115,11 +118,8 @@ export default {
       path: [],
       type: ['BUG', 'SUGGEST'],
       data: [],
-      // editor: ClassicEditor,
-      // editorData: '<p>Content of the editor.</p>',
-      // editorConfig: {
-      //   // The configuration of the editor.
-      // },
+      editorData: {},
+      uploadData: {},
     }
   },
   computed: {
@@ -151,40 +151,6 @@ export default {
     }
   },
   methods: {
-    onReady (editor) {
-      class UploadAdapter {
-        constructor(loader, http, url) {
-          this.loader = loader
-          this.http = http
-          this.url = url
-        }
-
-        async upload() {
-          let formData = new FormData()
-          formData.append("image", await this.loader.file)
-
-          let config = {
-            headers: {
-            'Content-Type': 'multipart/form-data'
-            }
-          }
-
-          return new Promise((resolve, reject) => {
-            this.http.post(this.url, formData, config)
-            .then(response => {
-              var resData = response.data
-              resData.default = resData.url
-              resolve(resData)
-            }).catch(error => {
-              reject(error)
-            })
-          })
-        }
-      }
-      editor.plugins.get("FileRepository").createUploadAdapter = loader => {
-          return new UploadAdapter(loader, this.$http, this.$urls.images_upload)
-      }
-    },
     async initialize () {
       await this.$http.get(this.$urls.feedback_get, {
         params: {
@@ -197,22 +163,26 @@ export default {
     },
     newItem () {
       this.feedback_id = ''
-      this.editorData = ''
+      this.editorData = {}
       this.dialogRichTextEdit = true
     },
     save () {
-      // this.dialogSaving = true
+      this.dialogSaving = true
       this.$refs.richText.getData()
+    },
+    uploadDataFunction(val) {
+      this.uploadData = val
     },
     async savingConfirm () {
       this.$store.set('progress', true)
+
       let formData = new FormData()
       formData.append("feedback_id", this.feedback_id)
       formData.append("username", this.username)
       formData.append("theme", this.theme)
       formData.append("path", this.pathSelect)
       formData.append("type", this.typeSelect)
-      formData.append("content", this.editorData)
+      formData.append("content", JSON.stringify(this.uploadData))
 
       let config = {
         headers: {

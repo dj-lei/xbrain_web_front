@@ -17,10 +17,26 @@ import Delimiter from '@editorjs/delimiter'
 import ImageTool from '@editorjs/image'
 
 export default {
+  props: {
+    data: {
+      type: Object,
+      default () {
+        return {}
+      }
+    },
+    readOnly: {
+      type: Boolean,
+      default () {
+        return false
+      }
+    },
+  },
   data() {
     return {
-      data: {},
+      returnData: {},
       config: {
+        readOnly: this.readOnly,
+        logLevel: 'ERROR',
         tools:{
           header: {
             class: Header,
@@ -91,15 +107,20 @@ export default {
           // console.log(process.env.BASE_URL + this.$urls.images_upload)
         },
         onChange: (args) => {
-          this.data = args
+          this.returnData = args
         },
+        data: this.data,
       },
-
     }
   },
   methods: {
     getData() {
-      console.log(this.data.saver.save())
+      this.returnData.saver.save().then((outputData) => {
+        this.$emit('uploadDataFunction', outputData)
+      }).catch((error) => {
+        console.log('Saving failed: ', error)
+      });
+      // return this.returnData.saver.save()
     },
     // onInitialized (editor) {
     //   console.log(editor)
