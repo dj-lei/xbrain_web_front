@@ -69,12 +69,14 @@
                           dense
                         )
                 //- ckeditor(:editor="editor" v-model="editorData" :config="editorConfig" @ready="onReady")
-                v-card
-                  RichText(
-                    ref="richText"
-                    v-bind:data='editorData'
-                    v-on:uploadDataFunction="uploadDataFunction"
-                    )
+                v-card(color='grey lighten-3')
+                  v-container
+                    v-card
+                      RichText(
+                        ref="richText"
+                        v-bind:data='editorData'
+                        v-on:uploadDataFunction="uploadDataFunction"
+                        )
       v-data-table(:headers="headers", :items="data", sort-by="Date", class="elevation-1")
         template(v-slot:item.Status="{ item }")
           v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}

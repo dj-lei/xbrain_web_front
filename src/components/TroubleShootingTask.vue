@@ -68,7 +68,7 @@ export default {
     return {
       project: 'TroubleShooting',
       role: 'visitor',
-      desc: '',
+      desc: {},
       nodeData: {},
       contextMenu: false,
       dialog: false,

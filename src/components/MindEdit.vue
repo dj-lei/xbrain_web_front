@@ -99,9 +99,9 @@ export default {
       }
     },
     desc: {
-      type: String,
+      type: Object,
       default () {
-        return ''
+        return {}
       }
     },
     nodeData: {
@@ -195,24 +195,24 @@ export default {
       return this.mind.getAllData()
     },
     closeDialogCheckTabs () {
-      if (this.checklistImages.length > 0 || this.checklistLogs.length > 0 || this.checklistComments.length > 0) {
+      if (this.checklistLogs.length > 0 || this.checklistComments.length > 0) {
         if (this.nodeTopic.indexOf("(*)") === -1){
           this.updateChecklistAsterisk()
         }
-      }else if (this.checklistImages.length === 0 && this.checklistLogs.length === 0 && this.checklistComments.length === 0) {
+      }else if (this.checklistLogs.length === 0 && this.checklistComments.length === 0) {
         if (this.nodeTopic.indexOf("(*)") >= 0 ){
           this.updateChecklistAsterisk()
         }
       }
       this.dialogCheckTabs = false
       this.checklistComments = []
-      this.checklistImages = []
+      // this.checklistImages = []
       this.checklistLogs = []
     },
     details () {
       this.isRoot = true
       this.nodeId = 'root'
-      this.getChecklistImages()
+      // this.getChecklistImages()
       this.getChecklistLogs()
       this.dialogCheckTabs = true
     },
@@ -225,7 +225,7 @@ export default {
       this.nodeId = val.id
       this.nodeTopic = val.topic
       this.getChecklistComments()
-      this.getChecklistImages()
+      // this.getChecklistImages()
       this.getChecklistLogs()
       this.dialogCheckTabs = true
     },
@@ -261,7 +261,7 @@ export default {
       formData.append("username", this.username)
       formData.append("template_id", this.template_id)
       formData.append("node_id", this.nodeId)
-      formData.append("comments", newcomment)
+      formData.append("comments", JSON.stringify(newcomment))
 
       let config = {
         headers: {

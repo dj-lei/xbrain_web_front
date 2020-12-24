@@ -4,6 +4,21 @@
       v-btn(icon, dark, @click="close")
         v-icon mdi-close
       v-toolbar-title Checkpoint Details
+    v-dialog(v-model="dialogRichTextEdit", transition="dialog-bottom-transition", max-width="800px")
+      v-card
+        v-toolbar(dark)
+          v-btn(icon, dark, @click="dialogRichTextEdit = false")
+            v-icon mdi-close
+          v-toolbar-title COMMENT EDIT
+          v-spacer
+          v-toolbar-items
+            v-btn(class="mr-2", dark, text, @click="uploadChecklistComments") SAVE
+        v-card(color='grey lighten-3')
+          v-container
+            v-card
+              RichText(
+                v-on:uploadDataFunction="uploadDataFunction"
+                )
     v-tabs(vertical, centered)
       template(v-if='isRoot === true')
         v-tab(class="me-10")
@@ -13,24 +28,31 @@
         v-tab
           v-icon(left) mdi-message-text
           span Comment
-      v-tab(class="me-5")
+      //- v-tab(class="me-5")
         v-icon(left) mdi-image
         span Images
       v-tab(class="me-10")
         v-icon(left) mdi-download
         span Logs
       v-tab-item
-        v-card(color='grey lighten-3' class="overflow-hidden")
+        v-card(color='grey lighten-3')
           template(v-if='isRoot === true')
-            v-card-text(class="body-2 pl-2")
-              div(v-for="(text, index) in desc.split('\\n')", :key="index") {{ text }}
+            //- v-card-text(class="body-2 pl-2")
+            //-   div(v-for="(text, index) in desc.split('\\n')", :key="index") {{ text }}
+            v-container
+              v-card
+                RichText(
+                  v-bind:data='desc'
+                  v-bind:readOnly='true'
+                  )
           template(v-else)
             Comment(
-              v-on:uploadChecklistComments="uploadChecklistComments"
               v-bind:comments='comments'
               v-bind:role='role'
             )
-      v-tab-item
+            v-btn(color="blue darken-1" dark absolute right fab @click="newPost")
+              v-icon mdi-plus
+      //- v-tab-item
         v-card(class="mx-auto")
           Images(
             v-bind:role='role'
@@ -55,12 +77,14 @@
 </template>
 
 <script>
-import Images from './common/images.vue'
+// import Images from './common/images.vue'
+import RichText from './common/rich-text.vue'
 import Comment from './common/comments.vue'
 
 export default {
   components: {
-    Images,
+    // Images,
+    RichText,
     Comment
   },
   props: {
@@ -77,9 +101,9 @@ export default {
       }
     },
     desc: {
-      type: String,
+      type: Object,
       default () {
-        return ''
+        return {}
       }
     },
     images: {
@@ -97,6 +121,7 @@ export default {
   },
   data () {
     return {
+      dialogRichTextEdit: false,
       addImages: [],
       addLogs: [],
       headers: [
@@ -105,9 +130,16 @@ export default {
         { text: 'CreatedTime', value: 'created_time' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
+      editData: {},
     }
   },
   methods: {
+    newPost() {
+      this.dialogRichTextEdit = true
+    },
+    uploadDataFunction(val) {
+      this.editData = val
+    },
     uploadChecklistImages () {
       this.$emit('uploadChecklistImages', this.addImages)
       this.addImages = []
@@ -116,8 +148,8 @@ export default {
       this.$emit('uploadChecklistLogs', this.addLogs)
       this.addLogs = []
     },
-    uploadChecklistComments (newcomment) {
-      this.$emit('uploadChecklistComments', newcomment)
+    uploadChecklistComments () {
+      this.$emit('uploadChecklistComments', this.editData)
     },
     downloadItem (item) {
       this.$emit('downloadChecklistLog', item)

@@ -1,35 +1,51 @@
 <template lang="pug">
-  v-container
-    template(v-if='role !== "visitor"')
-      v-textarea(
-        outlined
-        flat
-        placeholder="Write a new comment..."
-        auto-grow
-        dense
-        rows='3'
-        hide-details
-        v-model='newcomment'
-        color='blue-grey darken-2'
-        background-color='white'
-      )
-      v-row.mt-2(dense)
-      .d-flex.align-center.pt-3
-        v-spacer
-        .caption.mr-3
-          span Posting As_
-            strong(place='name') {{ username }}
-        v-btn(
-          dark
-          color='blue-grey darken-2'
-          @click='postComment'
-          depressed
-          aria-label='Post Comment'
-          )
-          v-icon(left) mdi-comment
-          span.text-none Post Comment
-    v-divider.mt-3
-    v-timeline(dense)
+  v-item-group
+    v-container
+      v-row
+        v-col(
+          v-for='cm of comments'
+          :key='`comment-` + cm.created_time'
+        )
+          v-item
+            v-card
+              v-card-title {{cm.username}} | {{ cm.created_time }}
+              v-divider
+              RichText(
+                v-bind:data='cm.comment'
+                v-bind:readOnly='true'
+                )
+  //- v-container
+    //- template(v-if='role !== "visitor"')
+    //-   v-textarea(
+    //-     outlined
+    //-     flat
+    //-     placeholder="Write a new comment..."
+    //-     auto-grow
+    //-     dense
+    //-     rows='3'
+    //-     hide-details
+    //-     v-model='newcomment'
+    //-     color='blue-grey darken-2'
+    //-     background-color='white'
+    //-   )
+    //-   v-row.mt-2(dense)
+    //-   .d-flex.align-center.pt-3
+    //-     v-spacer
+    //-     .caption.mr-3
+    //-       span Posting As_
+    //-         strong(place='name') {{ username }}
+    //-     v-btn(
+    //-       dark
+    //-       color='blue-grey darken-2'
+    //-       @click='postComment'
+    //-       depressed
+    //-       aria-label='Post Comment'
+    //-       )
+    //-       v-icon(left) mdi-comment
+    //-       span.text-none Post Comment
+    //- v-divider.mt-3
+
+    //- v-timeline(dense)
       v-timeline-item.comments-post(
         color='blue-grey'
         large
@@ -38,8 +54,15 @@
         :key='`comment-` + cm.created_time'
         :id='`comment-post-id-` + cm.created_time'
         )
-        v-card.elevation-1
+        v-card
+          v-card-title {{cm.username}} | {{ cm.created_time }}
+          v-divider
           v-card-text
+            RichText(
+              v-bind:data='cm.comment'
+              v-bind:readOnly='true'
+              )
+          //- v-card-text
             .comments-post-name.caption: strong {{cm.username}}
             .comments-post-date.overline.grey--text {{ cm.created_time }}
             div(v-for="(text, index) in cm.comment.split('\\n')", :key="index")
@@ -48,8 +71,12 @@
 
 <script>
 import { sync } from 'vuex-pathify'
+import RichText from './rich-text.vue'
 
 export default {
+  components: {
+    RichText
+  },
   props: {
     role: {
       type: String,

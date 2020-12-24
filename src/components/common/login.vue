@@ -137,6 +137,7 @@
 
 <script>
 import {JSEncrypt} from 'jsencrypt'
+import CryptoJS from 'crypto-js'
 
 export default {
   data () {
@@ -186,16 +187,26 @@ export default {
   // },
   methods: {
     async login() {
-      var public_key = '-----BEGIN PUBLIC KEY-----\n';
-      public_key += 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDlOJu6TyygqxfWT7eLtGDwajtN\n';
-      public_key += 'FOb9I5XRb6khyfD1Yt3YiCgQWMNW649887VGJiGr/L5i2osbl8C9+WJTeucF+S76\n';
-      public_key += 'xFxdU6jE0NQ+Z+zEdhUTooNRaY5nZiu5PgDB0ED/ZKBUSLKL7eibMxZtMlUDHjm4\n';
-      public_key += 'gwQco1KRMDSmXSMkDwIDAQAB\n';
-      public_key += '-----END PUBLIC KEY-----';
+      // var public_key = '-----BEGIN PUBLIC KEY-----\n';
+      //   public_key += 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCkpig5EfnRXR2QmITJNHQraAC3\n';
+      //   public_key += 'x8g0+1CGsAqvc7DhVQ96wDHwJa0tL3xWSbQtU7ZG8quvuDU/Qki5wcYymykUIJP6\n';
+      //   public_key += 'wzXXfiBWo2unjEeXj3fhnz0yEho193nOgXV9cvwBkcSfVEyUtHklBDsuKeMgPoWy\n';
+      //   public_key += 'a5MaRKKGMaIXk7Rp1wIDAQAB\n';
+      //   public_key += '-----END PUBLIC KEY-----';
 
-      let encryptor = new JSEncrypt()
-      encryptor.setPublicKey('aaaaaaaaaaaaaaaaaaaaa')
-      // console.log(encryptor, encryptor.encrypt(this.username))
+      // let encryptor = new JSEncrypt()
+      // encryptor.setPublicKey(public_key)
+      // console.log(encryptor.encrypt('administrator'))
+
+      // let encryptor = new CryptoJS()
+      // // Encrypt
+      // var ciphertext = CryptoJS.AES.encrypt('administrator', 'abcd').toString();
+      // console.log(ciphertext)
+      // // Decrypt
+      // var bytes  = CryptoJS.AES.decrypt(ciphertext, 'abcd');
+      // var originalText = bytes.toString(CryptoJS.enc.Utf8);
+      // console.log(originalText); // 'my message'
+
       if (this.username !== '' && this.password !== ''){
         this.isLoading = true
 

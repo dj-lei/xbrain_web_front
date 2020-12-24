@@ -1,6 +1,5 @@
 <template lang="pug">
-  div
-    editor(ref="editor" :config="config")
+  editor(ref="editor" :config="config")
 </template>
 
 <script>
@@ -108,6 +107,11 @@ export default {
         },
         onChange: (args) => {
           this.returnData = args
+          this.returnData.saver.save().then((outputData) => {
+            this.$emit('uploadDataFunction', outputData)
+          }).catch((error) => {
+            console.log('Saving failed: ', error)
+          });
         },
         data: this.data,
       },

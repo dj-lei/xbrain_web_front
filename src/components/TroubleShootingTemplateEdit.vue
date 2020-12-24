@@ -35,17 +35,22 @@
                   v-btn(color="blue darken-1" text @click="closeDelete") Cancel
                   v-btn(color="blue darken-1" text @click="deleteItemConfirm") OK
                   v-spacer
-            v-dialog(v-model="dialogReleaseTask" max-width="700px")
-              v-card
+            v-dialog(v-model="dialogReleaseTask" max-width="800px")
+              v-card(color='grey lighten-3')
                 v-card-title(class="headline") Damage Detail
-                v-card-text
-                  v-container
-                    v-textarea(v-model="desc", auto-grow, filled, color="deep-purple", label="Detailed damage text description", placeholder="description",rows="5")
-                    v-row
+                v-container
+                  v-card
+                    RichText(
+                      ref="richText"
+                      v-on:uploadDataFunction="uploadDataFunction"
+                      )
+                    //- v-textarea(v-model="desc", auto-grow, filled, color="deep-purple", label="Detailed damage text description", placeholder="description",rows="5")
+                    //- v-row
                       v-file-input(v-model="images",  solo,  accept="image/*",  prepend-icon="mdi-camera", counter, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Upload damage images", outlined, :show-size="1000")
                       v-btn(class="mt-2", :disabled='images.length === 0', color="blue darken-1" text @click="showImages") Show
-                    v-row
-                      v-file-input(v-model="logs", solo, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Upload damage logs", prepend-icon="mdi-paperclip", outlined, :show-size="1000")
+                  v-spacer(class="mt-8")
+                  v-row
+                    v-file-input(v-model="logs", solo, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Upload damage logs", prepend-icon="mdi-paperclip", outlined, :show-size="1000")
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1" text @click="releaseTaskConfirm") Release
@@ -71,13 +76,14 @@
 
 <script>
 import MindEdit from './MindEdit.vue'
-import Images from './common/images'
+// import Images from './common/images'
+import RichText from './common/rich-text'
 import { get, sync } from 'vuex-pathify'
 
 export default {
   components: {
     MindEdit,
-    Images
+    RichText
   },
   computed: {
     username: sync('username')
@@ -98,7 +104,8 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
-      desc: null,
+      editorData: {},
+      desc: {},
       images: [],
       uploadImages: [],
       logs: [],
@@ -196,24 +203,26 @@ export default {
       this.tempData = item
       this.dialogReleaseTask = true
     },
-
+    uploadDataFunction(val) {
+      this.editorData = val
+    },
     async releaseTaskConfirm () {
       this.$store.set('progress', true)
       let formData = new FormData()
       formData.append("operate", 'release_task')
       formData.append("username", this.username)
       formData.append("template_id", this.tempData.id)
-      formData.append("description", this.desc)
+      formData.append("description", JSON.stringify(this.editorData))
       formData.append("logs_size", this.logs.length)
-      formData.append("images_size", this.images.length)
+      // formData.append("images_size", this.images.length)
 
       this.logs.forEach((log, index) => {
         formData.append(`logs_${index}`, log)
       })
 
-      this.images.forEach((image, index) => {
-        formData.append(`images_${index}`, image)
-      })
+      // this.images.forEach((image, index) => {
+      //   formData.append(`images_${index}`, image)
+      // })
 
       let config = {
         headers: {
