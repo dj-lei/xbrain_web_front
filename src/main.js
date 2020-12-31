@@ -15,6 +15,7 @@ import TroubleShootingTemplateEdit from './components/TroubleShootingTemplateEdi
 import TroubleShootingTask from './components/TroubleShootingTask'
 import Pinmux from './components/Pinmux'
 import Feedback from './components/Feedback'
+import BabelSymbols from './components/BabelSymbols'
 
 Vue.config.productionTip = false
 Vue.use(Vuetify)
@@ -35,7 +36,8 @@ const routes = [
   { path: '/pinmux', component: Pinmux },
   { path: '/trouble_shooting_template_edit', component: TroubleShootingTemplateEdit },
   { path: '/trouble_shooting_task', component: TroubleShootingTask },
-  { path: '/feedback', component: Feedback }
+  { path: '/feedback', component: Feedback },
+  { path: '/symbols', component: BabelSymbols }
 ]
 
 const router = new VueRouter({
