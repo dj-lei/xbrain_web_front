@@ -198,14 +198,14 @@ export default {
       // encryptor.setPublicKey(public_key)
       // console.log(encryptor.encrypt('administrator'))
 
-      // let encryptor = new CryptoJS()
-      // // Encrypt
-      // var ciphertext = CryptoJS.AES.encrypt('administrator', 'abcd').toString();
-      // console.log(ciphertext)
-      // // Decrypt
-      // var bytes  = CryptoJS.AES.decrypt(ciphertext, 'abcd');
-      // var originalText = bytes.toString(CryptoJS.enc.Utf8);
-      // console.log(originalText); // 'my message'
+      let encryptor = new CryptoJS()
+      // Encrypt
+      var ciphertext = CryptoJS.AES.encrypt('administrator', 'abcd').toString();
+      console.log(ciphertext)
+      // Decrypt
+      var bytes  = CryptoJS.AES.decrypt(ciphertext, 'abcd');
+      var originalText = bytes.toString(CryptoJS.enc.Utf8);
+      console.log(originalText); // 'my message'
 
       if (this.username !== '' && this.password !== ''){
         this.isLoading = true
