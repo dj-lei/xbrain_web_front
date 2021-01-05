@@ -10,6 +10,8 @@ export const urls = {
     images_get: "images/get",
     feedback_save: "feedback/save",
     feedback_get: "feedback/get",
+    babel_save: "babel/save",
+    babel_get: "babel/get",
   }
 
 export default urls

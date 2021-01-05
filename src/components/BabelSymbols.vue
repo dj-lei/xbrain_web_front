@@ -8,9 +8,15 @@
             v-divider(class="mx-4", inset, vertical)
             v-btn(color="primary", dark, @click="newItem") New Symbol
             v-spacer
-            v-dialog(v-model="dialog", max-width="800px", transition="dialog-bottom-transition")
-              v-card
-                SymbolEditor
+            template(v-if="dialog")
+              v-dialog(v-model="dialog", fullscreen, transition="dialog-bottom-transition")
+                v-card
+                  SymbolEditor(
+                    v-bind:svg_content='svg_content'
+                    v-bind:flagUpdateOrAdd='flagUpdateOrAdd'
+                    v-on:dialogClose="dialogClose"
+                    v-on:saveToServer="save"
+                  )
             v-dialog(v-model="dialogSaveTemplate", max-width="500px")
               v-card
                 v-card-title
@@ -18,7 +24,7 @@
                 v-card-text
                   v-container
                     v-row
-                      v-text-field(v-model='templateName', label="Symbol name")
+                      v-text-field(v-model='symbolName', label="Symbol name")
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1", text, @click="close") Cancel
@@ -60,7 +66,7 @@ export default {
       dialogDelete: false,
       dialogSaveTemplate: false,
       headers: [
-        { text: 'Id', value: 'id' },
+        // { text: 'Id', value: 'id' },
         { text: 'Category', align: 'start', value: 'Category'},
         { text: 'SymbolName', align: 'start', value: 'SymbolName'},
         { text: 'Icon', align: 'start', value: 'Icon'},
@@ -68,22 +74,23 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
-      templateName: 'new name',
+      svg_content: '',
+      svg_temp: {},
+      symbolName: '',
       flagUpdateOrAdd: false,
-      isModifyTemplate: '',
       operateId: '',
     }
   },
 
   created () {
-    // this.initialize()
+    this.initialize()
   },
 
   methods: {
     async initialize () {
-      await this.$http.get(this.$urls.trouble_shooting_get, {
+      await this.$http.get(this.$urls.babel_get, {
         params: {
-            operate: 'get_template_titles',
+            operate: 'get_symbols_titles',
         },
         })
         .then(response => {
@@ -94,30 +101,20 @@ export default {
       this.dialog = false
     },
     newItem () {
-      this.nodeData = {
-        'id': 'root',
-        'topic': 'New Template',
-        'root': true,
-        'children': [],
-      }
-      this.templateName = 'new name'
       this.flagUpdateOrAdd = false
       this.dialog = true
     },
-
     async editItem (item) {
-      await this.$http.get(this.$urls.trouble_shooting_get, {
+      await this.$http.get(this.$urls.babel_get, {
         params: {
-            operate: 'get_template',
-            template_id: item.id,
+            operate: 'get_symbol',
+            symbol_id: item.id,
         },
         })
         .then(response => {
-          this.isModifyTemplate = item.TemplateName
-          this.templateName = item.TemplateName
           this.operateId = response.data.id
-          this.nodeData = response.data.content.nodeData
           this.flagUpdateOrAdd = true
+          this.svg_content = response.data.content.content
           this.dialog = true
         })
     },
@@ -145,46 +142,6 @@ export default {
         })
     },
 
-    releaseTask (item) {
-      this.tempData = item
-      this.dialogReleaseTask = true
-    },
-    uploadDataFunction(val) {
-      this.editorData = val
-    },
-    async releaseTaskConfirm () {
-      this.$store.set('progress', true)
-      let formData = new FormData()
-      formData.append("operate", 'release_task')
-      formData.append("username", this.username)
-      formData.append("template_id", this.tempData.id)
-      formData.append("description", JSON.stringify(this.editorData))
-      formData.append("logs_size", this.logs.length)
-      // formData.append("images_size", this.images.length)
-
-      this.logs.forEach((log, index) => {
-        formData.append(`logs_${index}`, log)
-      })
-
-      // this.images.forEach((image, index) => {
-      //   formData.append(`images_${index}`, image)
-      // })
-
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
-        }
-      }
-      await this.$http.post(this.$urls.trouble_shooting_save, formData, config)
-        .then(response => {
-          this.tempData = ''
-          setTimeout(() =>{
-            this.$store.set('progress', false)
-            this.dialogReleaseTask = false
-          },1000)
-        })
-    },
-
     close () {
       this.flagUpdateOrAdd = false
       this.dialogSaveTemplate = false
@@ -194,48 +151,58 @@ export default {
       this.dialogDelete = false
     },
 
-    closeRelease () {
-      this.desc = null
-      this.images = []
-    },
-
-    showImages () {
-      this.uploadImages = this.$common.readImages(this.images)
-      this.dialogImages = true
-    },
-
-    save () {
-      this.dialogSaveTemplate = true
+    save (svg) {
+      this.svg_temp = svg
+      if (this.flagUpdateOrAdd === false) {
+        this.dialogSaveTemplate = true
+      }else{
+        this.saveToServer()
+      }
     },
 
     async saveToServer () {
+      this.dialog = false
       this.$store.set('progress', true)
+      let serializer = new XMLSerializer()
+      let source = serializer.serializeToString(this.svg_temp.node())
+
+      //add name spaces.
+      if(!source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)){
+          source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+      }
+      if(!source.match(/^<svg[^>]+"http\:\/\/www\.w3\.org\/1999\/xlink"/)){
+          source = source.replace(/^<svg/, '<svg xmlns:xlink="http://www.w3.org/1999/xlink"');
+      }
+      //add xml declaration
+      source = '<?xml version="1.0" standalone="no"?>\r\n' + source
+      //convert svg source to URI data scheme.
+      let url = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(source)
+
       let formData = new FormData()
-      let saveDate = Object.assign({'TemplateName': this.templateName, 'Date': this.$common.getTime()}, this.$refs['mindEdit'].getAllData())
-      formData.append("data", JSON.stringify(saveDate))
+      formData.append("data", url)
+      formData.append("category", 'circuit')
+      formData.append("symbol_name", this.symbolName)
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
         }
       }
 
-      if ((this.flagUpdateOrAdd === false) || (this.isModifyTemplate !== this.templateName)) {
+      if (this.flagUpdateOrAdd === false) {
         formData.append("operate", 'new')
       } else {
         formData.append("operate", 'update')
-        formData.append("template_id", this.operateId)
+        formData.append("symbol_id", this.operateId)
       }
-      await this.$http.post(this.$urls.trouble_shooting_save, formData, config).then(
+
+      await this.$http.post(this.$urls.babel_save, formData, config).then(
         (response)=>{
           console.log(response.data)
       }, (error) => {
         console.log(error)
       })
       setTimeout(() =>{
-        this.operateId = ''
-        this.flagUpdateOrAdd = false
         this.dialogSaveTemplate = false
-        this.dialog = false
         this.initialize()
         this.$store.set('progress', false)
       },1000)

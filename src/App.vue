@@ -1,8 +1,8 @@
 <template>
   <div id="app">
     <v-app id="inspire">
-      <SymbolEditor>
-      </SymbolEditor>
+      <Page>
+      </Page>
     </v-app>
   </div>
 </template>
