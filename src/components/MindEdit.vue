@@ -58,22 +58,23 @@
                   template(v-slot:activator="{ on,attrs }")
                     v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="save(item)") mdi-checkbox-marked-circle
                   span close
-        v-dialog(v-model='dialogCheckTabs', persistent, dark, max-width="1000px")
-          CT(
-            v-on:uploadChecklistImages="uploadChecklistImages"
-            v-on:deleteChecklistImage="deleteChecklistImage"
-            v-on:uploadChecklistLogs="uploadChecklistLogs"
-            v-on:downloadChecklistLog="downloadChecklistLog"
-            v-on:deleteChecklistLog="deleteChecklistLog"
-            v-on:uploadChecklistComments="uploadChecklistComments"
-            v-on:closeDialogCheckTabs="closeDialogCheckTabs"
-            v-bind:role='role'
-            v-bind:desc='desc'
-            v-bind:images='checklistImages'
-            v-bind:logs='checklistLogs'
-            v-bind:comments='checklistComments'
-            v-bind:isRoot='isRoot'
-          )
+        template(v-if='dialogCheckTabs === true')
+          v-dialog(v-model='dialogCheckTabs', dark, max-width="1400px")
+            CT(
+              v-on:uploadChecklistImages="uploadChecklistImages"
+              v-on:deleteChecklistImage="deleteChecklistImage"
+              v-on:uploadChecklistLogs="uploadChecklistLogs"
+              v-on:downloadChecklistLog="downloadChecklistLog"
+              v-on:deleteChecklistLog="deleteChecklistLog"
+              v-on:uploadChecklistComments="uploadChecklistComments"
+              v-on:closeDialogCheckTabs="closeDialogCheckTabs"
+              v-bind:role='role'
+              v-bind:desc='desc'
+              v-bind:images='checklistImages'
+              v-bind:logs='checklistLogs'
+              v-bind:comments='checklistComments'
+              v-bind:isRoot='isRoot'
+            )
         v-dialog(v-model="dialogShareUrl" max-width="600px")
           v-card
             v-card-text {{ addrShareUrl }}
@@ -132,7 +133,7 @@ export default {
       addrShareUrl: '',
       checklistImages: [],
       checklistLogs: [],
-      checklistComments: [],
+      checklistComments: {},
       screeHeight: (document.documentElement.clientHeight-65).toString(),
       tempData: '',
       selected: [],
@@ -189,6 +190,11 @@ export default {
         this.data = []
       }
     },
+    dialogCheckTabs(val) {
+      if (val === false){
+        this.closeDialogCheckTabs()
+      }
+    }
   },
   methods: {
     getAllData () {
@@ -205,7 +211,7 @@ export default {
         }
       }
       this.dialogCheckTabs = false
-      this.checklistComments = []
+      this.checklistComments = {}
       // this.checklistImages = []
       this.checklistLogs = []
     },
@@ -213,21 +219,19 @@ export default {
       this.isRoot = true
       this.nodeId = 'root'
       // this.getChecklistImages()
-      this.getChecklistLogs()
-      this.dialogCheckTabs = true
+      this.getChecklistLogs().then(this.dialogCheckTabs = true)
     },
     shareUrl () {
       this.addrShareUrl = 'http://'+window.location.host+'/?trouble_shooting_task_id='+this.template_id
       this.dialogShareUrl = true
     },
-    getChecklistDetails (val) {
+    async getChecklistDetails (val) {
       this.isRoot = false
       this.nodeId = val.id
       this.nodeTopic = val.topic
-      this.getChecklistComments()
+      await this.getChecklistLogs()
+      await this.getChecklistComments().then(this.dialogCheckTabs = true)
       // this.getChecklistImages()
-      this.getChecklistLogs()
-      this.dialogCheckTabs = true
     },
     async updateChecklistAsterisk () {
       await this.$http.get(this.$urls.trouble_shooting_get, {
@@ -243,6 +247,7 @@ export default {
         })
     },
     async getChecklistComments () {
+      let comments = {}
       await this.$http.get(this.$urls.trouble_shooting_get, {
         params: {
             operate: 'get_checklist_comments',
@@ -251,8 +256,26 @@ export default {
         },
         })
         .then(response => {
-          this.checklistComments = response.data.content
+          let comment = []
+          let res = response.data.content
+          res.forEach((item, index) => {
+            comment = comment.concat(
+              [{
+                "type" : "delimiter",
+                "data" : {}
+              },
+              {
+                "data": {"text": item.username + " | " + item.created_time},
+                "type": "paragraph"
+              }]
+            )
+            comment = comment.concat(item.comment.blocks)
+            comments['time'] = item.comment.time
+            comments['version'] = item.comment.version
+          })
+          comments['blocks'] = comment
         })
+      this.checklistComments = comments
     },
     async uploadChecklistComments (newcomment) {
       this.$store.set('progress', true)

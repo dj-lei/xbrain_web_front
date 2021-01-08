@@ -1,10 +1,10 @@
 <template lang="pug">
   v-card
-    v-toolbar(flat dark)
-      v-btn(icon, dark, @click="close")
-        v-icon mdi-close
-      v-toolbar-title Checkpoint Details
-    v-dialog(v-model="dialogRichTextEdit", transition="dialog-bottom-transition", max-width="800px")
+    //- v-toolbar(flat dark)
+    //-   v-btn(icon, dark, @click="close")
+    //-     v-icon mdi-close
+    //-   v-toolbar-title Checkpoint Details
+    //- v-dialog(v-model="dialogRichTextEdit", transition="dialog-bottom-transition", max-width="800px")
       v-card
         v-toolbar(dark)
           v-btn(icon, dark, @click="dialogRichTextEdit = false")
@@ -16,9 +16,7 @@
         v-card(color='grey lighten-3')
           v-container
             v-card
-              RichText(
-                v-on:uploadDataFunction="uploadDataFunction"
-                )
+              div(id="commentEditor")
     v-tabs(vertical, centered)
       template(v-if='isRoot === true')
         v-tab(class="me-10")
@@ -35,34 +33,33 @@
         v-icon(left) mdi-download
         span Logs
       v-tab-item
-        v-card(color='grey lighten-3')
-          template(v-if='isRoot === true')
-            //- v-card-text(class="body-2 pl-2")
-            //-   div(v-for="(text, index) in desc.split('\\n')", :key="index") {{ text }}
-            v-container
-              v-card
-                RichText(
-                  v-bind:data='desc'
-                  v-bind:readOnly='true'
-                  )
-          template(v-else)
-            Comment(
-              v-bind:comments='comments'
-              v-bind:role='role'
-            )
-            v-btn(color="blue darken-1" dark absolute right fab @click="newPost")
-              v-icon mdi-plus
-      //- v-tab-item
-        v-card(class="mx-auto")
-          Images(
-            v-bind:role='role'
-            v-bind:images='images'
-            v-on:deleteChecklistImage="deleteChecklistImage"
-          )
-          template(v-if='role !== "visitor"')
-            v-bottom-navigation(color="primary")
-              v-file-input(v-model="addImages", prepend-icon="mdi-upload", solo, accept="image/*", hide-details, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Add images", outlined)
-              v-btn(:disabled='addImages.length === 0', color="blue darken-1" text @click="uploadChecklistImages") Upload
+        //- v-card(color='grey lighten-3')
+          v-container
+            v-layout(row)
+              v-flex.page-col-sd(xl2, lg12)
+                v-card
+                  template(v-if='isRoot === true')
+                    div(id="descEditor")
+                  template(v-else)
+        v-container
+          v-layout(row)
+            v-row(class="d-flex justify-center")
+              v-col(class="pa-2")
+                v-flex.page-col-sd(xl2, lg12)
+                  v-card
+                    div(id="commentsEditor")
+                v-flex.page-col-content(xs12,  xl10)
+                  v-btn(color="blue darken-1" dark top fab @click="newPost")
+                    v-icon mdi-plus
+              template(v-if='dialogRichTextEdit === true')
+                v-divider(vertical)
+                v-col(class="pa-2")
+                  v-flex.page-col-sd(xl2, lg12)
+                    v-card
+                      div(id="commentEditor")
+                //- v-flex.page-col-content(xs12,  xl10)
+                  //- template(v-if='isRoot === false')
+
       v-tab-item
         v-card
           v-data-table(:headers="headers", :items="logs", sort-by="created_time", class="elevation-1")
@@ -80,6 +77,7 @@
 // import Images from './common/images.vue'
 import RichText from './common/rich-text.vue'
 import Comment from './common/comments.vue'
+import EditorJS from '@editorjs/editorjs'
 
 export default {
   components: {
@@ -115,8 +113,8 @@ export default {
       default: () => ([])
     },
     comments: {
-      type: Array,
-      default: () => ([])
+      type: Object,
+      default: () => ({})
     }
   },
   data () {
@@ -131,11 +129,30 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       editData: {},
+      commentEditor: {},
     }
+  },
+  mounted(){
+    this.$nextTick(function(){
+      if (this.isRoot === true){
+        var editor1 = new EditorJS(this.$common.getEditorJSConfig('descEditor',this.desc))
+      }
+    })
+  },
+  watch: {
+    comments(val) {
+      if (val !== {}){
+        var editor = new EditorJS(this.$common.getEditorJSConfig('commentsEditor',val))
+      }
+    },
   },
   methods: {
     newPost() {
+      // var editor = new EditorJS(this.$common.getEditorJSConfig('commentEditor',{}))
       this.dialogRichTextEdit = true
+      this.$nextTick(function(){
+        this.commentEditor = new EditorJS(this.$common.getEditorJSConfig('commentEditor',{}))
+      })
     },
     uploadDataFunction(val) {
       this.editData = val
@@ -149,7 +166,11 @@ export default {
       this.addLogs = []
     },
     uploadChecklistComments () {
-      this.$emit('uploadChecklistComments', this.editData)
+      this.commentEditor.save()
+      .then((savedData) => {
+        this.$emit('uploadChecklistComments', savedData)
+        this.dialogRichTextEdit = false
+      })
     },
     downloadItem (item) {
       this.$emit('downloadChecklistLog', item)

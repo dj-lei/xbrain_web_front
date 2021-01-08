@@ -108,7 +108,7 @@ export default {
         onChange: (args) => {
           this.returnData = args
           this.returnData.saver.save().then((outputData) => {
-            this.$emit('uploadDataFunction', outputData)
+          this.$emit('uploadDataFunction', outputData)
           }).catch((error) => {
             console.log('Saving failed: ', error)
           });
