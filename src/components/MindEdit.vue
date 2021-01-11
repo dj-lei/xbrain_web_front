@@ -192,7 +192,6 @@ export default {
     },
     dialogCheckTabs(val) {
       if (val === false){
-        console.log('--------')
         this.closeDialogCheckTabs()
       }
     }

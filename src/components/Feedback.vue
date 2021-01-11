@@ -113,7 +113,7 @@ export default {
       path: [],
       type: ['BUG', 'SUGGEST'],
       data: [],
-      editorData: {},
+      editorData: '',
     }
   },
   computed: {
@@ -157,10 +157,14 @@ export default {
     },
     newItem () {
       this.feedback_id = ''
-      this.editorData = {}
+      // this.editorData = {}
       this.dialogRichTextEdit = true
       this.$nextTick(function(){
-        this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor',{}))
+        if (this.editorData === ''){
+          this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor',{}, false))
+        }else{
+          this.editorData.blocks.clear()
+        }
       })
     },
     save () {
@@ -226,7 +230,11 @@ export default {
           this.feedback_id = response.data.id
           this.dialogRichTextEdit = true
           this.$nextTick(function(){
-            this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor', response.data.content, true))
+            if (this.editorData === ''){
+              this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor', response.data.content, false))
+            }else{
+              this.editorData.blocks.render(response.data.content)
+            }
           })
         })
     },

@@ -44,6 +44,11 @@ const router = new VueRouter({
   routes
 })
 
+if (process.env.NODE_ENV === "production"){
+  console.log = function () {}
+  console.error = function () {}
+}
+
 new Vue({
   vuetify: new Vuetify(),
   store,
