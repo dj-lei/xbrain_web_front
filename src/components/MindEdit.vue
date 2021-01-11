@@ -192,6 +192,7 @@ export default {
     },
     dialogCheckTabs(val) {
       if (val === false){
+        console.log('--------')
         this.closeDialogCheckTabs()
       }
     }
@@ -201,11 +202,11 @@ export default {
       return this.mind.getAllData()
     },
     closeDialogCheckTabs () {
-      if (this.checklistLogs.length > 0 || this.checklistComments.length > 0) {
+      if (this.checklistLogs.length > 0 || this.checklistComments.blocks.length > 0) {
         if (this.nodeTopic.indexOf("(*)") === -1){
           this.updateChecklistAsterisk()
         }
-      }else if (this.checklistLogs.length === 0 && this.checklistComments.length === 0) {
+      }else if (this.checklistLogs.length === 0 && this.checklistComments.blocks.length === 0) {
         if (this.nodeTopic.indexOf("(*)") >= 0 ){
           this.updateChecklistAsterisk()
         }

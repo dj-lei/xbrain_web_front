@@ -26,40 +26,51 @@
         v-tab
           v-icon(left) mdi-message-text
           span Comment
-      //- v-tab(class="me-5")
-        v-icon(left) mdi-image
-        span Images
       v-tab(class="me-10")
         v-icon(left) mdi-download
         span Logs
       v-tab-item
-        //- v-card(color='grey lighten-3')
+        v-card(color='grey lighten-3')
           v-container
             v-layout(row)
-              v-flex.page-col-sd(xl2, lg12)
-                v-card
-                  template(v-if='isRoot === true')
-                    div(id="descEditor")
-                  template(v-else)
-        v-container
-          v-layout(row)
-            v-row(class="d-flex justify-center")
-              v-col(class="pa-2")
-                v-flex.page-col-sd(xl2, lg12)
-                  v-card
-                    div(id="commentsEditor")
-                v-flex.page-col-content(xs12,  xl10)
-                  v-btn(color="blue darken-1" dark top fab @click="newPost")
-                    v-icon mdi-plus
-              template(v-if='dialogRichTextEdit === true')
-                v-divider(vertical)
-                v-col(class="pa-2")
-                  v-flex.page-col-sd(xl2, lg12)
+              template(v-if='isRoot === true')
+                v-row(class="d-flex justify-center")
+                  v-col(class="pa-2")
                     v-card
-                      div(id="commentEditor")
-                //- v-flex.page-col-content(xs12,  xl10)
-                  //- template(v-if='isRoot === false')
-
+                      div(id="descEditor")
+              template(v-else)
+                v-row(class="d-flex justify-center")
+                  v-col(class="pa-2")
+                    v-flex.page-col-sd(xl2, lg12)
+                      v-card
+                        div(id="commentsEditor")
+                    v-flex.page-col-content(xs12,  xl10)
+                      template(v-if='dialogRichTextEdit === false')
+                        v-btn(color="blue darken-1" dark fab @click="newPost")
+                          v-icon mdi-plus
+                      template(v-else)
+                        v-btn(color="blue darken-1" dark fab @click="dialogRichTextEdit = false")
+                          v-icon mdi-minus
+                  template(v-if='dialogRichTextEdit === true')
+                    v-divider(vertical)
+                    v-col(class="pa-2")
+                      v-flex.page-col-sd(xl2, lg12)
+                        v-card
+                          div(id="commentEditor")
+                      v-flex.page-col-content(xs12,  xl10)
+                        v-icon.mr-1(color='blue-grey') mdi-language-markdown-outline
+                        v-spacer(class="mt-3")
+                          span postingAs|
+                            strong(place='name') {{username}}
+                        v-btn(
+                          dark
+                          color='blue-grey darken-2'
+                          @click='uploadChecklistComments'
+                          depressed
+                          aria-label="postComment"
+                          )
+                          v-icon(left) mdi-comment
+                          span.text-none postComment
       v-tab-item
         v-card
           v-data-table(:headers="headers", :items="logs", sort-by="created_time", class="elevation-1")
@@ -74,15 +85,11 @@
 </template>
 
 <script>
-// import Images from './common/images.vue'
-import RichText from './common/rich-text.vue'
-import Comment from './common/comments.vue'
 import EditorJS from '@editorjs/editorjs'
+import { get, sync } from 'vuex-pathify'
 
 export default {
   components: {
-    // Images,
-    RichText,
     Comment
   },
   props: {
@@ -117,6 +124,9 @@ export default {
       default: () => ({})
     }
   },
+  computed: {
+    username: sync('username')
+  },
   data () {
     return {
       dialogRichTextEdit: false,
@@ -130,28 +140,32 @@ export default {
       ],
       editData: {},
       commentEditor: {},
+      commentsEditor: '',
     }
   },
   mounted(){
     this.$nextTick(function(){
       if (this.isRoot === true){
-        var editor1 = new EditorJS(this.$common.getEditorJSConfig('descEditor',this.desc))
+        var editor1 = new EditorJS(this.$common.getEditorJSConfig('descEditor',this.desc,true))
       }
     })
   },
   watch: {
     comments(val) {
       if (val !== {}){
-        var editor = new EditorJS(this.$common.getEditorJSConfig('commentsEditor',val))
+        if (this.commentsEditor === ''){
+          this.commentsEditor = new EditorJS(this.$common.getEditorJSConfig('commentsEditor',val,true))
+        }else{
+          this.commentsEditor.blocks.render(val)
+        }
       }
     },
   },
   methods: {
     newPost() {
-      // var editor = new EditorJS(this.$common.getEditorJSConfig('commentEditor',{}))
       this.dialogRichTextEdit = true
       this.$nextTick(function(){
-        this.commentEditor = new EditorJS(this.$common.getEditorJSConfig('commentEditor',{}))
+        this.commentEditor = new EditorJS(this.$common.getEditorJSConfig('commentEditor',{},false))
       })
     },
     uploadDataFunction(val) {

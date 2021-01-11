@@ -34,10 +34,10 @@ export default {
       return temp
     },
 
-    getEditorJSConfig(holder, data) {
+    getEditorJSConfig(holder, data, readOnly=false) {
       return {
         holder: holder,
-        readOnly: false,
+        readOnly: readOnly,
         logLevel: 'ERROR',
         tools:{
           header: {

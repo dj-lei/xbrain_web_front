@@ -37,17 +37,10 @@
                   v-spacer
             v-dialog(v-model="dialogReleaseTask" max-width="800px")
               v-card(color='grey lighten-3')
-                v-card-title(class="headline") Damage Detail
+                v-card-title(class="headline") Detail
                 v-container
                   v-card
-                    RichText(
-                      ref="richText"
-                      v-on:uploadDataFunction="uploadDataFunction"
-                      )
-                    //- v-textarea(v-model="desc", auto-grow, filled, color="deep-purple", label="Detailed damage text description", placeholder="description",rows="5")
-                    //- v-row
-                      v-file-input(v-model="images",  solo,  accept="image/*",  prepend-icon="mdi-camera", counter, color="deep-purple accent-4",  label="Upload images", multiple, placeholder="Upload damage images", outlined, :show-size="1000")
-                      v-btn(class="mt-2", :disabled='images.length === 0', color="blue darken-1" text @click="showImages") Show
+                    div(id='editor')
                   v-spacer(class="mt-8")
                   v-row
                     v-file-input(v-model="logs", solo, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Upload damage logs", prepend-icon="mdi-paperclip", outlined, :show-size="1000")
@@ -76,14 +69,12 @@
 
 <script>
 import MindEdit from './MindEdit.vue'
-// import Images from './common/images'
-import RichText from './common/rich-text'
+import EditorJS from '@editorjs/editorjs'
 import { get, sync } from 'vuex-pathify'
 
 export default {
   components: {
-    MindEdit,
-    RichText
+    MindEdit
   },
   computed: {
     username: sync('username')
@@ -202,41 +193,43 @@ export default {
     releaseTask (item) {
       this.tempData = item
       this.dialogReleaseTask = true
+      this.$nextTick(function(){
+        this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor',{}))
+      })
     },
     uploadDataFunction(val) {
       this.editorData = val
     },
     async releaseTaskConfirm () {
       this.$store.set('progress', true)
-      let formData = new FormData()
-      formData.append("operate", 'release_task')
-      formData.append("username", this.username)
-      formData.append("template_id", this.tempData.id)
-      formData.append("description", JSON.stringify(this.editorData))
-      formData.append("logs_size", this.logs.length)
-      // formData.append("images_size", this.images.length)
+      this.editorData.save()
+      .then((savedData) => {
+        let formData = new FormData()
+        formData.append("operate", 'release_task')
+        formData.append("username", this.username)
+        formData.append("template_id", this.tempData.id)
+        formData.append("description", JSON.stringify(savedData))
+        formData.append("logs_size", this.logs.length)
+        // formData.append("images_size", this.images.length)
 
-      this.logs.forEach((log, index) => {
-        formData.append(`logs_${index}`, log)
-      })
-
-      // this.images.forEach((image, index) => {
-      //   formData.append(`images_${index}`, image)
-      // })
-
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
-        }
-      }
-      await this.$http.post(this.$urls.trouble_shooting_save, formData, config)
-        .then(response => {
-          this.tempData = ''
-          setTimeout(() =>{
-            this.$store.set('progress', false)
-            this.dialogReleaseTask = false
-          },1000)
+        this.logs.forEach((log, index) => {
+          formData.append(`logs_${index}`, log)
         })
+
+        let config = {
+          headers: {
+          'Content-Type': 'multipart/form-data'
+          }
+        }
+        this.$http.post(this.$urls.trouble_shooting_save, formData, config)
+          .then(response => {
+            this.tempData = ''
+            setTimeout(() =>{
+              this.$store.set('progress', false)
+              this.dialogReleaseTask = false
+            },1000)
+          })
+      })
     },
 
     close () {

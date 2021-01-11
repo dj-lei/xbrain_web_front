@@ -72,11 +72,7 @@
                 v-card(color='grey lighten-3')
                   v-container
                     v-card
-                      RichText(
-                        ref="richText"
-                        v-bind:data='editorData'
-                        v-on:uploadDataFunction="uploadDataFunction"
-                        )
+                      div(id='editor')
       v-data-table(:headers="headers", :items="data", sort-by="Date", class="elevation-1")
         template(v-slot:item.Status="{ item }")
           v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
@@ -92,13 +88,10 @@
 </template>
 
 <script>
-import RichText from './common/rich-text.vue'
 import { get, sync } from 'vuex-pathify'
+import EditorJS from '@editorjs/editorjs'
 
 export default {
-  components: {
-    RichText
-  },
   data () {
     return {
       dialogRichTextEdit: false,
@@ -121,7 +114,6 @@ export default {
       type: ['BUG', 'SUGGEST'],
       data: [],
       editorData: {},
-      uploadData: {},
     }
   },
   computed: {
@@ -167,40 +159,41 @@ export default {
       this.feedback_id = ''
       this.editorData = {}
       this.dialogRichTextEdit = true
+      this.$nextTick(function(){
+        this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor',{}))
+      })
     },
     save () {
       this.dialogSaving = true
-      this.$refs.richText.getData()
-    },
-    uploadDataFunction(val) {
-      this.uploadData = val
     },
     async savingConfirm () {
       this.$store.set('progress', true)
+      this.editorData.save()
+        .then((savedData) => {
+          let formData = new FormData()
+          formData.append("feedback_id", this.feedback_id)
+          formData.append("username", this.username)
+          formData.append("theme", this.theme)
+          formData.append("path", this.pathSelect)
+          formData.append("type", this.typeSelect)
+          formData.append("content", JSON.stringify(savedData))
 
-      let formData = new FormData()
-      formData.append("feedback_id", this.feedback_id)
-      formData.append("username", this.username)
-      formData.append("theme", this.theme)
-      formData.append("path", this.pathSelect)
-      formData.append("type", this.typeSelect)
-      formData.append("content", JSON.stringify(this.uploadData))
+          let config = {
+            headers: {
+            'Content-Type': 'multipart/form-data'
+            }
+          }
+          this.$http.post(this.$urls.feedback_save, formData, config)
+          .then(response => {
+            setTimeout(() =>{
+              this.dialogSaving = false
+              this.dialogRichTextEdit = false
 
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
-        }
-      }
-      await this.$http.post(this.$urls.feedback_save, formData, config)
-      .then(response => {
-        setTimeout(() =>{
-          this.dialogSaving = false
-          this.dialogRichTextEdit = false
-
-          this.initialize()
-          this.$store.set('progress', false)
-        },1000)
-      })
+              this.initialize()
+              this.$store.set('progress', false)
+            },1000)
+          })
+        })
     },
     closeItem (item) {
       this.feedback_id = item.id
@@ -230,9 +223,11 @@ export default {
         },
         })
         .then(response => {
-          this.editorData = response.data.content
           this.feedback_id = response.data.id
           this.dialogRichTextEdit = true
+          this.$nextTick(function(){
+            this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor', response.data.content, true))
+          })
         })
     },
     getColor (status) {
