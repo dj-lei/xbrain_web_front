@@ -49,56 +49,6 @@
                       v-spacer
                         v-row(type="flex" justify="end")
                           v-btn(color="blue darken-1", text, @click="dialogEdit = false") Cancel
-            //- v-dialog(v-model="dialogEdit", transition="dialog-bottom-transition", max-width="400px")
-            //-   v-card
-            //-     v-col
-            //-       v-card-text
-            //-         v-alert(v-model='errorShown', transition='slide-y-reverse-transition', color='red darken-2', tile, dark, dense, icon='mdi-alert') {{ errorInfo }}
-            //-         v-text-field(
-            //-           ref="userName"
-            //-           v-model="userName"
-            //-           label="User Name"
-            //-           disabled=true
-            //-         )
-            //-         v-text-field(
-            //-           ref="hasRoles"
-            //-           v-model="hasRoles"
-            //-           label="Has Roles"
-            //-           disabled=true
-            //-         )
-            //-         v-autocomplete(
-            //-           ref="projectName"
-            //-           v-model="projectName"
-            //-           :rules="[() => !!projectName || 'This field is required']"
-            //-           :items="projects"
-            //-           label="Project Name"
-            //-           placeholder="Select... name"
-            //-           @change='change'
-            //-           required
-            //-         )
-            //-         v-autocomplete(
-            //-           ref="roleName"
-            //-           v-model="roleName"
-            //-           :rules="[() => !!roleName || 'This field is required']"
-            //-           :items="roles"
-            //-           label="Role Name"
-            //-           placeholder="Select... role"
-            //-           required
-            //-         )
-            //-         v-autocomplete(
-            //-           ref="action"
-            //-           v-model="action"
-            //-           :rules="[() => !!action || 'This field is required']"
-            //-           :items="actions"
-            //-           label="Action"
-            //-           placeholder="Select... action"
-            //-           required
-            //-         )
-            //-         v-divider(class="mt-12")
-            //-       v-card-actions
-            //-         v-btn(color="blue darken-1", text, @click="dialogEdit = false") Cancel
-            //-         v-spacer
-            //-         v-btn(color="blue darken-1", text, @click="upload") Submit
             v-spacer
             v-dialog(v-model="dialogDelete" max-width="500px")
               v-card
@@ -109,7 +59,6 @@
                   v-btn(color="blue darken-1" text @click="deleteItemConfirm") OK
                   v-spacer
       v-data-table(:headers="headers", :items="userData", :search="keywords", class="elevation-1", :expanded.sync="expanded", show-expand) 
-        //- 还没想好怎么样好看的显示description
         template(v-slot:expanded-item="{ headers, item }")
           td(:colspan="headers.length") {{ item.roles }}
         template(v-slot:item.actions="{ item }")
@@ -132,7 +81,6 @@ export default {
       dialogDelete: false,
       dialogEdit: false,
       headers: [
-        // { text: 'Id', value: 'id' },
         { text: 'UserName', value: 'username' },
         { text: 'Authority', value: 'authority', sortable: false },
         { text: 'HasRole', value: 'roles', sortable: false },
@@ -144,15 +92,10 @@ export default {
         { text: 'Role', value: 'role', sortable: false },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
-      // projectName: null,
       roleName: null,
-      // action: null,
       userName: '',
       hasRoles: '',
       userId: '',
-      // projects:[],
-      // roles: [],
-      // actions: ['Delete', 'Add'],
       userData: [],
       editData: [],
       tempData: '',
@@ -172,24 +115,11 @@ export default {
     groups: sync('groups'),
     form () {
       return {
-        // projectName: this.projectName,
         roleName: this.roleName,
-        // action: this.action,
       }
     },
   },
   methods: {
-    // search () {
-    //   this.$http.get(this.$urls.user_management_search, {
-    //     params: {
-    //       keywords: this.keywords,
-    //       operate: 'get_specify_user'
-    //     }
-    //   })
-    //   .then(response => {
-    //     this.userData = response.data.content
-    //   })
-    // },
     async initialize () {
       await this.$http.get(this.$urls.user_management_get, {
         params: {
@@ -207,26 +137,13 @@ export default {
       this.userId = item.id
       this.$http.get(this.$urls.user_management_get, {
         params: {
-          // operate: 'get_all_projects'
           operate: 'get_projects_roles'
         }
       })
       .then(response => {
-        // this.projects = response.data.content
         this.editData = response.data.content
       })
     },
-    // async change () {
-    //   await this.$http.get(this.$urls.user_management_get, {
-    //     params: {
-    //       operate: 'get_the_roles',
-    //       project: this.projectName
-    //     }
-    //   })
-    //   .then(response => {
-    //     this.roles = response.data.content
-    //   })
-    // },
     deleteItem (item) {
       this.dialogDelete = true,
       this.tempData = item
@@ -259,50 +176,6 @@ export default {
       })
       return this.formHasErrors
     },
-    // upload (){ //改变
-    //   if (!this.validate()) {
-    //     this.$store.set('progress', true)
-    //     let formData = new FormData()
-    //     formData.append("user_id", this.userId)
-    //     formData.append("has_role", this.hasRoles)
-    //     formData.append("project", this.projectName)
-    //     formData.append("role", this.roleName)
-    //     formData.append("action", this.action)
-    //     formData.append("groups", this.groups)
-    //     let config = {
-    //       headers: {
-    //       'Content-Type': 'multipart/form-data'
-    //       }
-    //     }
-      
-    //     this.$http.post(this.$urls.user_management_save, formData, config).then(
-    //       (response => {
-    //         if (response.data.content === 'Success'){
-    //           setTimeout(() =>{
-    //             this.initialize()
-    //             // this.dialogEdit = false
-    //             this.$store.set('progress', false)
-    //           },1000)
-    //         } else{
-    //           this.errorInfo = response.data.content
-    //           this.errorShown = true
-    //           setTimeout(() =>{
-    //             this.errorShown = false
-    //             this.initialize()
-    //             // this.dialogEdit = false
-    //             this.$store.set('progress', false)
-    //           },1000)
-    //         }
-    //       }), (error) => {
-    //           this.errorInfo = 'There are something wrong!'
-    //           this.errorShown = true
-    //           setTimeout(() =>{
-    //             this.errorShown = false
-    //           },4000)
-    //       }
-    //     )
-    //   }
-    // },
     upload(operate){
       this.$store.set('progress', true)
       let formData = new FormData()

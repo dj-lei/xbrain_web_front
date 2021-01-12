@@ -124,18 +124,6 @@ export default {
           this.pageData = response.data.content
         })
     },
-    // update (page, project) {
-    //   this.$http.get(this.$urls.page_management_get, {
-    //     params: {
-    //       operate: 'get_page_roles',
-    //       page_name: page,
-    //       project_name: project
-    //     }
-    //   })
-    //   .then(response => {
-    //     this.editData = response.data.content
-    //   })
-    // },
     editItem (item) {
       this.dialogEdit = true
       this.tempData = item
