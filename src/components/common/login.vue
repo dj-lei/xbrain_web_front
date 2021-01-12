@@ -43,6 +43,7 @@
               placeholder='password'
               required
               light
+              @keyup.enter='login'
               )
             v-spacer(class="mt-8")
             v-btn(
@@ -197,7 +198,7 @@ export default {
       // let encryptor = new JSEncrypt()
       // encryptor.setPublicKey(public_key)
       // console.log(encryptor.encrypt('administrator'))
-
+	  
       let encryptor = new CryptoJS()
       // Encrypt
       var ciphertext = CryptoJS.AES.encrypt('administrator', 'abcd').toString();
