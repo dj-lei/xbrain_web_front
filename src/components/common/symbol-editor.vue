@@ -1,37 +1,32 @@
 <template lang="pug">
   v-container
-    v-toolbar(dark)
-      v-btn(icon, dark, @click="$emit('dialogClose')")
-        v-icon mdi-close
-      v-toolbar-title Symbol Edit
-      v-spacer
-      v-btn(dark, text, @click="save") SAVE
+    //- v-card(class="d-flex justify-start mb-6")
+    //-   v-toolbar(dark)
+    //-     v-btn(icon, dark, @click="$emit('dialogClose')")
+    //-       v-icon mdi-close
+    //-     v-toolbar-title Symbol Edit
+    //-     v-spacer
+    //-     v-btn(dark, text, @click="log") LOG
+    //-     v-btn(dark, text, @click="save") SAVE
     v-card(class="d-flex justify-center mb-6")
-      v-card(class="pa-2")
+      v-card(class="pa-2" dark)
         v-sheet(width="200")
-          v-row
-            v-btn(width='100%' @click="pathMenu") PATH
-          v-row
-            v-btn(width='100%' @click="polygonMenu") POLYGON
-          v-row
-            v-btn(width='100%' @click="textMenu") TEXT
-          v-row
-            v-btn(width='100%' @click="dataMenu") DATA
-          v-row
-            v-btn(width='100%' @click="log") LOG
+          v-list(dense class="grow")
+            v-list-item(v-for="(tool, j) in tools_category" :key="j")
+              v-list-group
+                template(v-slot:activator="")
+                  v-list-item-title {{ tool.title }}
+                v-list-item-group(color="success")
+                  v-list-item(v-for="(item, i) in tool.symbols" :key="item.id" @click="selected_item(item)")
+                    v-list-item-title(v-text="item.symbol")
       v-card(class="pa-2")
-        v-sheet(color="grey lighten-4" :height="canvas_height" :width="canvas_width" @click="done")
+        v-sheet(color="grey lighten-4" :height="canvas_height" :width="canvas_width"  @dblclick="done")
           div(id="painting")
-            template(v-if="flagUpdateOrAdd === false")
-              svg(id="viz" :height="canvas_height" :width="canvas_width" class="container-border")
-                //- foreignObject(width="100" height="50")
-                  v-combobox(dense outlined)
-                //-   v-text-field(dense outlined)
-                  //- v-btn log
-      v-card(class="pa-2")
+            svg(id="viz" :height="canvas_height" :width="canvas_width" class="container-border")
+      v-card(class="pa-2" dark)
         v-sheet(width="300")
           template(v-if="select_mode !== ''")
-            v-toolbar(color="grey lighten-4")
+            v-toolbar(dark)
               v-toolbar-title {{ select_mode }}
             v-spacer(class="mt-3")
             template(v-if="select_mode === 'path'")
@@ -49,17 +44,20 @@
             template(v-if="select_mode !== 'data'")
               v-row
                 v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
-                  //- v-sheet(dark class="pa-4")
-                  //-   pre {{ showColor }}
             template(v-else-if="select_mode === 'data'")
               v-row(class="d-flex justify-center")
                 v-col(class="pa-2")
-                  v-radio-group(v-model="data_type")
-                    v-radio(label="String" value="String")
-                    v-radio(label="Int" value="Int")
-                    v-radio(label="List" value="List")
-                  v-btn(width='100%' @click="createData") CREATE
-
+                  v-text-field(v-model="data_type" label="Type" disabled dense)
+                  v-text-field(v-model="data_id" label="Id" disabled dense)
+                  v-text-field(v-model="data_name" label="Name" disabled dense)
+                  v-text-field(v-model="data_range" label="Range" disabled dense)
+                  template(v-if="data_type === 'list'")
+                    v-combobox(v-model="data_value" :items='data_range.split(",")' dense outlined @change="updateData")
+                  template(v-else)
+                    v-text-field(v-model="data_value" label="Value" dense @keyup.enter="updateData")
+            v-dialog(v-model='dialogBind', dark, max-width="800px")
+              v-card
+                v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
 </template>
 
 <script>
@@ -78,12 +76,48 @@ export default {
       type: Boolean,
       default: false
     },
+    tools_category: {
+      type: Array,
+      default: []
+    },
   },
   data () {
     return {
+      items: [
+        {
+          id: 1,
+          name: 'Applications :',
+          children: [
+            { id: 2, name: 'Calendar', value:'kk1', type:'string', range:'""'},
+            { id: 3, name: 'Chrome', value:15, type:'int', range:[1,20] },
+            { id: 4, name: 'Webstorm', value:'a', type:'list', range:['a','b','c'] },
+          ],
+        },
+        {
+          id: 5,
+          name: 'Documents :',
+          children: [
+            {
+              id: 6,
+              name: 'vuetify :',
+              children: [
+                {
+                  id: 7,
+                  name: 'src :',
+                  children: [
+                    { id: 8, name: 'index' , value:'kk1', type:'string', range:''},
+                    { id: 9, name: 'bootstrap' , value:'kk1', type:'string', range:''},
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      dialogBind: false,
       hexa: '#FF00FF',
-      canvas_width: 600,
-      canvas_height: 600,
+      canvas_width: 950,
+      canvas_height: 690,
       margin: {
         top: 20,
         right: 40,
@@ -92,22 +126,47 @@ export default {
       },
       that: '',
       svg: '',
+      zoom: '',
+      gx:[],
+      gy:[],
+      x:[],
+      y:[],
       elm: '',
-      elms: [],
+      label: '',
+      bind_data: [],
+      data_type: '',
+      data_id: '',
+      data_name: '',
+      data_range: '',
+      data_value: '',
       selected : false,
       select_mode: '',
       unique_name: '',
-      x_axis: 0,
-      y_axis: 0,
       path_points: '',
       polygon_points: '',
       text: '',
-      data_type: '',
+      opacity: '30',
+      instance_num: 0,
+      instances: [],
     }
   },
-
+  watch:{
+    dialogBind(val) {
+      if(val === false && this.bind_data !== []){
+        this.data_type = "List"
+        this.createData()
+      }
+    },
+  },
   mounted () {
     var _this = this
+    this.x = d3.scaleLinear()
+      .domain([0, this.canvas_width])
+      .range([0, this.canvas_width])
+
+    this.y = d3.scaleLinear()
+      .domain([0, this.canvas_height])
+      .range([0, this.canvas_height])
 
     document.onkeydown = function(e) {
       let key = e.keyCode
@@ -123,101 +182,132 @@ export default {
       d3.xml(this.svg_content)
       .then(data => {
         // console.log(data.documentElement)
-        d3.select('#painting').node().append(data.documentElement)
+        let tmp = data.getElementsByTagName('g')[0]
+        d3.select('#viz').node().append(tmp)
+        this.svg = d3.select("#new")
+
         d3.selectAll('path').call(g => g.call(this.drag(g)))
         d3.selectAll('polygon').call(g => g.call(this.drag(g)))
         d3.selectAll('text').call(g => g.call(this.drag(g)))
         d3.selectAll('foreignObject').call(g => g.call(this.drag(g)))
-        this.svg = d3.select("#viz")
-        this.svg.append("g").call(this.xAxis)
-        this.svg.append("g").call(this.yAxis)
+        d3.select("#viz").append("g").call(this.xAxis)
+        d3.select("#viz").append("g").call(this.yAxis)
       })
     }else{
-      this.svg = d3.select("#viz")
-      this.svg.append("g").call(this.xAxis)
-      this.svg.append("g").call(this.yAxis)
+      this.gx = d3.select("#viz").append("g")
+      this.gy = d3.select("#viz").append("g")
+
+      this.svg = d3.select("#viz").append("g").attr("id", "new")
+      this.zoom = d3.zoom().scaleExtent([1, 8]).on("zoom", this.zoomed)
+      d3.select("#viz").call(this.zoom)
     }
-
-    // let n = "carNo=甘-J2L199&distance=3000&isNewReport=1&latitude=0&longitude=0&nonce=75341421609739888281&openId=&privacyOption=1&signType=MD5&timestamp=1609739888281&userId=c36b86825b004d648bfbbbc1b58a675e&W9cE5d4q0df9GjeBaR16a5B56Z1V51i7"
-    // let sign = CryptoJS.MD5(n).toString().toUpperCase()
-
-    // let e = JSON.parse("{\"isNewReport\":1,\"userId\":\"c36b86825b004d648bfbbbc1b58a675e\",\"carNo\":\"甘-J2L199\",\"privacyOption\":1,\"longitude\":0,\"latitude\":0,\"distance\":3000,\"openId\":\"\",\"signType\":\"MD5\",\"timestamp\":1609739888281,\"nonce\":\"75341421609739888281\",\"sign\":\"48DF5B8598ADEC7BE0D1B90D268C227E\"}")
-    // e.sign = sign
-    // e = JSON.stringify(e)
-    // let r = "L2kJs2aH9zT3X9SF"
-    // let t
-    // n = null
-
-    // var o = CryptoJS.enc.Utf8.parse(e),
-    // i = CryptoJS.enc.Utf8.parse(t || r),
-    // c = CryptoJS.AES.encrypt(o, i, n || {
-    //   mode: CryptoJS.mode.ECB,
-    //   padding: CryptoJS.pad.Pkcs7
-    // })
-    // console.log(CryptoJS.enc.Hex.stringify(c.ciphertext).toUpperCase())
-
   },
-
   methods: {
-    initialize () {
-
+    zoomed(event) {
+      const {transform} = event
+      d3.selectAll('path').call(g => g.attr("transform", transform))
+      d3.selectAll('polygon').call(g => g.attr("transform", transform))
+      d3.selectAll('text').call(g => g.attr("transform", transform))
+      d3.selectAll('foreignObject').call(g => g.attr("transform", transform))
+      d3.selectAll('rect').call(g => g.attr("transform", transform))
+      this.gx.call(this.xAxis, transform.rescaleX(this.x), transform)
+      this.gy.call(this.yAxis, transform.rescaleY(this.y), transform)
     },
-    xAxis(g){
-      let x = d3.scaleLinear()
-          .domain([0, 600])
-          .range([0, 600])
-
-      g.attr("transform", `translate(0,${this.margin.top})`)
+    selected_item(item){
+      this.done()
+      if (item.symbol == 'path'){
+        this.path_points = ''
+        this.select_mode = 'path'
+      }else if(item.symbol == 'polygon'){
+        this.polygon_points = ''
+        this.select_mode = 'polygon'
+      }else if(item.symbol == 'text'){
+        this.text = ''
+        this.select_mode = 'text'
+      }else if(item.symbol == 'data'){
+        this.data_type = ''
+        this.data_id = ''
+        this.data_name = ''
+        this.data_range = ''
+        this.data_value = ''
+        this.select_mode = 'data'
+        this.dialogBind = true
+      }else{
+        this.addSymbolSvg(item)
+      }
+    },
+    xAxis(g, x, transform){
+      g.attr("transform", `translate(${-transform.x},${-transform.y+this.margin.top})`)
       .attr("class", "tick")
-      .call(d3.axisTop(x.copy().interpolate(d3.interpolateRound)).ticks(null, "f"))
-      .call(g => g.select(".domain").remove())
-      .call(g => g.selectAll(".tick line").clone()
-          .attr("stroke-opacity", 0.1)
-          .attr("y1", this.canvas_height))
-      .call(g => g.select(".tick text").clone()
-          .attr("x", this.canvas_width - this.margin.right)
-          .attr("y", 5)
-          .attr("fill", "currentColor")
-          .attr("font-weight", "bold")
-          .text("Width px"))
+      .call(d3.axisTop(x).ticks(null, "f"))
+      .call(g => g.selectAll("line").remove())
+      // .call(d3.axisTop(x.copy().interpolate(d3.interpolateRound)).ticks(null, "f"))
+      // .call(g => g.select(".domain").remove())
+      // .call(g => g.selectAll(".tick line").clone()
+      //     .attr("stroke-opacity", 0.1)
+      //     .attr("y1", this.canvas_height))
     },
-    yAxis(g){
-      let y = d3.scaleLinear()
-          .domain([0, 600])
-          .range([0, 600])
-
-      g.attr("transform", `translate(${this.margin.left - 10},0)`)
+    yAxis(g, y, transform){
+      g.attr("transform", `translate(${-transform.x + this.margin.left - 10},${-transform.y})`)
       .attr("class", "tick")
-      .call(d3.axisLeft(y.copy().interpolate(d3.interpolateRound)))
-      .call(g => g.select(".domain").remove())
-      .call(g => g.selectAll(".tick line").clone()
-          .attr("stroke-opacity", 0.1)
-          .attr("x1", this.canvas_width))
-      .call(g => g.select(".tick text").clone()
-          .attr("x", 3)
-          .attr("y", 590)
-          .attr("text-anchor", "start")
-          .attr("font-weight", "bold")
-          .text("Height px"))
+      .call(d3.axisLeft(y).ticks(null, "f"))
+      .call(g => g.selectAll("line").remove())
+      // .call(d3.axisLeft(y.copy().interpolate(d3.interpolateRound)))
+      // .call(g => g.select(".domain").remove())
+      // .call(g => g.selectAll(".tick line").clone()
+      //     .attr("stroke-opacity", 0.1)
+      //     .attr("x1", this.canvas_width))
     },
-    polygonMenu(){
-      this.polygon_points = ''
-      this.select_mode = 'polygon'
-    },
-    pathMenu(){
-      this.path_points = ''
-      this.select_mode = 'path'
-    },
-    textMenu(){
-      this.text = ''
-      this.select_mode = 'text'
-    },
-    dataMenu(){
-      this.select_mode = 'data'
+    async addSymbolSvg (item) {
+      await this.$http.get(this.$urls.babel_get, {
+        params: {
+            operate: 'get_symbol',
+            symbol_id: item.id,
+        },
+        })
+        .then(response => {
+          let that = this
+          this.elm = response.data.content.content
+          d3.xml(this.elm)
+          .then(data => {
+            let tmp = data.getElementsByTagName('g')[0]
+            let instance_id = item.symbol+"NewInstance"+this.instance_num
+            this.instance_num = this.instance_num + 1
+
+            for (var i=0;i<tmp.childNodes.length;i++) {
+              if(tmp.childNodes[i].nodeType==1){
+                if(tmp.childNodes[i].hasChildNodes()){
+                  var self_id = tmp.childNodes[i].getElementsByTagName('span')
+                  if(self_id.length > 0){
+                    tmp.childNodes[i].getElementsByTagName('span')[0].setAttribute("id", instance_id+'_'+self_id[0].getAttribute("id"))
+                  }
+                }
+                tmp.childNodes[i].setAttribute("id", instance_id)
+                tmp.childNodes[i].setAttribute("class", instance_id)
+              }
+            }
+            tmp.setAttribute("id", instance_id)
+            tmp.setAttribute("dom_type", 'g')
+            d3.select('#viz').node().append(tmp)
+            this.svg = d3.select("#new")
+            d3.selectAll("."+instance_id).each(function(d, i) {
+              d3.select(this).call(g => g.call(that.drag(g)))
+            })
+            this.elm = ''
+          })
+        })
     },
     updateColor(){
       if (this.elm !== ''){
-        this.elm.style("stroke", this.hexa)
+        if(this.elm.attr("dom_type") === 'text'){
+          this.elm.style("fill", this.hexa)
+        }else{
+          if (this.elm.style("stroke").length > 7){
+            this.elm.style("stroke", this.hexa + this.opacity)
+          }else{
+            this.elm.style("stroke", this.hexa)
+          }
+        }
       }
     },
     updatePath(){
@@ -241,53 +331,73 @@ export default {
         this.createText()
       }
     },
+    updateData(){
+      let data = document.getElementById(this.data_id)
+      data.setAttribute("bind_value", this.data_value)
+      data.innerHTML = this.data_name+":"+this.data_value
+    },
     drag(elm) {
       let that = this
       function dragstarted(event) {
         if (that.elm !== ''){
-          that.elm.raise().style("stroke", "black")
-        }else{
-          that.hexa = that.colorRGBtoHex(d3.select(this).style("stroke"))
+          that.done()
+        }
+
+        if (d3.select(this.parentNode).attr("id") !== "new"){
+          let tmp = document.getElementById(d3.select(this).attr("id")).getBBox()
+          that.elm = d3.select(this.parentNode)
+          that.elm.append("rect")
+            .attr("class", d3.select(this).attr("id"))
+            .attr("x", tmp.x)
+            .attr("y", tmp.y)
+            .attr("width", tmp.width)
+            .attr("height", tmp.height)
+            .attr("fill", "none")
+            .attr("stroke", "#6CFFF6")
+            .attr("stroke-width", 2)
+          return
         }
 
         that.elm = d3.select(this)
         if (d3.select(this).attr("dom_type") === 'polygon') {
+          that.hexa = that.colorRGBtoHex(d3.select(this).style("stroke"))
           that.select_mode = 'polygon'
           that.polygon_points = d3.select(this).attr("points")
+          setTimeout(() =>{
+            d3.select(this).style("stroke", that.colorRGBtoHex(d3.select(this).style("stroke")) + that.opacity)
+          },100)
         }else if(d3.select(this).attr("dom_type") === 'text'){
+          that.hexa = d3.select(this).attr("fill")
           that.select_mode = 'text'
           that.text = d3.select(this).text()
+          d3.select(this)
+            .style("stroke", "#000000FF")
+            .style("stroke-width", 1)
         }else if(d3.select(this).attr("dom_type") === 'path'){
+          that.hexa = that.colorRGBtoHex(d3.select(this).style("stroke"))
           that.select_mode = 'path'
           that.path_points = d3.select(this).attr("d")
+          setTimeout(() =>{
+            d3.select(this).style("stroke", that.colorRGBtoHex(d3.select(this).style("stroke")) + that.opacity)
+          },100)
         }else{
+          let data = d3.select(this).node().getElementsByTagName('span')[0]
+          that.data_type = data.getAttribute("bind_type")
+          that.data_id = data.getAttribute("id")
+          that.data_name = data.getAttribute("bind_name")
+          that.data_range = data.getAttribute("bind_range")
+          that.data_value = data.getAttribute("bind_value")
           that.select_mode = 'data'
         }
-
-        d3.select(this).raise().style("stroke", "black")
       }
       function dragged(event) {
-        if (d3.select(this).attr("dom_type") === 'polygon') {
-          let points = d3.select(this).attr("points").split(" ")
-          let result = []
-          points.forEach((point) => {
-            result.push((parseInt(point.split(",")[0]) + event.dx).toString()+','+(parseInt(point.split(",")[1]) + event.dy).toString())
+        if (d3.select(this.parentNode).attr("id") !== "new"){
+          let tmp_id = d3.select(this).attr("id")
+          d3.selectAll("."+tmp_id).each(function(d, i) {
+            that.render(d3.select(this), event)
           })
-
-          d3.select(this).attr("points", result.join(' '))
-        }else if(d3.select(this).attr("dom_type") === 'path'){
-          let points = d3.select(this).attr("d").match(/(\d+ \d+|[A-Za-z])/g)
-          let result = []
-          points.forEach((point) => {
-            if (point.length > 1){
-              result.push((parseInt(point.split(" ")[0]) + event.dx).toString()+' '+(parseInt(point.split(" ")[1]) + event.dy).toString() + " ")
-            }else{
-              result.push(point)
-            }
-          })
-          d3.select(this).attr("d", result.join(''))
         }else{
-          d3.select(this).attr("x", elm.x = event.x).attr("y", elm.y = event.y)
+          that.render(d3.select(this), event)
         }
       }
       function dragended(event) {
@@ -306,9 +416,15 @@ export default {
           .on("end", dragended)
     },
     done() {
-      console.log('click')
       if (this.elm !== ''){
-        this.elm.style("stroke", this.hexa)
+        if(this.elm.attr("dom_type") === 'text'){
+          this.elm.style("stroke", "none")
+            .style("stroke-width", 0)
+        }else if(this.elm.attr("dom_type") === 'g'){
+          this.elm.selectAll('rect').remove()
+        }else if(this.elm.attr("dom_type") !== 'data'){
+          this.elm.style("stroke", this.colorRGBtoHex(this.elm.style("stroke")).substring(0,7))
+        }
       }
       this.elm = ''
       this.select_mode = ''
@@ -319,13 +435,12 @@ export default {
         .attr("id", this.unique_name)
         .attr("d", this.path_points) //'M50 150Q300 50 300 150T450 150'
         .attr("dom_type", 'path')
-        .style("fill", "none")
+        .style("fill", 'none')
         .style('stroke', this.hexa)
         .style('stroke-width', 5)
         .call(this.drag(this.svg))
     },
     createPolygon() { // 200,200 200,400 350,300
-      console.log(this.hexa)
       this.svg.append("polygon")
         .attr("id", this.unique_name)
         .attr("dom_type", 'polygon')
@@ -334,24 +449,6 @@ export default {
         .style('stroke', this.hexa)
         .style('stroke-width', 5)
         .call(this.drag(this.svg))
-
-      // this.svg.append("g")
-      //   .call(
-      //     g => g.append("polygon")
-      //     .attr("id", this.unique_name)
-      //     .attr("points", this.polygon_points)
-      //     .style("fill", "none")
-      //     .style('stroke', this.showColor)
-      //     .style('stroke-width', 5)
-      //     .call(this.drag(this.svg))
-      //   )
-      //   .call(
-      //     g => g.append("text")
-      //     .attr("dy", "1em")
-      //     .attr("fill", this.showColor)
-      //     .attr("font-weight", "bold")
-      //     .text(this.unique_name)
-      //   )
     },
     createText() {
       this.svg.append("text")
@@ -365,40 +462,26 @@ export default {
         .call(this.drag(this.svg))
     },
     createData(){
-      if (this.data_type === 'List'){
-        this.svg.append("foreignObject")
-          .attr("x", this.canvas_width / 2)
-          .attr("y", this.canvas_height / 2)
-          .attr("width", 100)
-          .attr("height", 50)
-        .html('<div xmlns="http://www.w3.org/1999/xhtml" class="v-input v-input--dense theme--light v-text-field v-text-field--is-booted v-text-field--enclosed v-text-field--outlined v-select v-autocomplete"><div class="v-input__control"><div role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-owns="list-206" class="v-input__slot"><fieldset aria-hidden="true"><legend style="width: 0px;"><span>​</span></legend></fieldset><div class="v-select__slot"><input type="text" autocomplete="off" /><div class="v-input__append-inner"><div class="v-input__icon v-input__icon--append"><i aria-hidden="true" class="v-icon notranslate mdi mdi-menu-down theme--light"></i></div></div><input type="hidden" /></div><div class="v-menu"><!----></div></div><div class="v-text-field__details"><div class="v-messages theme--light"><div class="v-messages__wrapper"></div></div></div></div></div>')
-        .call(this.drag(this.svg))
-      }else{
-        this.svg.append("foreignObject")
-          .attr("x", this.canvas_width / 2)
-          .attr("y", this.canvas_height / 2)
-          .attr("width", 100)
-          .attr("height", 50)
-        .html('<div xmlns="http://www.w3.org/1999/xhtml" class="v-input v-input--dense theme--light v-text-field v-text-field--is-booted v-text-field--enclosed v-text-field--outlined"><div class="v-input__control"><div class="v-input__slot"><fieldset aria-hidden="true"><legend style="width: 0px;"><span>​</span></legend></fieldset><div class="v-text-field__slot"><input type="text" /></div></div><div class="v-text-field__details"><div class="v-messages theme--light"><div class="v-messages__wrapper"></div></div></div></div></div>')
-        .call(this.drag(this.svg))
-      }
+      let data = this.$common.jsonSearchId(this.items, this.bind_data)
+      this.svg.append("foreignObject")
+        .attr("id", "''")
+        .attr("dom_type", 'data')
+        .attr("x", this.canvas_width / 2)
+        .attr("y", this.canvas_height / 2)
+        .attr("width", 150)
+        .attr("height", 50)
+      .html('<div xmlns="http://www.w3.org/1999/xhtml"> <span id='+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: red">'+data['name']+":"+data['value']+'</span> </div>')
+      .call(this.drag(this.svg))
     },
     deleteElm() {
       if (this.elm !== ''){
         this.elm.remove()
+        this.elm = ''
       }
     },
-    log() {
-      this.hex = "8CFFFE"
-
-      // d3.selectAll(".tick").remove()
-      // let serializer = new XMLSerializer()
-      // let source = serializer.serializeToString(this.svg.node())
-      console.log(this.showColor)
-    },
-    save(){
-      d3.selectAll(".tick").remove()
-      this.$emit('saveToServer', this.svg)
+    async save(){
+      await d3.selectAll(".tick").remove()
+      this.$emit('saveToServer', d3.select("#viz"))
     },
     colorRGBtoHex(color) {
       var rgb = color.split(',')
@@ -407,6 +490,35 @@ export default {
       var b = parseInt(rgb[2].split(')')[0])
       var hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
       return hex
+    },
+    log(){
+      let serializer = new XMLSerializer()
+      let source = serializer.serializeToString(d3.select("#viz").node())
+      console.log(source)
+    },
+    render(element, event) {
+      if (element.attr("dom_type") === 'polygon') {
+        let points = element.attr("points").split(" ")
+        let result = []
+        points.forEach((point) => {
+          result.push((parseInt(point.split(",")[0]) + event.dx).toString()+','+(parseInt(point.split(",")[1]) + event.dy).toString())
+        })
+
+        element.attr("points", result.join(' '))
+      }else if(element.attr("dom_type") === 'path'){
+        let points = element.attr("d").match(/(\d+ \d+|[A-Za-z])/g)
+        let result = []
+        points.forEach((point) => {
+          if (point.length > 1){
+            result.push((parseInt(point.split(" ")[0]) + parseInt(event.dx)).toString()+' '+(parseInt(point.split(" ")[1]) + parseInt(event.dy)).toString() + " ")
+          }else{
+            result.push(point)
+          }
+        })
+        element.attr("d", result.join(''))
+      }else{
+        element.attr("x", parseInt(element.attr("x"))+parseInt(event.dx)).attr("y", parseInt(element.attr("y"))+parseInt(event.dy))
+      }
     }
   },
 }

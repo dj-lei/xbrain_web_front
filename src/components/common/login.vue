@@ -187,24 +187,23 @@ export default {
   // },
   methods: {
     async login() {
-      // var public_key = '-----BEGIN PUBLIC KEY-----\n';
-      //   public_key += 'MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCkpig5EfnRXR2QmITJNHQraAC3\n';
-      //   public_key += 'x8g0+1CGsAqvc7DhVQ96wDHwJa0tL3xWSbQtU7ZG8quvuDU/Qki5wcYymykUIJP6\n';
-      //   public_key += 'wzXXfiBWo2unjEeXj3fhnz0yEho193nOgXV9cvwBkcSfVEyUtHklBDsuKeMgPoWy\n';
-      //   public_key += 'a5MaRKKGMaIXk7Rp1wIDAQAB\n';
-      //   public_key += '-----END PUBLIC KEY-----';
+    // let n = "carNo=甘-J2L199&distance=3000&isNewReport=1&latitude=0&longitude=0&nonce=75341421609739888281&openId=&privacyOption=1&signType=MD5&timestamp=1609739888281&userId=c36b86825b004d648bfbbbc1b58a675e&W9cE5d4q0df9GjeBaR16a5B56Z1V51i7"
+    // let sign = CryptoJS.MD5(n).toString().toUpperCase()
 
-      // let encryptor = new JSEncrypt()
-      // encryptor.setPublicKey(public_key)
-      // console.log(encryptor.encrypt('administrator'))
+    // let e = JSON.parse("{\"isNewReport\":1,\"userId\":\"c36b86825b004d648bfbbbc1b58a675e\",\"carNo\":\"甘-J2L199\",\"privacyOption\":1,\"longitude\":0,\"latitude\":0,\"distance\":3000,\"openId\":\"\",\"signType\":\"MD5\",\"timestamp\":1609739888281,\"nonce\":\"75341421609739888281\",\"sign\":\"48DF5B8598ADEC7BE0D1B90D268C227E\"}")
+    // e.sign = sign
+    // e = JSON.stringify(e)
+    // let r = "L2kJs2aH9zT3X9SF"
+    // let t
+    // n = null
 
-      // // Encrypt
-      // var ciphertext = CryptoJS.AES.encrypt('administrator', 'abcd').toString();
-      // console.log(ciphertext)
-      // // Decrypt
-      // var bytes  = CryptoJS.AES.decrypt(ciphertext, 'abcd');
-      // var originalText = bytes.toString(CryptoJS.enc.Utf8);
-      // console.log(originalText); // 'my message'
+    // var o = CryptoJS.enc.Utf8.parse(e),
+    // i = CryptoJS.enc.Utf8.parse(t || r),
+    // c = CryptoJS.AES.encrypt(o, i, n || {
+    //   mode: CryptoJS.mode.ECB,
+    //   padding: CryptoJS.pad.Pkcs7
+    // })
+    // console.log(CryptoJS.enc.Hex.stringify(c.ciphertext).toUpperCase())
 
       if (this.username !== '' && this.password !== ''){
         this.isLoading = true

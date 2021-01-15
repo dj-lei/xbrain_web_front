@@ -14,6 +14,7 @@
                   SymbolEditor(
                     v-bind:svg_content='svg_content'
                     v-bind:flagUpdateOrAdd='flagUpdateOrAdd'
+                    v-bind:tools_category='symbols'
                     v-on:dialogClose="dialogClose"
                     v-on:saveToServer="save"
                   )
@@ -74,6 +75,7 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
+      symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
       svg_content: '',
       svg_temp: {},
       symbolName: '',
@@ -95,6 +97,8 @@ export default {
         })
         .then(response => {
           this.data = response.data.content
+          this.symbols = [{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}]
+          this.symbols = this.symbols.concat(response.data.symbols)
         })
     },
     dialogClose () {
@@ -126,10 +130,10 @@ export default {
 
     async deleteItemConfirm () {
       this.$store.set('progress', true)
-      await this.$http.get(this.$urls.trouble_shooting_get, {
+      await this.$http.get(this.$urls.babel_get, {
         params: {
-            operate: 'delete_template',
-            template_id: this.tempData.id,
+            operate: 'delete_symbol',
+            symbol_id: this.tempData.id,
         },
         })
         .then(response => {

@@ -34,6 +34,29 @@ export default {
       return temp
     },
 
+    jsonSearchId(node_data, id){
+      if(node_data instanceof Array){
+        for(var i=0; i<node_data.length; i++){
+
+          if(node_data[i]['id'] == id){
+            return node_data[i]
+          }else{
+            if(node_data[i].hasOwnProperty('children')){
+              var temp = this.jsonSearchId(node_data[i]['children'], id)
+              if(temp instanceof Array){
+                continue
+              }else{
+                return temp
+              }
+            }else{
+              continue
+            }
+          }
+        }
+      }
+      return []
+    },
+
     getEditorJSConfig(holder, data, readOnly=false) {
       return {
         holder: holder,
