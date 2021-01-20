@@ -178,7 +178,7 @@ export default {
     },
     xAxis(g, x, transform){
       g.attr("transform", `translate(${-transform.x},${-transform.y+this.margin.top})`)
-      .attr("class", "tick")
+      // .attr("class", "tick")
       .call(d3.axisTop(x).ticks(null, "f"))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick line")
@@ -188,7 +188,7 @@ export default {
     },
     yAxis(g, y, transform){
       g.attr("transform", `translate(${-transform.x + this.margin.left - 10},${-transform.y})`)
-      .attr("class", "tick")
+      // .attr("class", "tick")
       .call(d3.axisLeft(y).ticks(null, "f"))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick line")
@@ -325,11 +325,11 @@ export default {
     updateColor(){
       if (this.elm !== ''){
         if(this.elm.attr("dom_type") === 'text'){
-          this.elm.style("fill", this.hexa)
+          this.elm.attr("fill", this.hexa+this.opt)
         }else if(this.elm.attr("dom_type") === 'data'){
           this.elm.select('span').attr("style", "color: "+this.hexa+this.opt)
         }else{
-          this.elm.style("stroke", this.hexa)
+          this.elm.style("stroke", this.hexa+this.opt)
         }
       }
     },
@@ -385,7 +385,9 @@ export default {
       this.done()
       this.select_mode=''
       this.elm=''
+      this.transform='translate(0,0) scale(1)'
       d3.select("#new").selectAll("*").remove()
+      d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity)
     },
     drag(elm) {
       let that = this
@@ -426,8 +428,9 @@ export default {
       }
       function dragged(event) {
         let scale_event = {}
-        scale_event['dx'] = parseInt(event.dx / that.transform.k)
-        scale_event['dy'] = parseInt(event.dy / that.transform.k)
+        let k = that.transform === 'translate(0,0) scale(1)' ? 1 : that.transform.k
+        scale_event['dx'] = parseInt(event.dx / k)
+        scale_event['dy'] = parseInt(event.dy / k)
         if (d3.select(this.parentNode).attr("dom_type") === "g"){
           d3.select("#"+d3.select(this).attr("id")).selectAll("*").select(function() {
             if(d3.select(this).attr("dom_type") !== "g"){
@@ -466,7 +469,7 @@ export default {
       }else if(elm.attr("dom_type") === 'path'){
         elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
       }else if(elm.attr("dom_type") === 'text'){
-        elm.attr("fill", flag == true ? elm.attr("fill")+this.opt:elm.attr("fill").slice(0,7))
+        elm.attr("fill", flag == true ? elm.attr("fill")+this.opt : elm.attr("fill").slice(0,7))
       }else if(elm.attr("dom_type") === 'data'){
         elm.select('span').attr("style", flag == true ? "color: "+elm.select('span').attr("style").split(" ")[1]+this.opt : "color: "+elm.select('span').attr("style").split(" ")[1].slice(0,7))
       }else if(elm.attr("dom_type") === 'g'){
