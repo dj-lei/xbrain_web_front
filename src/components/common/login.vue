@@ -43,6 +43,7 @@
               placeholder='password'
               required
               light
+              @keyup.enter='login'
               )
             v-spacer(class="mt-8")
             v-btn(
