@@ -13,15 +13,34 @@ import urls from './urls'
 
 export default {
     getTime () {
-        let yy = new Date().getFullYear();
-        let mm = new Date().getMonth()+1;
-        let dd = new Date().getDate();
-        let hh = new Date().getHours();
-        let mf = new Date().getMinutes()<10 ? '0'+new Date().getMinutes() : new Date().getMinutes();
-        let ss = new Date().getSeconds()<10 ? '0'+new Date().getSeconds() : new Date().getSeconds();
-        return yy+'-'+mm+'-'+dd+' '+hh+':'+mf+':'+ss
+      let yy = new Date().getFullYear();
+      let mm = new Date().getMonth()+1;
+      let dd = new Date().getDate();
+      let hh = new Date().getHours();
+      let mf = new Date().getMinutes()<10 ? '0'+new Date().getMinutes() : new Date().getMinutes();
+      let ss = new Date().getSeconds()<10 ? '0'+new Date().getSeconds() : new Date().getSeconds();
+      return yy+'-'+mm+'-'+dd+' '+hh+':'+mf+':'+ss
     },
-
+    colorRGBtoHex(color) {
+      var rgb = color.split(',')
+      var r = parseInt(rgb[0].split('(')[1])
+      var g = parseInt(rgb[1])
+      var b = parseInt(rgb[2].split(')')[0])
+      var hex = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)
+      return hex
+    },
+    setBrowserTitle(val){
+      document.title = "Edit "+val
+    },
+    generateUUID() {
+      var d = new Date().getTime()
+      var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = (d + Math.random()*16)%16 | 0
+        d = Math.floor(d/16)
+        return (c=='x' ? r : (r&0x3|0x8)).toString(16)
+      })
+      return 'a'+uuid
+    },
     readImages (images) {
       let temp = []
       images.forEach((image, index) => {

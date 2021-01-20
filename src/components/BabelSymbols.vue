@@ -12,11 +12,14 @@
               v-dialog(v-model="dialog", fullscreen, transition="dialog-bottom-transition")
                 v-card
                   SymbolEditor(
+                    ref="symbolEditor"
                     v-bind:svg_content='svg_content'
                     v-bind:flagUpdateOrAdd='flagUpdateOrAdd'
                     v-bind:tools_category='symbols'
                     v-on:dialogClose="dialogClose"
                     v-on:saveToServer="save"
+                    v-on:newItem="newItem"
+                    v-on:editItem="editItem"
                   )
             v-dialog(v-model="dialogSaveTemplate", max-width="500px")
               v-card
@@ -25,7 +28,9 @@
                 v-card-text
                   v-container
                     v-row
-                      v-text-field(v-model='symbolName', label="Symbol name")
+                      v-combobox(v-model='symbol_type' :items="symbol_types" label="Symbol Type")
+                    v-row
+                      v-text-field(v-model='symbol_name', label="Symbol name")
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1", text, @click="close") Cancel
@@ -78,7 +83,9 @@ export default {
       symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
       svg_content: '',
       svg_temp: {},
-      symbolName: '',
+      symbol_name: '',
+      symbol_type: 'circuit',
+      symbol_types: [],
       flagUpdateOrAdd: false,
       operateId: '',
     }
@@ -99,6 +106,10 @@ export default {
           this.data = response.data.content
           this.symbols = [{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}]
           this.symbols = this.symbols.concat(response.data.symbols)
+          this.symbol_types = []
+          response.data.symbols.forEach((symbol) => {
+            this.symbol_types.push(symbol.title)
+          })
         })
     },
     dialogClose () {
@@ -120,6 +131,9 @@ export default {
           this.flagUpdateOrAdd = true
           this.svg_content = response.data.content.content
           this.dialog = true
+          this.$nextTick(function(){
+            this.$refs.symbolEditor.updateItem(this.svg_content)
+          })
         })
     },
 
@@ -165,7 +179,7 @@ export default {
     },
 
     async saveToServer () {
-      this.dialog = false
+      // this.dialog = false
       this.$store.set('progress', true)
       let serializer = new XMLSerializer()
       let source = serializer.serializeToString(this.svg_temp.node())
@@ -184,8 +198,8 @@ export default {
 
       let formData = new FormData()
       formData.append("data", url)
-      formData.append("category", 'circuit')
-      formData.append("symbol_name", this.symbolName)
+      formData.append("category", this.symbol_type)
+      formData.append("symbol_name", this.symbol_name)
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
@@ -207,6 +221,7 @@ export default {
       })
       setTimeout(() =>{
         this.dialogSaveTemplate = false
+        this.flagUpdateOrAdd = true
         this.initialize()
         this.$store.set('progress', false)
       },1000)
