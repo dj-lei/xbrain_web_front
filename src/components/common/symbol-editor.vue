@@ -12,6 +12,15 @@
             v-list-item-title SAVE
           v-list-item(@click="log")
             v-list-item-title LOG
+          template(v-if='is_viewer === true')
+            template(v-if='is_viewer === false')
+              v-list-item(@click="runOrStop")
+                v-list-item-title RUN
+            template(v-else)
+              v-list-item(@click="runOrStop")
+                v-list-item-title STOP
+            v-list-item(@click="dialogViewerConfig = true")
+              v-list-item-title CONFIG
     v-card(class="pa-2" dark)
       v-sheet(width="130")
         v-list(dense class="grow")
@@ -58,22 +67,38 @@
                   v-combobox(v-model="data_value" :items='data_range.split(",")' dense outlined @change="updateData")
                 template(v-else)
                   v-text-field(v-model="data_value" label="Value" dense @keyup.enter="updateData")
+          template(v-else-if="select_mode === 'viewer'")
+            v-row(class="d-flex justify-center")
+              v-col(class="pa-2")
+                v-combobox(v-model="selected_hardware_environment" :items='JSON.stringify(hardware_environment_list).match(/\"name\":\"(.*?)\"/g)' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
           v-row
-              v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
-          v-dialog(v-model='dialogBind', dark, max-width="800px")
+            v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
+          v-dialog(v-model='dialogDataBind', dark, max-width="800px")
             v-card
               v-container
                 v-row
-                  v-text-field(v-model="data_url" label="bind data url" dense outlined)
+                  v-text-field(v-model="url_hardware_environment_editable_data" label="bind data url" dense outlined)
                   v-btn(dark, text, @click="queryBackendData") REFRESH
                 v-divider
                 v-card
                   v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
+          v-dialog(v-model='dialogViewerConfig', dark, max-width="800px")
+            v-card
+              v-container
+                v-row
+                  v-text-field(v-model="url_hardware_environment_read_status" label="Api get hardware environment status" dense outlined)
+                v-row
+                  v-text-field(v-model="url_hardware_environment_save_config" label="Api post config info" dense outlined)
+                v-row
+                  v-text-field(v-model="url_hardware_environment_read_data" label="Api read data" dense outlined)
+                v-row
+                  v-btn(dark) APPLY
 </template>
 
 <script>
 import * as d3 from 'd3'
 import axios from 'axios'
+import * as echarts from 'echarts'
 
 export default {
   props: {
@@ -91,12 +116,26 @@ export default {
       type: Array,
       default: []
     },
+    is_viewer:{
+      type: Boolean,
+      default: false
+    },
+    hardware_environment_list:{
+      type: Array,
+      default: []
+    }
   },
   data () {
     return {
       items: [],
-      data_url: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
-      dialogBind: false,
+      url_hardware_environment_editable_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
+      url_hardware_environment_read_status: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
+      url_hardware_environment_save_config: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_save_config' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_save_config',
+      url_hardware_environment_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_data' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_data',
+      selected_hardware_environment: '',
+      run_flag: false,
+      dialogDataBind: false,
+      dialogViewerConfig: false,
       hexa: '#FF00FF',
       canvas_width: 950,
       canvas_height: 730,
@@ -132,7 +171,7 @@ export default {
     }
   },
   watch:{
-    dialogBind(val) {
+    dialogDataBind(val) {
       if(val === false && this.bind_data.length > 0){
         // this.data_type = "List"
         this.createData()
@@ -178,7 +217,6 @@ export default {
     },
     xAxis(g, x, transform){
       g.attr("transform", `translate(${-transform.x},${-transform.y+this.margin.top})`)
-      // .attr("class", "tick")
       .call(d3.axisTop(x).ticks(null, "f"))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick line")
@@ -188,7 +226,6 @@ export default {
     },
     yAxis(g, y, transform){
       g.attr("transform", `translate(${-transform.x + this.margin.left - 10},${-transform.y})`)
-      // .attr("class", "tick")
       .call(d3.axisLeft(y).ticks(null, "f"))
       .call(g => g.select(".domain").remove())
       .call(g => g.selectAll(".tick line")
@@ -235,13 +272,13 @@ export default {
         this.data_range = ''
         this.data_value = ''
         this.select_mode = 'data'
-        this.dialogBind = true
+        this.dialogDataBind = true
       }else{
         this.addSymbolSvg(item)
       }
     },
     async queryBackendData(){
-      await axios.get(this.data_url)
+      await axios.get(this.url_hardware_environment_editable_data)
         .then(response => {
           this.items=response.data.content
         })
@@ -311,16 +348,30 @@ export default {
     createData(){
       let data = this.$common.jsonSearchId(this.items, this.bind_data)
       let uuid = this.$common.generateUUID()
-      this.svg.append("foreignObject")
-        .attr("id", uuid)
-        .attr("dom_type", 'data')
-        .attr("x", this.canvas_width / 2)
-        .attr("y", this.canvas_height / 2)
-        .attr("width", 150)
-        .attr("height", 50)
-        .attr("transform", this.transform)
-      .html('<div xmlns="http://www.w3.org/1999/xhtml"> <span id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: '+this.hexa+'">'+data['name']+":"+data['value']+'</span> </div>')
-      .call(this.drag(this.svg))
+      if (data['type'] === 'echarts'){
+        this.svg.append("foreignObject")
+          .attr("id", uuid)
+          .attr("dom_type", 'data')
+          .attr("x", this.canvas_width / 2)
+          .attr("y", this.canvas_height / 2)
+          .attr("width", 600)
+          .attr("height", 400)
+          .attr("transform", this.transform)
+        .html('<div id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value="Object" bind_type='+data['type']+' bind_range="[]" xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
+        .call(this.drag(this.svg))
+        echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
+      }else{
+        this.svg.append("foreignObject")
+          .attr("id", uuid)
+          .attr("dom_type", 'data')
+          .attr("x", this.canvas_width / 2)
+          .attr("y", this.canvas_height / 2)
+          .attr("width", 150)
+          .attr("height", 50)
+          .attr("transform", this.transform)
+        .html('<div xmlns="http://www.w3.org/1999/xhtml"> <span id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: '+this.hexa+'">'+data['name']+":"+data['value']+'</span> </div>')
+        .call(this.drag(this.svg))
+      }
     },
     updateColor(){
       if (this.elm !== ''){
@@ -364,6 +415,7 @@ export default {
       if (this.elm !== ''){
         this.elm.remove()
         this.elm = ''
+        this.select_mode = ''
       }
     },
     done() {
@@ -379,7 +431,8 @@ export default {
       this.$emit('saveToServer', d3.select("#new"))
     },
     log(){
-      console.log(d3.select("#new").node())
+      // console.log(d3.select("#new").node())
+      console.log(JSON.stringify(this.hardware_environment_list).search(/\"name\":\"\(.*?\)\"/g))
     },
     clear(){
       this.done()
@@ -396,6 +449,9 @@ export default {
           that.done()
         }
         if (d3.select(this.parentNode).attr("dom_type") === "g"){
+          if (that.is_viewer === true){
+            that.select_mode = 'viewer'
+          }
           that.elm = d3.select("#"+d3.select(this).attr("id"))
           that.boxSelection(d3.select("#"+d3.select(this).attr("id")), true)
         }else{
@@ -412,7 +468,12 @@ export default {
             that.select_mode = 'path'
             that.path_points = d3.select(this).attr("d")
           }else if(d3.select(this).attr("dom_type") === 'data'){
-            let data = d3.select(this).node().getElementsByTagName('span')[0]
+            let data = {}
+            if (d3.select(this).node().getElementsByTagName('span').length > 0){
+              data = d3.select(this).node().getElementsByTagName('span')[0]
+            }else{
+              data = d3.select(this).node().getElementsByTagName('div')[0]
+            }
             that.data_type = data.getAttribute("bind_type")
             that.data_id = data.getAttribute("id")
             that.data_name = data.getAttribute("bind_name")
@@ -471,7 +532,9 @@ export default {
       }else if(elm.attr("dom_type") === 'text'){
         elm.attr("fill", flag == true ? elm.attr("fill")+this.opt : elm.attr("fill").slice(0,7))
       }else if(elm.attr("dom_type") === 'data'){
-        elm.select('span').attr("style", flag == true ? "color: "+elm.select('span').attr("style").split(" ")[1]+this.opt : "color: "+elm.select('span').attr("style").split(" ")[1].slice(0,7))
+        if(elm.node().getElementsByTagName('span').length > 0){
+          elm.select('span').attr("style", flag == true ? "color: "+elm.select('span').attr("style").split(" ")[1]+this.opt : "color: "+elm.select('span').attr("style").split(" ")[1].slice(0,7))
+        }
       }else if(elm.attr("dom_type") === 'g'){
         elm.selectAll('*').select(function() {
           if(d3.select(this).attr("dom_type") !== "g"){
@@ -509,6 +572,22 @@ export default {
                 .attr("y", parseInt(element.attr("y"))+event.dy)
       }
     },
+    syncHardwareEnvironment(){
+      // this.elm.attr("hardware_environment") = this.selected_hardware_environment
+    },
+    async runOrStop(){
+      if(this.run_flag === false){
+        this.run_flag = true
+        while(this.run_flag){
+          await axios.post(this.url_hardware_environment_save_config)
+            .then(response => {
+
+            })
+        }
+      }else{
+        this.run_flag = false
+      }
+    }
   },
 }
 </script>

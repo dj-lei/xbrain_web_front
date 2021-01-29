@@ -39,7 +39,7 @@ export default {
     }
   },
   mounted() {
-    // console.log(window.location.search)
+    document.documentElement.style.overflowY = 'hidden'
     let param = window.location.search
     if (param.indexOf("trouble_shooting_task_id") >= 0){
       this.$router.push({ path: '/trouble_shooting_task', query: { taskId: param.split('=')[1] }})

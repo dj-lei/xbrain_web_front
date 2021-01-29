@@ -4,9 +4,9 @@
       template
         v-card(color="grey lighten-4", dark, flat, height="50px")
           v-toolbar(dense)
-            v-toolbar-title Symbols
+            v-toolbar-title Viewers
             v-divider(class="mx-4", inset, vertical)
-            v-btn(color="primary", dark, @click="newItem") New Symbol
+            v-btn(color="primary", dark, @click="newItem") New Viewer
             v-spacer
             template(v-if="dialog")
               v-dialog(v-model="dialog", fullscreen, transition="dialog-bottom-transition")
@@ -16,6 +16,8 @@
                     v-bind:svg_content='svg_content'
                     v-bind:flagUpdateOrAdd='flagUpdateOrAdd'
                     v-bind:tools_category='symbols'
+                    v-bind:is_viewer='is_viewer'
+                    v-bind:hardware_environment_list='hardware_environment_list'
                     v-on:dialogClose="dialogClose"
                     v-on:saveToServer="save"
                     v-on:newItem="newItem"
@@ -24,26 +26,24 @@
             v-dialog(v-model="dialogSaveTemplate", max-width="500px")
               v-card
                 v-card-title
-                  span(class="headline") Symbol Save
+                  span(class="headline") Viewer Save
                 v-card-text
                   v-container
                     v-row
-                      v-combobox(v-model='symbol_type' :items="symbol_types" label="Symbol Type")
-                    v-row
-                      v-text-field(v-model='symbol_name', label="Symbol name")
+                      v-text-field(v-model='viewer_name', label="Viewer name")
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1", text, @click="close") Cancel
                   v-btn(color="blue darken-1", text, @click="saveToServer") Save
             v-dialog(v-model="dialogDelete" max-width="500px")
               v-card
-                v-card-title(class="headline") Are you sure you want to delete this symbol?
+                v-card-title(class="headline") Are you sure you want to delete this viewer?
                 v-card-actions
                   v-spacer
                   v-btn(color="blue darken-1" text @click="closeDelete") Cancel
                   v-btn(color="blue darken-1" text @click="deleteItemConfirm") OK
                   v-spacer
-      v-data-table(:headers="headers", :items="data", sort-by="SymbolName", class="elevation-1")
+      v-data-table(:headers="headers", :items="data", sort-by="ViewerName", class="elevation-1")
         template(v-slot:item.actions="{ item }")
           v-tooltip(bottom)
             template(v-slot:activator="{ on,attrs }")
@@ -69,25 +69,23 @@ export default {
   data () {
     return {
       dialog: false,
-      dialogDelete: false,
       dialogSaveTemplate: false,
+      dialogDelete: false,
       headers: [
         // { text: 'Id', value: 'id' },
-        { text: 'Category', align: 'start', value: 'Category'},
-        { text: 'SymbolName', align: 'start', value: 'SymbolName'},
-        { text: 'Icon', align: 'start', value: 'Icon'},
+        { text: 'ViewerName', align: 'start', value: 'ViewerName'},
         { text: 'CreatedTime', value: 'CreatedTime' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
+      is_viewer: true,
       symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
       svg_content: '',
       svg_temp: {},
-      symbol_name: '',
-      symbol_type: 'circuit',
-      symbol_types: [],
+      viewer_name: '',
       flagUpdateOrAdd: false,
       operateId: '',
+      hardware_environment_list: [],
     }
   },
 
@@ -99,17 +97,30 @@ export default {
     async initialize () {
       await this.$http.get(this.$urls.babel_get, {
         params: {
-            operate: 'get_symbols_titles',
+          operate: 'get_symbols_titles',
+        },
+        })
+        .then(response => {
+          this.symbols = [{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}]
+          this.symbols = this.symbols.concat(response.data.symbols)
+        })
+
+      this.$http.get(this.$urls.babel_get, {
+        params: {
+          operate: 'get_viewers_titles',
         },
         })
         .then(response => {
           this.data = response.data.content
-          this.symbols = [{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}]
-          this.symbols = this.symbols.concat(response.data.symbols)
-          this.symbol_types = []
-          response.data.symbols.forEach((symbol) => {
-            this.symbol_types.push(symbol.title)
-          })
+        })
+
+      this.$http.get(this.$urls.babel_get, {
+        params: {
+          operate: 'hardware_environment_read_status',
+        },
+        })
+        .then(response => {
+          this.hardware_environment_list = response.data.content
         })
     },
     dialogClose () {
@@ -122,8 +133,8 @@ export default {
     async editItem (item) {
       await this.$http.get(this.$urls.babel_get, {
         params: {
-            operate: 'get_symbol',
-            symbol_id: item.id,
+            operate: 'get_viewer',
+            viewer_id: item.id,
         },
         })
         .then(response => {
@@ -136,12 +147,10 @@ export default {
           })
         })
     },
-
     deleteItem (item) {
       this.tempData = item
       this.dialogDelete = true
     },
-
     async deleteItemConfirm () {
       this.$store.set('progress', true)
       await this.$http.get(this.$urls.babel_get, {
@@ -159,16 +168,13 @@ export default {
           },1000)
         })
     },
-
     close () {
       this.flagUpdateOrAdd = false
       this.dialogSaveTemplate = false
     },
-
     closeDelete () {
       this.dialogDelete = false
     },
-
     save (svg) {
       this.svg_temp = svg
       if (this.flagUpdateOrAdd === false) {
@@ -177,7 +183,6 @@ export default {
         this.saveToServer()
       }
     },
-
     async saveToServer () {
       this.$store.set('progress', true)
       let serializer = new XMLSerializer()
@@ -197,8 +202,7 @@ export default {
 
       let formData = new FormData()
       formData.append("data", url)
-      formData.append("category", this.symbol_type)
-      formData.append("symbol_name", this.symbol_name)
+      formData.append("viewer_name", this.viewer_name)
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
@@ -206,10 +210,10 @@ export default {
       }
 
       if (this.flagUpdateOrAdd === false) {
-        formData.append("operate", 'symbol_new')
+        formData.append("operate", 'viewer_new')
       } else {
-        formData.append("operate", 'symbol_update')
-        formData.append("symbol_id", this.operateId)
+        formData.append("operate", 'viewer_update')
+        formData.append("viewer_id", this.operateId)
       }
 
       await this.$http.post(this.$urls.babel_save, formData, config).then(

@@ -28,7 +28,7 @@
               v-toolbar-items
                 v-btn(class="mr-2", dark, text, @click="shooting") Shooting
                 v-btn(dark, text, @click="save") Close
-            v-dialog(v-model="dialogShooting" max-width="500px")
+            v-dialog(v-model="dialogShooting" max-width="630px")
               v-card
                 v-card-title(class="headline") Are you sure these items is the cause of the damage?
                 v-card-actions
