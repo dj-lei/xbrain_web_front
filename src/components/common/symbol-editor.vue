@@ -626,7 +626,7 @@ export default {
             this.interval = setInterval(function() {
               axios.get(that.url_hardware_environment_read_data, {
               params: {
-                username: this.username,
+                username: that.username,
                 operate: 'hardware_environment_read_data',
               },
               })
