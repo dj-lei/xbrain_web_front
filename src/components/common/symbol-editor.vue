@@ -5,7 +5,7 @@
         v-list(dense class="grow")
           v-list-item
             v-list-item-title
-                v-icon(@click="$emit('dialogClose')") mdi-close
+              v-icon(@click="$emit('dialogClose')") mdi-close
           v-list-item(@click="newItem")
             v-list-item-title NEW
           v-list-item(@click="save")
@@ -13,7 +13,7 @@
           v-list-item(@click="log")
             v-list-item-title LOG
           template(v-if='is_viewer === true')
-            template(v-if='is_viewer === false')
+            template(v-if='run_flag === false')
               v-list-item(@click="runOrStop")
                 v-list-item-title RUN
             template(v-else)
@@ -29,9 +29,9 @@
               template(v-slot:activator="")
                 v-list-item-title {{ tool.title }}
               v-list-item-group(color="success")
-                v-list-item(v-for="(item, i) in tool.symbols" dense :key="item.id" @click="selectedItem(item)")
+                v-list-item(v-for="(item, i) in tool.symbols" :disabled='item.symbol === "data" && is_viewer === true' dense :key="item.id" @click="selectedItem(item)")
                   v-list-item-title(v-text="item.symbol")
-                  template(v-if='tool.title !== "basic"')
+                  template(v-if='tool.title !== "basic" && is_viewer === false')
                     v-list-item-icon
                       v-icon(@click.stop="editItem(item)") mdi-pencil
     v-card(class="pa-2")
@@ -70,29 +70,27 @@
           template(v-else-if="select_mode === 'viewer'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
-                v-combobox(v-model="selected_hardware_environment" :items='JSON.stringify(hardware_environment_list).match(/\"name\":\"(.*?)\"/g)' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
+                v-combobox(v-model="selected_hardware_environment" :items='coverToList()' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
           v-row
             v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
-          v-dialog(v-model='dialogDataBind', dark, max-width="800px")
-            v-card
-              v-container
-                v-row
-                  v-text-field(v-model="url_hardware_environment_editable_data" label="bind data url" dense outlined)
-                  v-btn(dark, text, @click="queryBackendData") REFRESH
-                v-divider
-                v-card
-                  v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
-          v-dialog(v-model='dialogViewerConfig', dark, max-width="800px")
-            v-card
-              v-container
-                v-row
-                  v-text-field(v-model="url_hardware_environment_read_status" label="Api get hardware environment status" dense outlined)
-                v-row
-                  v-text-field(v-model="url_hardware_environment_save_config" label="Api post config info" dense outlined)
-                v-row
-                  v-text-field(v-model="url_hardware_environment_read_data" label="Api read data" dense outlined)
-                v-row
-                  v-btn(dark) APPLY
+        v-dialog(v-model='dialogDataBind', dark, max-width="800px")
+          v-card
+            v-container
+              v-row
+                v-text-field(v-model="url_hardware_environment_editable_data" label="bind data url" dense outlined)
+                v-btn(dark, text, @click="queryBackendData") REFRESH
+              v-divider
+              v-card
+                v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
+        v-dialog(v-model='dialogViewerConfig', dark, max-width="800px")
+          v-card
+            v-container
+              v-row
+                v-text-field(v-model="url_hardware_environment_read_status" label="Api get hardware environment status" dense outlined)
+              v-row
+                v-text-field(v-model="url_hardware_environment_save_config" label="Api post config info" dense outlined)
+              v-row
+                v-text-field(v-model="url_hardware_environment_read_data" label="Api read data" dense outlined)
 </template>
 
 <script>
@@ -120,9 +118,15 @@ export default {
       type: Boolean,
       default: false
     },
+    username:{
+      type: String,
+      default: 'visitor'
+    },
     hardware_environment_list:{
       type: Array,
-      default: []
+      default () {
+        return []
+      }
     }
   },
   data () {
@@ -130,10 +134,11 @@ export default {
       items: [],
       url_hardware_environment_editable_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
       url_hardware_environment_read_status: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
-      url_hardware_environment_save_config: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_save_config' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_save_config',
-      url_hardware_environment_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_data' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_data',
+      url_hardware_environment_save_config: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
+      url_hardware_environment_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get' : 'http://10.166.152.49/ru/babel/get',
       selected_hardware_environment: '',
       run_flag: false,
+      interval: '',
       dialogDataBind: false,
       dialogViewerConfig: false,
       hexa: '#FF00FF',
@@ -299,14 +304,17 @@ export default {
             let tmp = data.getElementsByTagName('g')[0]
             tmp.setAttribute("id", instance_id)
             tmp.setAttribute("dom_type", 'g')
+            tmp.setAttribute("class", that.is_viewer === true ? "hardware_environment" : null)
             d3.select('#new').node().append(tmp)
 
             that.major_elms.forEach((elm) => {
               d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("id", instance_id).call(this.drag(g)))
               d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("transform", that.transform))
             })
-            d3.select('#'+instance_id).selectAll("span").each(function(d, i) {
-              d3.select(this).attr("id", instance_id+'_'+d3.select(this).attr("id").split("_")[1])
+            d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
+              if (d3.select(this).attr("id").split("_").length > 1){
+                d3.select(this).attr("id", d3.select(this).attr("id").split("_")[1])
+              }
             })
           })
         })
@@ -357,7 +365,7 @@ export default {
           .attr("width", 600)
           .attr("height", 400)
           .attr("transform", this.transform)
-        .html('<div id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value="Object" bind_type='+data['type']+' bind_range="[]" xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
+        .html('<div class="data" id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value="Object" bind_type='+data['type']+' bind_range="[]" xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
         .call(this.drag(this.svg))
         echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
       }else{
@@ -369,7 +377,7 @@ export default {
           .attr("width", 150)
           .attr("height", 50)
           .attr("transform", this.transform)
-        .html('<div xmlns="http://www.w3.org/1999/xhtml"> <span id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: '+this.hexa+'">'+data['name']+":"+data['value']+'</span> </div>')
+        .html('<div class="data" id='+uuid+'_'+data['id']+' bind_type='+data['type']+' xmlns="http://www.w3.org/1999/xhtml"> <span id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: '+this.hexa+'">'+data['name']+":"+data['value']+'</span> </div>')
         .call(this.drag(this.svg))
       }
     },
@@ -406,10 +414,12 @@ export default {
       }
     },
     updateData(){
-      let data = document.getElementById(this.data_id)
-      data.setAttribute("bind_value", this.data_value)
-      data.setAttribute("bind_name", this.data_name)
-      data.innerHTML = this.data_name+":"+this.data_value
+      if(d3.select('#'+this.data_id).attr('bind_type') !== 'echarts'){
+        let data = d3.select('#'+this.data_id).node().getElementsByTagName('span')[0]
+        data.setAttribute("bind_value", this.data_value)
+        data.setAttribute("bind_name", this.data_name)
+        data.innerHTML = this.data_name+":"+this.data_value
+      }
     },
     deleteElm() {
       if (this.elm !== ''){
@@ -431,8 +441,8 @@ export default {
       this.$emit('saveToServer', d3.select("#new"))
     },
     log(){
-      // console.log(d3.select("#new").node())
-      console.log(JSON.stringify(this.hardware_environment_list).search(/\"name\":\"\(.*?\)\"/g))
+      console.log(d3.select("#new").node())
+      console.log(this.data_id)
     },
     clear(){
       this.done()
@@ -451,6 +461,7 @@ export default {
         if (d3.select(this.parentNode).attr("dom_type") === "g"){
           if (that.is_viewer === true){
             that.select_mode = 'viewer'
+            that.selected_hardware_environment = d3.select("#"+d3.select(this).attr("id")).attr("hardware_environment_name")
           }
           that.elm = d3.select("#"+d3.select(this).attr("id"))
           that.boxSelection(d3.select("#"+d3.select(this).attr("id")), true)
@@ -572,19 +583,81 @@ export default {
                 .attr("y", parseInt(element.attr("y"))+event.dy)
       }
     },
+    coverToList(){
+      let tmp = []
+      JSON.stringify(this.hardware_environment_list).match(/\"name\":\"(.*?)\"/g).forEach((elm) => {
+        tmp.push(elm.split(":")[1].replace(/\"/g,''))
+      })
+      return tmp
+    },
     syncHardwareEnvironment(){
-      // this.elm.attr("hardware_environment") = this.selected_hardware_environment
+      this.hardware_environment_list.forEach((e) => {
+        if (e['name'] === this.selected_hardware_environment) {
+          this.elm.attr("hardware_environment_id", e['id'])
+          this.elm.attr("hardware_environment_name", e['name'])
+        }
+      })
     },
     async runOrStop(){
       if(this.run_flag === false){
-        this.run_flag = true
-        while(this.run_flag){
-          await axios.post(this.url_hardware_environment_save_config)
-            .then(response => {
-
-            })
+        let result = []
+        d3.selectAll(".hardware_environment").each(function(d, i) {
+          let tmp = {'hardware_environment_id': d3.select(this).attr("hardware_environment_id"),
+                    'hardware_environment_name': d3.select(this).attr("hardware_environment_name"),'data': []}
+          d3.select(this).selectAll('.data').each(function(d, i) {
+            tmp.data.push(d3.select(this).attr("id"))
+          })
+          result.push(tmp)
+        })
+        let formData = new FormData()
+        formData.append("username", this.username)
+        formData.append("operate", "hardware_environment_save_config")
+        formData.append("content", JSON.stringify(result))
+        let config = {
+          headers: {
+          'Content-Type': 'multipart/form-data'
+          }
         }
+
+        await axios.post(this.url_hardware_environment_save_config, formData, config).then(
+          (response)=>{
+            this.run_flag = true
+            let that = this
+            this.interval = setInterval(function() {
+              axios.get(that.url_hardware_environment_read_data, {
+              params: {
+                username: this.username,
+                operate: 'hardware_environment_read_data',
+              },
+              })
+              .then(response => {
+                let he = response.data.content
+                he.forEach((data) => {
+                  let tmp = ''
+                  d3.selectAll(".hardware_environment").each(function(d, i) {
+                    if (d3.select(this).attr("hardware_environment_name") === data['hardware_environment_name']) {
+                      tmp = d3.select(this)
+                    }
+                  })
+                  data['data'].forEach((elm) => {
+                    tmp.selectAll("#"+elm['id']).each(function(d, i) {
+                      if(d3.select(this).attr("bind_type") === "echarts"){
+                          echarts.init(d3.select(this).node()).setOption(elm['value'])
+                      }else{
+                        let data = d3.select(this).node().getElementsByTagName('span')[0]
+                        data.setAttribute("bind_value", elm['value'])
+                        data.innerHTML = data.getAttribute("bind_name")+":"+elm['value']
+                      }
+                    })
+                  })
+                })
+              })
+            },3000)
+        }, (error) => {
+          console.log(error)
+        })
       }else{
+        clearInterval(this.interval)
         this.run_flag = false
       }
     }

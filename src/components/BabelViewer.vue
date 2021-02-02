@@ -17,6 +17,7 @@
                     v-bind:flagUpdateOrAdd='flagUpdateOrAdd'
                     v-bind:tools_category='symbols'
                     v-bind:is_viewer='is_viewer'
+                    v-bind:username='username'
                     v-bind:hardware_environment_list='hardware_environment_list'
                     v-on:dialogClose="dialogClose"
                     v-on:saveToServer="save"
@@ -155,8 +156,8 @@ export default {
       this.$store.set('progress', true)
       await this.$http.get(this.$urls.babel_get, {
         params: {
-            operate: 'delete_symbol',
-            symbol_id: this.tempData.id,
+            operate: 'delete_viewer',
+            viewer_id: this.tempData.id,
         },
         })
         .then(response => {
