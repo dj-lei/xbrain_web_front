@@ -50,10 +50,20 @@ export default {
     goLogin() {
       this.$refs['login'].dialog = true
     },
-    logout() {
-      this.isAuthenticated = false
-      this.username = ''
-      this.$router.push('/')
+    async logout() {
+      await this.$http.get(this.$urls.admin_logout, {
+        params: {
+            username: this.username,
+        },
+        })
+        .then(response => {
+          this.$store.set('username', '')
+          this.$store.set('isAuthenticated', false)
+          // this.isAuthenticated = false
+          // this.username = ''
+          // this.$router.push('/')
+          document.location.reload()
+        })
     }
   }
 }

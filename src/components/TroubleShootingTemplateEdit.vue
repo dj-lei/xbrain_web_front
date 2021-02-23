@@ -6,7 +6,8 @@
           v-toolbar(dense)
             v-toolbar-title MineSweeper Template
             v-divider(class="mx-4", inset, vertical)
-            v-btn(color="primary", dark, @click="newItem") New Template
+            template(v-if='isAuthenticated === true')
+              v-btn(color="primary", dark, @click="newItem") New Template
             v-spacer
             v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
               v-card
@@ -51,20 +52,24 @@
             v-dialog(v-model='dialogImages', max-width="700px")
               v-card(class="mx-auto")
                 Images(ref="images", v-bind:images='uploadImages')
-      v-data-table(:headers="headers", :items="data", sort-by="TemplateName", class="elevation-1")
-        template(v-slot:item.actions="{ item }")
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
-            span edit
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
-            span delete
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, v-bind="attrs", v-on="on", @click="releaseTask(item)") mdi-antenna
-            span release
+      v-card
+        v-card-title
+          v-text-field(v-model="search" label="Search" single-line hide-details)
+        v-data-table(:search="search" :headers="headers", :items="data", sort-by="Date", class="elevation-1")
+          template(v-slot:item.actions="{ item }")
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
+              span edit
+            template(v-if='isAuthenticated === true')
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+                span delete
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, v-bind="attrs", v-on="on", @click="releaseTask(item)") mdi-antenna
+                span release
 </template>
 
 <script>
@@ -77,7 +82,8 @@ export default {
     MindEdit
   },
   computed: {
-    username: sync('username')
+    username: sync('username'),
+    isAuthenticated: sync('isAuthenticated')
   },
   data () {
     return {
@@ -89,11 +95,12 @@ export default {
       dialogImages: false,
       errorShown: false,
       headers: [
-        { text: 'Id', value: 'id' },
+        // { text: 'Id', value: 'id' },
         { text: 'TemplateName', align: 'start', value: 'TemplateName'},
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
+      search: '',
       data: [],
       editorData: {},
       desc: {},

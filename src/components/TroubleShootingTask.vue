@@ -33,27 +33,30 @@
                 v-btn(color="blue darken-1" text @click="dialogCloseTask = false") Cancel
                 v-btn(color="blue darken-1" text @click="closeTaskConfirm") OK
                 v-spacer
-      v-data-table(:headers="headers", :items="data", sort-by="Date", class="elevation-1")
-        template(v-slot:item.Status="{ item }")
-          v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
-        template(v-slot:item.actions="{ item }")
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
-            span edit
-          template(v-if='role === "administrator"')
+      v-card
+        v-card-title
+          v-text-field(v-model="search" label="Search" single-line hide-details)
+        v-data-table(:search="search" :headers="headers", :items="data", sort-by="Date", class="elevation-1")
+          template(v-slot:item.Status="{ item }")
+            v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
+          template(v-slot:item.actions="{ item }")
             v-tooltip(bottom)
               template(v-slot:activator="{ on,attrs }")
-                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
-              span delete
-            v-tooltip(bottom)
-              template(v-slot:activator="{ on,attrs }")
-                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="closeTask(item)") mdi-checkbox-marked-circle
-              span close
-            v-tooltip(bottom)
-              template(v-slot:activator="{ on,attrs }")
-                v-icon(small, v-bind="attrs", v-on="on", @click="exportTask(item)") mdi-export
-              span export
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
+              span edit
+            template(v-if='isAuthenticated === true')
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+                span delete
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="closeTask(item)") mdi-checkbox-marked-circle
+                span close
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, v-bind="attrs", v-on="on", @click="exportTask(item)") mdi-export
+                span export
 </template>
 
 <script>
@@ -81,6 +84,7 @@ export default {
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
+      search: '',
       data: [],
       template_id: '',
       tempData: '',
@@ -90,7 +94,8 @@ export default {
     this.initialize()
   },
   computed: {
-    groups: sync('groups')
+    groups: sync('groups'),
+    isAuthenticated: sync('isAuthenticated')
   },
   methods: {
     async initialize () {

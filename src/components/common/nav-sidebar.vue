@@ -48,7 +48,12 @@ export default {
           // console.log(response.data.groups)
           this.pages = response.data.content
           this.$store.set('groups', response.data.groups)
-          this.$store.set('username', 'visitor')
+          if (typeof(response.data.username) !== "undefined") {
+            this.$store.set('username', response.data.username)
+            this.$store.set('isAuthenticated', true)
+          }else{
+            this.$store.set('username', 'visitor')
+          }
         })
     },
   }

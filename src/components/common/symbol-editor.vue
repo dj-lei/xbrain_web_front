@@ -57,16 +57,17 @@
               v-col(class="pa-2")
                 v-text-field(v-model="text" label="text" dense outlined @keyup.enter="updateText")
           template(v-else-if="select_mode === 'data'")
-            v-row(class="d-flex justify-center")
+            v-row(class="d-flex justify-center" v-for="key in Object.keys(data)" :key="key.id")
               v-col(class="pa-2")
-                v-text-field(v-model="data_type" label="Type" disabled dense)
-                v-text-field(v-model="data_id" label="Id" disabled dense)
-                v-text-field(v-model="data_name" label="Name" dense @keyup.enter="updateData")
-                v-text-field(v-model="data_range" label="Range" disabled dense)
-                template(v-if="data_type === 'list'")
-                  v-combobox(v-model="data_value" :items='data_range.split(",")' dense outlined @change="updateData")
-                template(v-else)
-                  v-text-field(v-model="data_value" label="Value" dense @keyup.enter="updateData")
+                v-text-field(:value="data[key]" :label="key" disabled dense)
+                //- v-text-field(v-model="data_type" label="Type" disabled dense)
+                //- v-text-field(v-model="data_id" label="Id" disabled dense)
+                //- v-text-field(v-model="data_name" label="Name" dense @keyup.enter="updateData")
+                //- v-text-field(v-model="data_range" label="Range" disabled dense)
+                //- template(v-if="data_type === 'list'")
+                //-   v-combobox(v-model="data_value" :items='data_range.split(",")' dense outlined @change="updateData")
+                //- template(v-else)
+                //-   v-text-field(v-model="data_value" label="Value" dense @keyup.enter="updateData")
           template(v-else-if="select_mode === 'viewer'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
@@ -76,10 +77,10 @@
         v-dialog(v-model='dialogDataBind', dark, max-width="800px")
           v-card
             v-container
-              v-row
+              //- v-row
                 v-text-field(v-model="url_hardware_environment_editable_data" label="bind data url" dense outlined)
                 v-btn(dark, text, @click="queryBackendData") REFRESH
-              v-divider
+              //- v-divider
               v-card
                 v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
         v-dialog(v-model='dialogViewerConfig', dark, max-width="800px")
@@ -97,6 +98,7 @@
 import * as d3 from 'd3'
 import axios from 'axios'
 import * as echarts from 'echarts'
+import pako from 'pako'
 
 export default {
   props: {
@@ -133,6 +135,7 @@ export default {
     return {
       items: [],
       url_hardware_environment_editable_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
+      // url_hardware_environment_editable_data: process.env.NODE_ENV === 'development' ? 'http://10.166.152.40/ru/docman/get' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
       url_hardware_environment_read_status: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
       url_hardware_environment_save_config: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
       url_hardware_environment_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get' : 'http://10.166.152.49/ru/babel/get',
@@ -161,11 +164,13 @@ export default {
       major_elms: ['polygon','path','text','foreignObject'],
       label: '',
       bind_data: [],
-      data_type: '',
-      data_id: '',
-      data_name: '',
-      data_range: '',
-      data_value: '',
+      data: {},
+      original_attributes: ['style','xmlns'],
+      // data_type: '',
+      // data_id: '',
+      // data_name: '',
+      // data_range: '',
+      // data_value: '',
       select_mode: '',
       path_points: '',
       polygon_points: '',
@@ -285,7 +290,7 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_hardware_environment_editable_data)
         .then(response => {
-          this.items=response.data.content
+          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
         })
     },
     async addSymbolSvg (item) {
@@ -312,8 +317,8 @@ export default {
               d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("transform", that.transform))
             })
             d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
-              if (d3.select(this).attr("id").split("_").length > 1){
-                d3.select(this).attr("id", d3.select(this).attr("id").split("_")[1])
+              if (d3.select(this).attr("id").split("@").length > 1){
+                d3.select(this).attr("id", d3.select(this).attr("id").split("@")[1])
               }
             })
           })
@@ -354,9 +359,17 @@ export default {
         .call(this.drag(this.svg))
     },
     createData(){
-      let data = this.$common.jsonSearchId(this.items, this.bind_data)
+      this.data = this.$common.jsonSearchId(this.items, this.bind_data)
       let uuid = this.$common.generateUUID()
-      if (data['type'] === 'echarts'){
+      let content = ''
+      Object.keys(this.data).forEach((key) => {
+        if (key == 'id') {
+          content += ' '+key+'='+uuid+'@'+this.data[key].replace('.', '-')
+        }else{
+          content += ' '+key+'='+window.btoa(this.data[key])
+        }
+      })
+      if (this.data['type'] === 'echarts'){
         this.svg.append("foreignObject")
           .attr("id", uuid)
           .attr("dom_type", 'data')
@@ -365,9 +378,9 @@ export default {
           .attr("width", 600)
           .attr("height", 400)
           .attr("transform", this.transform)
-        .html('<div class="data" id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value="Object" bind_type='+data['type']+' bind_range="[]" xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
+        .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
         .call(this.drag(this.svg))
-        echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
+        // echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
       }else{
         this.svg.append("foreignObject")
           .attr("id", uuid)
@@ -377,7 +390,7 @@ export default {
           .attr("width", 150)
           .attr("height", 50)
           .attr("transform", this.transform)
-        .html('<div class="data" id='+uuid+'_'+data['id']+' bind_type='+data['type']+' xmlns="http://www.w3.org/1999/xhtml"> <span id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: '+this.hexa+'">'+data['name']+":"+data['value']+'</span> </div>')
+        .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml"> <span '+content+' style="color: '+this.hexa+'">'+this.data['id']+'</span> </div>')
         .call(this.drag(this.svg))
       }
     },
@@ -441,8 +454,8 @@ export default {
       this.$emit('saveToServer', d3.select("#new"))
     },
     log(){
+      // console.log(d3.select("#QURDX0lGXzBfQ0xLX0NUU-kwu_RU4"))
       console.log(d3.select("#new").node())
-      console.log(this.data_id)
     },
     clear(){
       this.done()
@@ -480,16 +493,21 @@ export default {
             that.path_points = d3.select(this).attr("d")
           }else if(d3.select(this).attr("dom_type") === 'data'){
             let data = {}
+            that.data = {}
             if (d3.select(this).node().getElementsByTagName('span').length > 0){
               data = d3.select(this).node().getElementsByTagName('span')[0]
             }else{
               data = d3.select(this).node().getElementsByTagName('div')[0]
             }
-            that.data_type = data.getAttribute("bind_type")
-            that.data_id = data.getAttribute("id")
-            that.data_name = data.getAttribute("bind_name")
-            that.data_range = data.getAttribute("bind_range")
-            that.data_value = data.getAttribute("bind_value")
+            for(let i=0;i < data.attributes.length;i++){
+              if(that.original_attributes.toString().indexOf(data.attributes[i].name) == -1){
+                if('id' == data.attributes[i].name){
+                  that.data[data.attributes[i].name] = data.getAttribute(data.attributes[i].name).split('@')[1]
+                }else{
+                  that.data[data.attributes[i].name] = window.atob(data.getAttribute(data.attributes[i].name))
+                }
+              }
+            }
             that.select_mode = 'data'
           }
           that.elm = d3.select(this)
@@ -600,62 +618,46 @@ export default {
     },
     async runOrStop(){
       if(this.run_flag === false){
-        let result = []
-        d3.selectAll(".hardware_environment").each(function(d, i) {
-          let tmp = {'hardware_environment_id': d3.select(this).attr("hardware_environment_id"),
-                    'hardware_environment_name': d3.select(this).attr("hardware_environment_name"),'data': []}
-          d3.select(this).selectAll('.data').each(function(d, i) {
-            tmp.data.push(d3.select(this).attr("id"))
-          })
-          result.push(tmp)
-        })
-        let formData = new FormData()
-        formData.append("username", this.username)
-        formData.append("operate", "hardware_environment_save_config")
-        formData.append("content", JSON.stringify(result))
-        let config = {
-          headers: {
-          'Content-Type': 'multipart/form-data'
-          }
-        }
+        let that = this
+        this.run_flag = true
+        this.interval = setInterval(function() {
+          d3.selectAll(".hardware_environment").each(function(d, i) {
+            let tmp = []
+            let hardware = this
+            let formData = new FormData()
+            formData.append("username", that.username)
+            formData.append("operate", "hardware_environment_save_config")
+            formData.append("sid", d3.select(this).attr("hardware_environment_id"))
+            formData.append("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
 
-        await axios.post(this.url_hardware_environment_save_config, formData, config).then(
-          (response)=>{
-            this.run_flag = true
-            let that = this
-            this.interval = setInterval(function() {
-              axios.get(that.url_hardware_environment_read_data, {
-              params: {
-                username: that.username,
-                operate: 'hardware_environment_read_data',
-              },
-              })
-              .then(response => {
+            d3.select(this).selectAll('.data').each(function(d, i) {
+              tmp.push(d3.select(this).attr("id").replace('-','.'))
+            })
+            formData.append("key", tmp.join(','))
+            formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
+            let config = {
+              headers: {
+              'Content-Type': 'multipart/form-data'
+              }
+            }
+            axios.post(that.url_hardware_environment_save_config, formData, config).then(
+              (response)=>{
                 let he = response.data.content
-                he.forEach((data) => {
-                  let tmp = ''
-                  d3.selectAll(".hardware_environment").each(function(d, i) {
-                    if (d3.select(this).attr("hardware_environment_name") === data['hardware_environment_name']) {
-                      tmp = d3.select(this)
+                Object.keys(he).forEach((key) => {
+                  d3.select(hardware).selectAll("#"+key.replace('.','-')).each(function(d, i) {
+                    if(window.atob(d3.select(this).attr("type")) === "echarts"){
+                      echarts.init(d3.select(this).node()).setOption(he[key])
+                    }else{
+                      let data = d3.select(this).node().getElementsByTagName('span')[0]
+                      data.innerHTML = data.getAttribute("id").split('@')[1].replace('-','.')+":"+he[key]
                     }
                   })
-                  data['data'].forEach((elm) => {
-                    tmp.selectAll("#"+elm['id']).each(function(d, i) {
-                      if(d3.select(this).attr("bind_type") === "echarts"){
-                          echarts.init(d3.select(this).node()).setOption(elm['value'])
-                      }else{
-                        let data = d3.select(this).node().getElementsByTagName('span')[0]
-                        data.setAttribute("bind_value", elm['value'])
-                        data.innerHTML = data.getAttribute("bind_name")+":"+elm['value']
-                      }
-                    })
-                  })
                 })
-              })
-            },3000)
-        }, (error) => {
-          console.log(error)
-        })
+            }, (error) => {
+              console.log(error)
+            })
+          })
+        },3000)
       }else{
         clearInterval(this.interval)
         this.run_flag = false
@@ -664,3 +666,5 @@ export default {
   },
 }
 </script>
+
+
