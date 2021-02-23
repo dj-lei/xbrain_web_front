@@ -45,12 +45,13 @@
                       v-card
                         div(id="commentsEditor")
                     v-flex.page-col-content(xs12,  xl10)
-                      template(v-if='dialogRichTextEdit === false')
-                        v-btn(color="blue darken-1" dark fab @click="newPost")
-                          v-icon mdi-plus
-                      template(v-else)
-                        v-btn(color="blue darken-1" dark fab @click="dialogRichTextEdit = false")
-                          v-icon mdi-minus
+                      template(v-if='isAuthenticated === true')
+                        template(v-if='dialogRichTextEdit === false')
+                          v-btn(color="blue darken-1" dark fab @click="newPost")
+                            v-icon mdi-plus
+                        template(v-else)
+                          v-btn(color="blue darken-1" dark fab @click="dialogRichTextEdit = false")
+                            v-icon mdi-minus
                   template(v-if='dialogRichTextEdit === true')
                     v-divider(vertical)
                     v-col(class="pa-2")
@@ -76,9 +77,9 @@
           v-data-table(:headers="headers", :items="logs", sort-by="created_time", class="elevation-1")
             template(v-slot:item.actions="{ item }")
               v-icon(small, class="mr-2", @click="downloadItem(item)") mdi-download
-              template(v-if='role !== "visitor"')
+              template(v-if='isAuthenticated === true')
                 v-icon(small, @click="deleteItem(item)") mdi-delete
-          template(v-if='role !== "visitor"')
+          template(v-if='isAuthenticated === true')
             v-bottom-navigation(color="primary")
               v-file-input(v-model="addLogs", prepend-icon="mdi-upload", solo, hide-details, color="deep-purple accent-4",  label="Upload logs", multiple, placeholder="Add logs", outlined)
               v-btn(:disabled='addLogs.length === 0', color="blue darken-1" text @click="uploadChecklistLogs") Upload
@@ -125,7 +126,8 @@ export default {
     }
   },
   computed: {
-    username: sync('username')
+    username: sync('username'),
+    isAuthenticated: sync('isAuthenticated')
   },
   data () {
     return {
