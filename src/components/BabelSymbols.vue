@@ -80,7 +80,7 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
-      symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
+      symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'circle'},{'id':'3', 'symbol':'rectangle'},{'id':'4', 'symbol':'text'},{'id':'5', 'symbol':'data'}]}],
       svg_content: '',
       svg_temp: {},
       symbol_name: '',
@@ -104,7 +104,7 @@ export default {
         })
         .then(response => {
           this.data = response.data.content
-          this.symbols = [{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}]
+          this.symbols = [{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'circle'},{'id':'3', 'symbol':'rectangle'},{'id':'4', 'symbol':'text'},{'id':'5', 'symbol':'data'}]}]
           this.symbols = this.symbols.concat(response.data.symbols)
           this.symbol_types = []
           response.data.symbols.forEach((symbol) => {

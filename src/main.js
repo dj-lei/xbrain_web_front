@@ -9,6 +9,7 @@ import 'material-design-icons-iconfont/dist/material-design-icons.css'
 import service from '@/plugins/http'
 import urls from '@/plugins/urls'
 import common from '@/plugins/common'
+import experience from '@/plugins/experience'
 
 import TroubleShootingTemplateEdit from './components/TroubleShootingTemplateEdit'
 import TroubleShootingTask from './components/TroubleShootingTask'
@@ -31,6 +32,7 @@ Vue.use(VueRouter)
 Vue.prototype.$http = service
 Vue.prototype.$urls = urls
 Vue.prototype.$common = common
+Vue.prototype.$experience = experience
 
 const routes = [
   { path: '/', component: Pinmux },

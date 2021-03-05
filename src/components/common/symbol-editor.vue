@@ -48,10 +48,24 @@
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
                 v-text-field(v-model="path_points" label="path points" dense outlined @keyup.enter="updatePath")
+                v-text-field(v-model="stroke_width" label="stroke width" dense outlined @keyup.enter="updateStrokeWidth")
           template(v-else-if="select_mode === 'polygon'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
                 v-text-field(v-model="polygon_points" label="polygon points" dense outlined @keyup.enter="updatePolygon")
+                v-text-field(v-model="stroke_width" label="stroke width" dense outlined @keyup.enter="updateStrokeWidth")
+          template(v-else-if="select_mode === 'circle'")
+            v-row(class="d-flex justify-center")
+              v-col(class="pa-2")
+                v-text-field(v-model="circle_r_x" label="circle radius of x" dense outlined @keyup.enter="updateCircle")
+                v-text-field(v-model="circle_r_y" label="circle radius of y" dense outlined @keyup.enter="updateCircle")
+                v-text-field(v-model="stroke_width" label="stroke width" dense outlined @keyup.enter="updateStrokeWidth")
+          template(v-else-if="select_mode === 'rectangle'")
+            v-row(class="d-flex justify-center")
+              v-col(class="pa-2")
+                v-text-field(v-model="rec_width" label="width" dense outlined @keyup.enter="updateRec")
+                v-text-field(v-model="rec_height" label="height" dense outlined @keyup.enter="updateRec")
+                v-text-field(v-model="stroke_width" label="stroke width" dense outlined @keyup.enter="updateStrokeWidth")
           template(v-else-if="select_mode === 'text'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
@@ -67,10 +81,15 @@
                   v-combobox(v-model="data_value" :items='data_range.split(",")' dense outlined @change="updateData")
                 template(v-else)
                   v-text-field(v-model="data_value" label="Value" dense @keyup.enter="updateData")
-          template(v-else-if="select_mode === 'viewer'")
-            v-row(class="d-flex justify-center")
-              v-col(class="pa-2")
-                v-combobox(v-model="selected_hardware_environment" :items='coverToList()' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
+          v-toolbar(dark)
+            v-toolbar-title Shape and Color
+          v-col
+              v-slider(v-model="s_scale" class="ma-2" :readonly="s_flag" :max="s_max" :min="s_min" thumb-label thumb-color="blue" ticks label="Scale" @input="updateScale")
+              v-slider(v-if="select_mode !== 'text' && select_mode !== 'data' " v-model="s_width" class="ma-2" :readonly="s_flag" :max="w_max" :min="w_min" thumb-label thumb-color="blue" ticks label="Width" @input="updateScaleOfW")
+              v-slider(v-if="select_mode !== 'text' && select_mode !== 'data' " v-model="s_height" class="ma-2" :readonly="s_flag" :max="h_max" :min="h_min" thumb-label thumb-color="blue" ticks label="Height" @input="updateScaleOfH")
+              span(class="ma-2") Rotate
+              v-btn(v-model="rotate" @click="startRotate")
+                v-icon mdi-crop-rotate
           v-row
             v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
         v-dialog(v-model='dialogDataBind', dark, max-width="800px")
@@ -97,6 +116,7 @@
 import * as d3 from 'd3'
 import axios from 'axios'
 import * as echarts from 'echarts'
+//import func from '../../../vue-temp/vue-editor-bridge'
 
 export default {
   props: {
@@ -131,6 +151,7 @@ export default {
   },
   data () {
     return {
+      num: 0,
       items: [],
       url_hardware_environment_editable_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
       url_hardware_environment_read_status: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
@@ -158,7 +179,7 @@ export default {
       x:[],
       y:[],
       elm: '',
-      major_elms: ['polygon','path','text','foreignObject'],
+      major_elms: ['polygon','path','text','foreignObject','circle','rectangle','ellipse'],
       label: '',
       bind_data: [],
       data_type: '',
@@ -169,10 +190,39 @@ export default {
       select_mode: '',
       path_points: '',
       polygon_points: '',
+      circle_r_x: '',
+      circle_r_y: '',
+      rec_width: '',
+      rec_height: '',
+      rec_points: '',
+      stroke_width: 5,
       text: '',
       instance_num: 0,
       opt: '20',
       transform: 'translate(0,0) scale(1)',
+      clipboard: {
+        data: null,
+        count: 0
+      },
+      state:{
+        svgLog: [],
+        current: -1,
+        limit: 10
+      },
+      s_flag: true,
+      s_scale: 0,
+      s_min: -50,
+      s_max: 200,
+      s_width: 0,
+      s_height: 0,
+      w_min: -50,
+      w_max: 200,
+      h_min: -50,
+      h_max: 200,
+      font_size: 15,
+      rotate: 90,
+      brush:'',
+      combined: []
     }
   },
   watch:{
@@ -198,8 +248,108 @@ export default {
       // window.event.preventDefault()
       if (e.path[0].getAttribute('type') === 'text') return
 
+      if (key == 80){ // P path
+        _this.select_mode = 'path'
+      }
+      if (key == 79){ // O polygon
+        _this.select_mode = 'polygon'
+      }
+      if (key == 67){ // C circle
+        _this.select_mode = 'circle'
+      }
+      if (key == 82){ // R rectangle
+        _this.select_mode = 'rectangle'
+      }
+      if (key == 84){ // T text
+        _this.select_mode = 'text'
+      }
+      if (key == 68){ // D data
+        _this.dialogDataBind = true
+        _this.select_mode = 'data'
+      }
+
       if (key== 46 || key== 8) { //Del or Backspace
         _this.deleteElm()
+      }
+
+      if (e.ctrlKey && key == 67){ // Ctrl+C
+        _this.clipboard = _this.$experience.copyElm(_this.elm)
+      }
+
+      if (e.ctrlKey && key == 86){ // Ctrl+V
+        if (_this.clipboard.data.attr("dom_type") === 'g'){
+          _this.clipboard.count++
+          _this.clipboard.data.selectAll('*').select(function() {
+            if(d3.select(this).attr("dom_type") !== "g"){
+              return this
+            }
+          }).each(function(d, i) {
+            let id = _this.$common.generateUUID()
+            _this.$experience.pasteElm(_this.clipboard, _this.svg, id, _this.hexa, d3.select(this))
+            _this.svg.select("#" + id).call(_this.drag(_this.svg))
+          })
+        }else{
+          let id = _this.$common.generateUUID()
+          _this.$experience.pasteElm(_this.clipboard, _this.svg, id, _this.hexa, '')
+          _this.svg.select("#" + id).call(_this.drag(_this.svg))
+        }
+        _this.$experience.saveLog(_this.state, _this.svg)
+      }
+
+      if (e.ctrlKey && key == 90){ // Ctrl+Z
+        //_this.$experience.undo(_this.state, _this.svg, _this.drag)
+        let val = _this.state.svgLog[_this.state.current-1]
+        d3.xml(val)
+          .then(data => {
+            let tmp = data.getElementsByTagName('g')[0]
+            //console.log(tmp)
+            d3.select("#new").remove()
+            d3.select('#viz').node().append(tmp)
+            _this.svg = d3.select("#new")
+            //console.log("svg",_this.svg)
+            _this.svg.selectAll('*').each(function(d, i){
+              d3.select(this).call(_this.drag(d3.select(this)))
+            })
+          })
+        _this.state.current--
+      }
+
+      if (e.ctrlKey && key == 89){ // Ctrl+Y
+        _this.$experience.redo(_this.state, _this.svg)
+        if(_this.state.current < _this.state.svgLog.length-1){
+          let val = _this.state.svgLog[_this.state.current+1]
+          d3.xml(val)
+            .then(data => {
+              let tmp = data.getElementsByTagName('g')[0]
+              //console.log(tmp)
+              d3.select("#new").remove()
+              d3.select('#viz').node().append(tmp)
+              _this.svg = d3.select("#new")
+              //console.log("svg",_this.svg)
+              _this.svg.selectAll('*').each(function(d, i){
+                d3.select(this).call(_this.drag(d3.select(this)))
+              })
+            })
+          _this.state.current++
+        }
+        
+      }
+
+      if (e.ctrlKey && key == 66){ // Ctrl+B 禁用zoom 开启brush
+        // 先禁用zoom
+        d3.select("#viz").on("mousedown.zoom", null).on("wheel.zoom", null)
+        //console.log(_this.x) // 想办法输出当前坐标轴的左上角坐标
+        // 启用brush
+        _this.brush = d3.select("#viz").append("g").attr("class", "brush")
+        //console.log(_this.brush.select(".selection"))
+        _this.brush.call(d3.brush()
+                  .extent([[0, 0], [_this.canvas_width, _this.canvas_height]])
+                  // .on("start brush end", _this.brushed)
+                  .on("start", _this.brushstarted)
+                  .on("brush", _this.brushed) //brush
+                  .on("end", _this.brushended) //关闭brush 开启zoom
+                  )
+        _this.done()
       }
     }
     this.$common.setBrowserTitle("new")
@@ -209,8 +359,36 @@ export default {
     this.gy = d3.select("#viz").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
     this.zoom = d3.zoom().scaleExtent([0.4, 8]).on("zoom", this.zoomed)
     d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
+    this.$experience.saveLog(this.state, this.svg)
   },
   methods: {
+    brushstarted(event){
+      this.done()
+    },
+    brushed(event){
+      this.combined = this.$experience.brushed(event, this.svg)
+    },
+    brushended(event){
+      // console.log("combined",this.combined)
+      let _this = this
+      this.svg.append("g").attr("dom_type", 'g').attr("id", "control")
+      //试一下放在一起id control class 原id
+      this.combined.forEach(d => {
+        let c = document.getElementById(d)
+        document.getElementById("control").appendChild(c)
+      })
+      d3.select('#control').selectAll("*").each(function(d){
+        if(_this.major_elms.includes(d3.select(this).attr("dom_type")) || d3.select(this).attr("dom_type")=== 'data'){
+          // console.log("this", d3.select(this))
+          let id = d3.select(this).attr("id")
+          d3.select(this).attr("class", id).attr("id", "control").call(_this.drag(d3.select(this)))
+        }
+        
+      })
+      //结束brush 恢复zoom
+      d3.select('.brush').remove()
+      d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
+    },
     zoomed(event) {
       const {transform} = event
       this.transform = transform
@@ -263,10 +441,20 @@ export default {
       this.done()
       if (item.symbol == 'path'){
         this.path_points = ''
+        this.stroke_width = 5,
         this.select_mode = 'path'
       }else if(item.symbol == 'polygon'){
         this.polygon_points = ''
         this.select_mode = 'polygon'
+      }else if(item.symbol == 'circle'){
+        this.circle_r_x = ''
+        this.circle_r_y = ''
+        this.select_mode = 'circle'
+      }else if(item.symbol == 'rectangle'){
+        this.rec_height = ''
+        this.rec_width = ''
+        this.rec_points = ''
+        this.select_mode = 'rectangle'
       }else if(item.symbol == 'text'){
         this.text = ''
         this.select_mode = 'text'
@@ -320,15 +508,17 @@ export default {
         })
     },
     createPath() {
+      let id = this.$common.generateUUID()
       this.svg.append('path')
-        .attr("id", this.$common.generateUUID())
+        .attr("id", id)
         .attr("d", this.path_points) //'M50 150Q300 50 300 150T450 150'
         .attr("dom_type", 'path')
         .attr("transform", this.transform)
         .style("fill", 'none')
         .style('stroke', this.hexa)
-        .style('stroke-width', 5)
+        .style('stroke-width', this.stroke_width)
         .call(this.drag(this.svg))
+      this.$experience.saveLog(this.state, this.svg)
     },
     createPolygon() { // 100,100 100,400 300,400 300,100
       this.svg.append("polygon")
@@ -338,8 +528,70 @@ export default {
         .attr("transform", this.transform)
         .style("fill", "none")
         .style('stroke', this.hexa)
-        .style('stroke-width', 5)
+        .style('stroke-width', this.stroke_width)
         .call(this.drag(this.svg))
+      this.$experience.saveLog(this.state, this.svg)
+    },
+    createCircle() {
+      if(this.circle_r_x || this.circle_r_y){
+        if(!this.circle_r_y){
+          this.circle_r_y = this.circle_r_x
+        } else if(!this.circle_r_x){
+          this.circle_r_x = this.circle_r_y
+        }
+        this.svg.append("ellipse")
+        .attr("id", this.$common.generateUUID())
+        .attr("dom_type", 'circle')
+        .attr("cx", this.canvas_width / 2)
+        .attr("cy", this.canvas_height / 2)
+        .attr('rx',this.circle_r_x)
+        .attr('ry',this.circle_r_y)
+        .attr("transform", this.transform)
+        .style("fill", 'none')
+        .style("stroke", this.hexa)
+        .style("stroke-width", this.stroke_width)
+        .call(this.drag(this.svg))
+      this.$experience.saveLog(this.state, this.svg)
+      }
+      
+    },
+    createRec() {
+      if (this.rec_height && this.rec_width){
+        let x = (this.canvas_width / 2) - (this.rec_width / 2)
+        let y = (this.canvas_height / 2) - (this.rec_height / 2)
+        this.rec_points = x+','+y+' '+
+                          (parseInt(x)+parseInt(this.rec_width))+','+y+' ' +
+                          (parseInt(x)+parseInt(this.rec_width))+','+(parseInt(y)+parseInt(this.rec_height))+' '+
+                          x+','+(parseInt(y)+parseInt(this.rec_height))
+        this.svg.append("polygon")
+          .attr("id", this.$common.generateUUID())
+          .attr("dom_type", 'rectangle')
+          .attr("points", this.rec_points)
+          .attr("transform", this.transform)
+          .style("fill", 'none')
+          .style("stroke", this.hexa)
+          .style("stroke-width", this.stroke_width)
+          .call(this.drag(this.svg))
+        this.$experience.saveLog(this.state, this.svg)
+      }
+      
+      // if (this.rec_height && this.rec_width){
+      //   let x = (this.canvas_width / 2)
+      //   let y = (this.canvas_height / 2)
+      //   this.svg.append("rect")
+      //     .attr("id", this.$common.generateUUID())
+      //     .attr("dom_type", 'rectangle')
+      //     .attr("x", x)
+      //     .attr("y", y)
+      //     .attr("width", this.rec_width)
+      //     .attr("height", this.rec_height)
+      //     .attr("transform", this.transform)
+      //     .style("fill", 'none')
+      //     .style("stroke", this.hexa)
+      //     .style("stroke-width", this.stroke_width)
+      //     .call(this.drag(this.svg))
+      //   this.$experience.saveLog(this.state, this.svg)
+      // }
     },
     createText() {
       this.svg.append("text")
@@ -349,9 +601,11 @@ export default {
         .attr("y", this.canvas_height / 2)
         .attr("fill", this.hexa)
         .attr("transform", this.transform)
+        .attr("font-size", this.font_size)
         // .attr("font-weight", "bold")
         .text(this.text)
         .call(this.drag(this.svg))
+      this.$experience.saveLog(this.state, this.svg)
     },
     createData(){
       let data = this.$common.jsonSearchId(this.items, this.bind_data)
@@ -380,6 +634,7 @@ export default {
         .html('<div class="data" id='+uuid+'_'+data['id']+' bind_type='+data['type']+' xmlns="http://www.w3.org/1999/xhtml"> <span id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: '+this.hexa+'">'+data['name']+":"+data['value']+'</span> </div>')
         .call(this.drag(this.svg))
       }
+      this.$experience.saveLog(this.state, this.svg)
     },
     updateColor(){
       if (this.elm !== ''){
@@ -390,11 +645,44 @@ export default {
         }else{
           this.elm.style("stroke", this.hexa+this.opt)
         }
+        this.$experience.saveLog(this.state, this.svg)
+      }
+    },
+    updateScale(){
+      if (this.elm !== ''){
+        this.$experience.updateScale(this.elm, 1, 1, this.s_scale, this.s_width, this.s_height, this.font_size, this.path_points, this.polygon_points, this.rec_points, this.rec_width, this.rec_height, this.circle_r_x, this.circle_r_y)
+        //this.done()
+        this.$experience.saveLog(this.state, this.svg)
+      }
+    },
+    updateScaleOfW(){
+      if (this.elm !== ''){
+        this.$experience.updateScale(this.elm, 1, 0, this.s_scale, this.s_width, this.s_height, this.font_size, this.path_points, this.polygon_points, this.rec_points, this.rec_width, this.rec_height, this.circle_r_x, this.circle_r_y)
+        this.$experience.saveLog(this.state, this.svg)
+      }
+    },
+    updateScaleOfH(){
+      if (this.elm !== ''){
+        this.$experience.updateScale(this.elm, 0, 1, this.s_scale, this.s_width, this.s_height, this.font_size, this.path_points, this.polygon_points, this.rec_points, this.rec_width, this.rec_height, this.circle_r_x, this.circle_r_y)
+        this.$experience.saveLog(this.state, this.svg)
+      }
+    },
+    updateStrokeWidth(){
+      if (this.elm !== ''){
+        this.elm.style("stroke-width", this.stroke_width)
+        this.$experience.saveLog(this.state, this.svg)
+      }
+    },
+    startRotate(){
+      if (this.elm !== ''){
+        this.$experience.Rotate(this.elm, this.rotate, this.canvas_width, this.canvas_height)
+        this.$experience.saveLog(this.state, this.svg)
       }
     },
     updatePath(){
       if (this.elm !== ''){
         this.elm.attr("d", this.path_points)
+        this.$experience.saveLog(this.state, this.svg)
       }else{
         this.createPath()
       }
@@ -402,13 +690,40 @@ export default {
     updatePolygon(){
       if (this.elm !== ''){
         this.elm.attr("points", this.polygon_points)
+        this.$experience.saveLog(this.state, this.svg)
       }else{
         this.createPolygon()
+      }
+    },
+    updateCircle(){
+      if (this.elm !== ''){
+        this.elm.attr("rx", this.circle_r_x)
+                .attr("ry", this.circle_r_y)
+        this.$experience.saveLog(this.state, this.svg)
+      }else{
+        this.createCircle()
+      }
+    },
+    updateRec(){
+      if (this.elm !== ''){
+        let x = (this.canvas_width / 2) - (this.rec_width / 2)
+        let y = (this.canvas_height / 2) - (this.rec_height / 2)
+        this.rec_points = x+','+y+' '+
+                          (parseInt(x)+parseInt(this.rec_width))+','+y+' ' +
+                          (parseInt(x)+parseInt(this.rec_width))+','+(parseInt(y)+parseInt(this.rec_height))+' '+
+                          x+','+(parseInt(y)+parseInt(this.rec_height))
+        this.elm.attr("points", this.rec_points)
+        // this.elm.attr("width", this.rec_width)
+        //         .attr("height", this.rec_height)
+        this.$experience.saveLog(this.state, this.svg)
+      }else{
+        this.createRec()
       }
     },
     updateText(){
       if (this.elm !== ''){
         this.elm.text(this.text)
+        this.$experience.saveLog(this.state, this.svg)
       }else{
         this.createText()
       }
@@ -419,6 +734,7 @@ export default {
         data.setAttribute("bind_value", this.data_value)
         data.setAttribute("bind_name", this.data_name)
         data.innerHTML = this.data_name+":"+this.data_value
+        this.$experience.saveLog(this.state, this.svg)
       }
     },
     deleteElm() {
@@ -426,6 +742,7 @@ export default {
         this.elm.remove()
         this.elm = ''
         this.select_mode = ''
+        this.$experience.saveLog(this.state, this.svg)
       }
     },
     done() {
@@ -434,6 +751,15 @@ export default {
       }
       this.elm = ''
       this.select_mode = ''
+      if (this.combined.length){
+        this.combined.forEach(d => {
+          let c = document.getElementsByClassName(d)[0]
+          c.setAttribute("id", c.getAttribute("class"))
+          document.getElementById("new").appendChild(c)
+        })
+      }
+      d3.select("#control").remove()
+      this.combined = []
     },
     async save(){
       await this.done()
@@ -470,6 +796,17 @@ export default {
             that.select_mode = 'polygon'
             that.hexa = that.$common.colorRGBtoHex(d3.select(this).style("stroke"))
             that.polygon_points = d3.select(this).attr("points")
+          }else if(d3.select(this).attr("dom_type") === 'circle'){
+            that.hexa = that.$common.colorRGBtoHex(d3.select(this).style("stroke"))
+            that.select_mode = 'circle'
+            that.circle_r_x = d3.select(this).attr("rx")
+            that.circle_r_y = d3.select(this).attr("ry")
+          }else if (d3.select(this).attr("dom_type") === 'rectangle'){
+            that.select_mode = 'rectangle'
+            that.hexa = that.$common.colorRGBtoHex(d3.select(this).style("stroke"))
+            that.rec_points = d3.select(this).attr("points")
+            // that.rec_width = d3.select(this).attr("width")
+            // that.rec_height = d3.select(this).attr("height")
           }else if(d3.select(this).attr("dom_type") === 'text'){
             that.hexa = d3.select(this).attr("fill")
             that.select_mode = 'text'
@@ -515,14 +852,22 @@ export default {
           that.render(d3.select(this), scale_event)
         }
       }
-      function dragended(event) {
+      function dragended(event) { // 
         if (d3.select(this).attr("dom_type") === 'polygon') {
           that.polygon_points = d3.select(this).attr("points")
+        }else if(d3.select(this).attr("dom_type") === 'rectangle'){
+          that.rec_points = d3.select(this).attr("points")
+          // that.rec_width = d3.select(this).attr("width")
+          // that.rec_height = d3.select(this).attr("height")
+        }else if(d3.select(this).attr("dom_type") === 'circle'){
+          that.circle_r_x = d3.select(this).attr("rx")
+          that.circle_r_y = d3.select(this).attr("ry")
         }else if(d3.select(this).attr("dom_type") === 'text'){
           that.text = d3.select(this).text()
         }else if(d3.select(this).attr("dom_type") === 'path'){
           that.path_points = d3.select(this).attr("d")
         }
+        that.$experience.saveLog(that.state, that.svg)
       }
       return d3.drag()
           .on("start", dragstarted)
@@ -534,11 +879,16 @@ export default {
         d3.selectAll(elm).call(g => g.call(this.drag(g)))
       })
     },
-    boxSelection(elm, flag){
+    boxSelection(elm, flag){// original
+      this.s_flag = false
       let that = this
       if (elm.attr("dom_type") === 'polygon') {
         elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
       }else if(elm.attr("dom_type") === 'path'){
+        elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
+      }else if(elm.attr("dom_type") === 'circle'){
+        elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
+      }else if (elm.attr("dom_type") === 'rectangle') {
         elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
       }else if(elm.attr("dom_type") === 'text'){
         elm.attr("fill", flag == true ? elm.attr("fill")+this.opt : elm.attr("fill").slice(0,7))
@@ -557,7 +907,7 @@ export default {
       }
     },
     render(element, event) {
-      if (element.attr("dom_type") === 'polygon') {
+      if (element.attr("dom_type") === 'polygon' || element.attr("dom_type") === 'rectangle') {
         let points = element.attr("points").split(" ")
         let result = []
         points.forEach((point) => {
@@ -575,6 +925,14 @@ export default {
           }
         })
         element.attr("d", result.join(''))
+      }
+      // else if(element.attr("dom_type") === 'rectangle'){
+      //   element.attr("x", parseInt(element.attr("x"))+event.dx)
+      //           .attr("y", parseInt(element.attr("y"))+event.dy)
+      // }
+      else if(element.attr("dom_type") === 'circle'){
+        element.attr("cx", parseInt(element.attr("cx"))+event.dx)
+                .attr("cy", parseInt(element.attr("cy"))+event.dy)
       }else if(element.attr("dom_type") === 'text'){
         element.attr("x", parseInt(element.attr("x"))+event.dx)
                 .attr("y", parseInt(element.attr("y"))+event.dy)
