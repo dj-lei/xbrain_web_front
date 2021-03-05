@@ -71,15 +71,16 @@
               v-col(class="pa-2")
                 v-text-field(v-model="text" label="text" dense outlined @keyup.enter="updateText")
           template(v-else-if="select_mode === 'data'")
-            v-row(class="d-flex justify-center")
+            v-row(class="d-flex justify-center" v-for="key in Object.keys(data)" :key="key.id")
               v-col(class="pa-2")
-                v-text-field(v-model="data_type" label="Type" disabled dense)
-                v-text-field(v-model="data_id" label="Id" disabled dense)
-                v-text-field(v-model="data_name" label="Name" dense @keyup.enter="updateData")
-                v-text-field(v-model="data_range" label="Range" disabled dense)
-                template(v-if="data_type === 'list'")
-                  v-combobox(v-model="data_value" :items='data_range.split(",")' dense outlined @change="updateData")
+                template(v-if="key === 'mode'")
+                  v-combobox(v-model="selected" :items="['normal', 'interactive']" label="select mode" @change='initCtrlElm')
+                template(v-else-if="key === 'id' && Object.keys(data).indexOf('mode') > -1")
+                  v-text-field(v-model="fill_id" label="fill id" @change="initCtrlElm")
+                template(v-else-if="key === 'value' && Object.keys(data).indexOf('mode') > -1")
+                  v-text-field(v-model="fill_param" label="fill param" @change="initCtrlElm")
                 template(v-else)
+<<<<<<< HEAD
                   v-text-field(v-model="data_value" label="Value" dense @keyup.enter="updateData")
           v-toolbar(dark)
             v-toolbar-title Shape and Color
@@ -92,12 +93,43 @@
                 v-icon mdi-crop-rotate
           v-row
             v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
+=======
+                  v-text-field(:value="data[key]" :label="key" disabled dense)
+            v-row
+              v-col(class="pa-2")
+                v-btn(dark, @click="expression") EXPRESSION
+            v-dialog(v-model="dialogExpression", max-width="900px")
+              v-card
+                v-container(fluid)
+                  v-row(class="d-flex justify-center")
+                    v-col(class="pa-2")
+                      v-treeview(:active.sync="variable" open-on-click dense hoverable activatable :items="items")
+                    v-divider(vertical)
+                    v-col(class="pa-2")
+                      v-textarea(v-model="express" label="Fill in the expression" auto-grow outlined :error="error_flag" :error-messages="error_messages")
+                      v-btn(dark :color="info_color" @click='checkExpression' depressed) CHECK
+                        template(v-if="is_success === true")
+                          v-icon(dark right) mdi-checkbox-marked-circle
+          template(v-else-if="select_mode === 'viewer'")
+            v-row(class="d-flex justify-center")
+              v-col(class="pa-2")
+                //- template(v-if="ctrl_param_type === 'list'")
+                //-   v-combobox(v-model="selected" :items="selected_items" label="selected param" @change='initCtrlElm')
+                //- template(v-else-if="ctrl_param_type === 'text'")
+                //-   v-text-field(v-model="selected" label="fill param" @change='initCtrlElm')
+                //- template(v-else)
+                v-combobox(v-model="selected_hardware_environment" :items='coverToList()' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
+                v-btn(dark @click='interactive' depressed) INTERACTIVE
+          template(v-if="select_mode !== 'data' && is_viewer !== true")
+            v-row
+              v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
+>>>>>>> 4e4717d9ee038bed12147d2c59539f40a0a0cdb2
         v-dialog(v-model='dialogDataBind', dark, max-width="800px")
           v-card
             v-container
               v-row
-                v-text-field(v-model="url_hardware_environment_editable_data" label="bind data url" dense outlined)
-                v-btn(dark, text, @click="queryBackendData") REFRESH
+                v-btn(color="primary", dark, @click="createCustomData") CUSTOM
+              v-spacer(class="mt-3")
               v-divider
               v-card
                 v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
@@ -105,18 +137,25 @@
           v-card
             v-container
               v-row
-                v-text-field(v-model="url_hardware_environment_read_status" label="Api get hardware environment status" dense outlined)
+                v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
               v-row
-                v-text-field(v-model="url_hardware_environment_save_config" label="Api post config info" dense outlined)
+                v-text-field(v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
               v-row
-                v-text-field(v-model="url_hardware_environment_read_data" label="Api read data" dense outlined)
+                v-text-field(v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
+              v-row
+                v-text-field(v-model="url_post_interactive_data" label="Api post interactive data" dense outlined)
 </template>
 
 <script>
 import * as d3 from 'd3'
 import axios from 'axios'
 import * as echarts from 'echarts'
+<<<<<<< HEAD
 //import func from '../../../vue-temp/vue-editor-bridge'
+=======
+import pako from 'pako'
+import * as math from 'mathjs'
+>>>>>>> 4e4717d9ee038bed12147d2c59539f40a0a0cdb2
 
 export default {
   props: {
@@ -153,15 +192,25 @@ export default {
     return {
       num: 0,
       items: [],
-      url_hardware_environment_editable_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
-      url_hardware_environment_read_status: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
-      url_hardware_environment_save_config: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
-      url_hardware_environment_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get' : 'http://10.166.152.49/ru/babel/get',
+      url_get_bind_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
+      url_get_ins_env: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
+      url_post_config_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
+      url_post_interactive_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
       selected_hardware_environment: '',
       run_flag: false,
       interval: '',
       dialogDataBind: false,
+      dialogExpression: false,
       dialogViewerConfig: false,
+      express: '',
+      error_flag: false,
+      error_messages: '',
+      is_success: false,
+      info_color: 'info',
+      variable: [],
+      selected: '',
+      fill_param: '',
+      fill_id: '',
       hexa: '#FF00FF',
       canvas_width: 950,
       canvas_height: 730,
@@ -182,11 +231,8 @@ export default {
       major_elms: ['polygon','path','text','foreignObject','circle','rectangle','ellipse'],
       label: '',
       bind_data: [],
-      data_type: '',
-      data_id: '',
-      data_name: '',
-      data_range: '',
-      data_value: '',
+      data: {},
+      original_attributes: ['style','xmlns'],
       select_mode: '',
       path_points: '',
       polygon_points: '',
@@ -228,10 +274,16 @@ export default {
   watch:{
     dialogDataBind(val) {
       if(val === false && this.bind_data.length > 0){
-        // this.data_type = "List"
         this.createData()
       }
     },
+    variable(val) {
+      this.express = this.express + val[0]
+    },
+    express(val) {
+      this.info_color = 'info'
+      this.is_success = false
+    }
   },
   mounted () {
     var _this = this
@@ -464,16 +516,17 @@ export default {
         this.data_name = ''
         this.data_range = ''
         this.data_value = ''
-        this.select_mode = 'data'
+        // this.select_mode = 'data'
         this.dialogDataBind = true
       }else{
         this.addSymbolSvg(item)
       }
     },
     async queryBackendData(){
-      await axios.get(this.url_hardware_environment_editable_data)
+      await axios.get(this.url_get_bind_data)
         .then(response => {
-          this.items=response.data.content
+          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          this.items = response.data.content
         })
     },
     async addSymbolSvg (item) {
@@ -500,8 +553,8 @@ export default {
               d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("transform", that.transform))
             })
             d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
-              if (d3.select(this).attr("id").split("_").length > 1){
-                d3.select(this).attr("id", d3.select(this).attr("id").split("_")[1])
+              if (d3.select(this).attr("id").split("@").length > 1){
+                d3.select(this).attr("id", d3.select(this).attr("id").split("@")[1])
               }
             })
           })
@@ -608,9 +661,17 @@ export default {
       this.$experience.saveLog(this.state, this.svg)
     },
     createData(){
-      let data = this.$common.jsonSearchId(this.items, this.bind_data)
+      this.data = this.$common.jsonSearchId(this.items, this.bind_data)
       let uuid = this.$common.generateUUID()
-      if (data['type'] === 'echarts'){
+      let content = ''
+      Object.keys(this.data).forEach((key) => {
+        if (key == 'id') {
+          content += ' '+key+'='+this.data[key]
+        }else{
+          content += ' '+key+'='+window.btoa(this.data[key])
+        }
+      })
+      if (this.data['type'] === 'echarts'){
         this.svg.append("foreignObject")
           .attr("id", uuid)
           .attr("dom_type", 'data')
@@ -619,9 +680,9 @@ export default {
           .attr("width", 600)
           .attr("height", 400)
           .attr("transform", this.transform)
-        .html('<div class="data" id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value="Object" bind_type='+data['type']+' bind_range="[]" xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
+        .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
         .call(this.drag(this.svg))
-        echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
+        // echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
       }else{
         this.svg.append("foreignObject")
           .attr("id", uuid)
@@ -631,10 +692,24 @@ export default {
           .attr("width", 150)
           .attr("height", 50)
           .attr("transform", this.transform)
-        .html('<div class="data" id='+uuid+'_'+data['id']+' bind_type='+data['type']+' xmlns="http://www.w3.org/1999/xhtml"> <span id='+uuid+'_'+data['id']+' bind_name='+data['name']+' bind_value='+data['value']+' bind_type='+data['type']+' bind_range='+data['range']+' style="color: '+this.hexa+'">'+data['name']+":"+data['value']+'</span> </div>')
+        .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml"> <span '+content+' style="color: '+this.hexa+'">'+this.data['id']+'</span> </div>')
         .call(this.drag(this.svg))
       }
       this.$experience.saveLog(this.state, this.svg)
+    },
+    createCustomData(){
+      let uuid = this.$common.generateUUID()
+      let content = ' id='+uuid+' value='+window.btoa('content')+' mode='+window.btoa('normal')
+      this.svg.append("foreignObject")
+        .attr("id", uuid)
+        .attr("dom_type", 'data')
+        .attr("x", this.canvas_width / 2)
+        .attr("y", this.canvas_height / 2)
+        .attr("width", 150)
+        .attr("height", 50)
+        .attr("transform", this.transform)
+      .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml"> <span '+content+' style="color: '+this.hexa+'"> '+uuid+":"+"content"+' </span> </div>')
+      .call(this.drag(this.svg))
     },
     updateColor(){
       if (this.elm !== ''){
@@ -767,8 +842,38 @@ export default {
       this.$emit('saveToServer', d3.select("#new"))
     },
     log(){
+      // console.log(d3.select("#interactive\.layer"))
       console.log(d3.select("#new").node())
-      console.log(this.data_id)
+    },
+    expression(){
+      this.dialogExpression = true
+    },
+    checkExpression(){
+      if (this.elm !== ''){
+        let data = {}
+        if (this.express.search("$") !== -1) {
+          data = this.elm.node().getElementsByTagName('span')[0]
+          data.setAttribute("expression", window.btoa(this.express))
+          data.innerHTML = data.getAttribute('id') + ":" + this.express
+          this.info_color = 'success'
+          this.is_success = true
+          return
+        }
+        try{
+          const node = math.parse(this.express)
+          if (this.elm.node().getElementsByTagName('span').length > 0){
+            data = this.elm.node().getElementsByTagName('span')[0]
+          }else{
+            data = this.elm.node().getElementsByTagName('div')[0]
+          }
+          data.setAttribute("expression", window.btoa(this.express))
+          this.info_color = 'success'
+          this.is_success = true
+        }catch(err){
+          this.error_flag = true
+          this.error_messages = err.toString()
+        }
+      }
     },
     clear(){
       this.done()
@@ -784,13 +889,11 @@ export default {
         if (that.elm !== ''){
           that.done()
         }
-        if (d3.select(this.parentNode).attr("dom_type") === "g"){
+        if (d3.select(this.parentNode).attr("dom_type") === "g" && d3.select(this).attr("dom_type") !== "data"){
           if (that.is_viewer === true){
             that.select_mode = 'viewer'
             that.selected_hardware_environment = d3.select("#"+d3.select(this).attr("id")).attr("hardware_environment_name")
           }
-          that.elm = d3.select("#"+d3.select(this).attr("id"))
-          that.boxSelection(d3.select("#"+d3.select(this).attr("id")), true)
         }else{
           if (d3.select(this).attr("dom_type") === 'polygon') {
             that.select_mode = 'polygon'
@@ -817,18 +920,33 @@ export default {
             that.path_points = d3.select(this).attr("d")
           }else if(d3.select(this).attr("dom_type") === 'data'){
             let data = {}
+            that.data = {}
             if (d3.select(this).node().getElementsByTagName('span').length > 0){
               data = d3.select(this).node().getElementsByTagName('span')[0]
             }else{
               data = d3.select(this).node().getElementsByTagName('div')[0]
             }
-            that.data_type = data.getAttribute("bind_type")
-            that.data_id = data.getAttribute("id")
-            that.data_name = data.getAttribute("bind_name")
-            that.data_range = data.getAttribute("bind_range")
-            that.data_value = data.getAttribute("bind_value")
+            for(let i=0;i < data.attributes.length;i++){
+              if(that.original_attributes.toString().indexOf(data.attributes[i].name) == -1){
+                if('id' == data.attributes[i].name){
+                  that.fill_id = data.getAttribute(data.attributes[i].name)
+                }else if('value' == data.attributes[i].name){
+                  that.fill_param = window.atob(data.getAttribute(data.attributes[i].name))
+                }else if('mode' == data.attributes[i].name){
+                  that.selected = window.atob(data.getAttribute(data.attributes[i].name))
+                }else if('expression' == data.attributes[i].name){
+                  that.express = window.atob(data.getAttribute(data.attributes[i].name))
+                }
+                that.data[data.attributes[i].name] = 'id' !== data.attributes[i].name ? window.atob(data.getAttribute(data.attributes[i].name)) : data.getAttribute(data.attributes[i].name)
+              }
+            }
             that.select_mode = 'data'
           }
+        }
+        if (that.is_viewer === true){
+          that.elm = d3.select("#"+d3.select(this).attr("id"))
+          that.boxSelection(d3.select("#"+d3.select(this).attr("id")), true)
+        }else{
           that.elm = d3.select(this)
           setTimeout(() =>{
             that.boxSelection(d3.select(this), true)
@@ -958,67 +1076,111 @@ export default {
     },
     async runOrStop(){
       if(this.run_flag === false){
-        let result = []
-        d3.selectAll(".hardware_environment").each(function(d, i) {
-          let tmp = {'hardware_environment_id': d3.select(this).attr("hardware_environment_id"),
-                    'hardware_environment_name': d3.select(this).attr("hardware_environment_name"),'data': []}
-          d3.select(this).selectAll('.data').each(function(d, i) {
-            tmp.data.push(d3.select(this).attr("id"))
-          })
-          result.push(tmp)
-        })
-        let formData = new FormData()
-        formData.append("username", this.username)
-        formData.append("operate", "hardware_environment_save_config")
-        formData.append("content", JSON.stringify(result))
-        let config = {
-          headers: {
-          'Content-Type': 'multipart/form-data'
-          }
-        }
+        let that = this
+        this.run_flag = true
+        this.interval = setInterval(function() {
+          d3.selectAll(".hardware_environment").each(function(d, i) {
+            let tmp = []
+            let hardware = this
+            let formData = new FormData()
+            formData.append("username", that.username)
+            formData.append("operate", "hardware_environment_save_config")
+            formData.append("sid", d3.select(this).attr("hardware_environment_id"))
+            formData.append("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
 
-        await axios.post(this.url_hardware_environment_save_config, formData, config).then(
-          (response)=>{
-            this.run_flag = true
-            let that = this
-            this.interval = setInterval(function() {
-              axios.get(that.url_hardware_environment_read_data, {
-              params: {
-                username: that.username,
-                operate: 'hardware_environment_read_data',
-              },
-              })
-              .then(response => {
+            d3.select(hardware).selectAll("span").each(function(d, i) {
+              let data = d3.select(this).node()
+              if (data.getAttribute('expression') !== null) {
+                tmp = tmp.concat(that.$common.getRootVar(data.getAttribute("expression")))
+              }else{
+                tmp.push(data.getAttribute("id"))
+              }
+            })
+            formData.append("key", that.$common.dedupe(tmp).join(','))
+            formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
+            let config = {
+              headers: {
+              'Content-Type': 'multipart/form-data'
+              }
+            }
+            axios.post(that.url_post_config_read_data, formData, config).then(
+              (response)=>{
                 let he = response.data.content
-                he.forEach((data) => {
-                  let tmp = ''
-                  d3.selectAll(".hardware_environment").each(function(d, i) {
-                    if (d3.select(this).attr("hardware_environment_name") === data['hardware_environment_name']) {
-                      tmp = d3.select(this)
+
+                d3.select(hardware).selectAll("span").each(function(d, i) {
+                  let data = d3.select(this).node()
+                  if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
+                    data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
+                    data.innerHTML = data.getAttribute("id")+":"+he[data.getAttribute("id")]
+                  }else if(data.getAttribute('expression').search("$") === -1) {
+                    let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he)
+                    data.setAttribute("value", window.btoa(temp))
+                    data.innerHTML = data.getAttribute("id")+":"+temp
+                  }else if(data.getAttribute('expression').search("$") !== -1 ) {
+                    let expression = window.atob(data.getAttribute('expression'))
+                    let vars = expression.match(/(\$\{(.*?)\})/g)
+                    if (vars !== null) {
+                      vars.forEach((v) => {
+                        expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he))
+                      })
+                      data.setAttribute("value", window.btoa(expression))
+                      data.innerHTML = expression
+                    }else{
+                      let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he)
+                      data.setAttribute("value", window.btoa(temp))
+                      data.innerHTML = data.getAttribute("id")+":"+temp
                     }
-                  })
-                  data['data'].forEach((elm) => {
-                    tmp.selectAll("#"+elm['id']).each(function(d, i) {
-                      if(d3.select(this).attr("bind_type") === "echarts"){
-                          echarts.init(d3.select(this).node()).setOption(elm['value'])
-                      }else{
-                        let data = d3.select(this).node().getElementsByTagName('span')[0]
-                        data.setAttribute("bind_value", elm['value'])
-                        data.innerHTML = data.getAttribute("bind_name")+":"+elm['value']
-                      }
-                    })
-                  })
+                  }
                 })
-              })
-            },3000)
-        }, (error) => {
-          console.log(error)
-        })
+
+            }, (error) => {
+              console.log(error)
+            })
+          })
+        },3000)
       }else{
         clearInterval(this.interval)
         this.run_flag = false
       }
-    }
+    },
+    initCtrlElm(){
+      if (this.elm !== ''){
+        this.elm.select('span')
+          .attr('id', this.fill_id)
+          .attr('value', window.btoa(this.fill_param))
+          .attr('mode', window.btoa(this.selected))
+        this.elm.node().getElementsByTagName('span')[0].innerHTML = this.fill_id + ":" + this.fill_param
+      }
+    },
+    async interactive(){
+      let tmp = []
+
+      let formData = new FormData()
+      formData.append("username", this.username)
+      formData.append("operate", "hardware_environment_save_config")
+      formData.append("sid", "")
+      formData.append("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
+
+      d3.selectAll("span").each(function(d, i) {
+        let data = d3.select(this).node()
+        if (window.atob(data.getAttribute("mode")) === 'interactive'){
+          tmp.push([data.getAttribute("id"), window.atob(data.getAttribute("value"))])
+        }
+      })
+      formData.append("key", JSON.stringify(tmp))
+
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+      await axios.post(this.url_hardware_environment_read_data, formData, config).then(
+        (response)=>{
+        // this.items = response.data.content
+      })
+    },
   },
 }
 </script>
+
+

@@ -16,9 +16,10 @@
             v-toolbar-title Edit Template
             v-spacer
             v-toolbar-items
-              v-btn(dark, text, @click="$emit('saveToServer')") SAVE
+              template(v-if='isAuthenticated === true')
+                v-btn(dark, text, @click="$emit('saveToServer')") SAVE
         div(id="map" :style='`width:100%;height:`+ screeHeight +`px`')
-        v-dialog(v-model="dialog" max-width="1000px")
+        v-dialog(v-model="dialog" :persistent="true" max-width="1000px")
           v-card
             v-toolbar(dark)
               v-btn(icon, dark, @click="dialog = false")
@@ -26,38 +27,22 @@
               v-toolbar-title Task
               v-spacer
               v-toolbar-items
-                v-btn(class="mr-2", dark, text, @click="shooting") Shooting
-                v-btn(dark, text, @click="save") Close
-            v-dialog(v-model="dialogShooting" max-width="630px")
+                v-btn(class="mr-2", dark, text, @click="apply") APPLY
+                //- v-btn(dark, text, @click="save") Close
+            v-dialog(v-model="dialogApply" max-width="630px")
               v-card
-                v-card-title(class="headline") Are you sure these items is the cause of the damage?
+                v-card-title(class="headline") Are you sure you want to change these options?
                 v-card-actions
                   v-spacer
-                  v-btn(color="blue darken-1" text @click="dialogShooting = false") Cancel
-                  v-btn(color="blue darken-1" text @click="shootingConfirm") OK
+                  v-btn(color="blue darken-1" text @click="dialogApply = false") Cancel
+                  v-btn(color="blue darken-1" text @click="applyConfirm") OK
                   v-spacer
-            v-dialog(v-model="dialogSaving" max-width="500px")
-              v-card
-                v-card-title(class="headline") Are you sure these items is normal?
-                v-card-actions
-                  v-spacer
-                  v-btn(color="blue darken-1" text @click="dialogSaving = false") Cancel
-                  v-btn(color="blue darken-1" text @click="savingConfirm") OK
-                  v-spacer
-            v-data-table(v-model='selected', show-select, :headers="headers", :items="data", class="elevation-1")
-              //- template(v-slot:item.data-table-select="{ isSelected, select, item }")
-              //-   v-simple-checkbox(color="green", :disabled='item.Status !== "active"', :value='item.Status !== "active" ? true : isSelected', @input="select($event)")
+            v-data-table(:headers="headers", :items="data", class="elevation-1")
               template(v-slot:item.Status="{ item }")
-                v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
-              //- template(v-slot:item.actions="{ item }")
-                v-tooltip(bottom)
-                  template(v-slot:activator="{ on,attrs }")
-                    v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="shooting(item)") mdi-access-point
-                  span shooting
-                v-tooltip(bottom)
-                  template(v-slot:activator="{ on,attrs }")
-                    v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="save(item)") mdi-checkbox-marked-circle
-                  span close
+                v-slider(v-model="item.Status" :tick-labels="ticksLabels" :max="3" step="1" tick-size="4")
+                //- v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
+              template(v-slot:item.Schedule="{ item }")
+                v-slider(v-model="item.Schedule" :thumb-size="24" thumb-label="always")
         template(v-if='dialogCheckTabs === true')
           v-dialog(v-model='dialogCheckTabs', dark, max-width="1400px")
             CT(
@@ -123,7 +108,7 @@ export default {
   data () {
     return {
       dialog: false,
-      dialogShooting: false,
+      dialogApply: false,
       dialogCheckTabs: false,
       dialogShareUrl: false,
       dialogSaving: false,
@@ -143,13 +128,16 @@ export default {
         // { text: 'Id', value: 'id' },
         { text: 'TaskName', align: 'start', value: 'Task'},
         { text: 'Status', value: 'Status' },
-        { text: 'Executor', value: 'Executor' },
+        { text: 'Schedule', value: 'Schedule'},
+        // { text: 'Executor', value: 'Executor' },
         // { text: 'Shooting/Close', value: 'actions', sortable: false },
       ],
+      ticksLabels: ['G','D','U','S']
     }
   },
   computed: {
-    username: sync('username')
+    username: sync('username'),
+    isAuthenticated: sync('isAuthenticated')
   },
   mounted() {
     this.mind = new MindElixir({
@@ -171,7 +159,7 @@ export default {
 
     if (this.contextMenu === false) {
       this.mind.bus.addListener('selectNode', node => {
-        if (node.hasOwnProperty('children') && this.role !== 'visitor') {
+        if (node.hasOwnProperty('children') && this.isAuthenticated === true) {
           this.getNodeDetails(node)
         }else if (node.hasOwnProperty('children') !== true) {
           this.getChecklistDetails(node)
@@ -201,18 +189,17 @@ export default {
       return this.mind.getAllData()
     },
     closeDialogCheckTabs () {
-      if (this.checklistLogs.length > 0 || this.checklistComments.blocks.length > 0) {
-        if (this.nodeTopic.indexOf("(*)") === -1){
-          this.updateChecklistAsterisk()
-        }
-      }else if (this.checklistLogs.length === 0 && this.checklistComments.blocks.length === 0) {
-        if (this.nodeTopic.indexOf("(*)") >= 0 ){
-          this.updateChecklistAsterisk()
-        }
-      }
+      // if (this.checklistLogs.length > 0 || this.checklistComments.blocks.length > 0) {
+      //   if (this.nodeTopic.indexOf("(*)") === -1){
+      //     this.updateChecklistAsterisk()
+      //   }
+      // }else if (this.checklistLogs.length === 0 && this.checklistComments.blocks.length === 0) {
+      //   if (this.nodeTopic.indexOf("(*)") >= 0 ){
+      //     this.updateChecklistAsterisk()
+      //   }
+      // }
       this.dialogCheckTabs = false
       this.checklistComments = {}
-      // this.checklistImages = []
       this.checklistLogs = []
     },
     details () {
@@ -441,51 +428,16 @@ export default {
           this.dialog = true
         })
     },
-    save () {
-      this.dialogSaving = true
+    apply() {
+      this.dialogApply = true
     },
-    async savingConfirm () {
+    async applyConfirm () {
       this.$store.set('progress', true)
       let formData = new FormData()
-      formData.append("operate", 'update_task')
+      formData.append("operate", 'apply')
       formData.append("template_id", this.template_id)
       formData.append("username", this.username)
-
-      // let sel = []
-      // sel.push(this.tempData)
-      // this.selected.forEach((select) => {
-      //   if (select.Status !== "shooting"){
-      //     sel.push(select)
-      //   }
-      // })
-      formData.append("selected", JSON.stringify(this.selected))
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
-        }
-      }
-      await this.$http.post(this.$urls.trouble_shooting_save, formData, config).then(
-        (response)=>{
-        this.mind.nodeData = response.data.content.nodeData
-        this.mind.init()
-        setTimeout(() =>{
-          this.$store.set('progress', false)
-          this.dialog = false
-        },1000)
-      }, (error) => {
-        console.log(error)
-      })
-    },
-    shooting() {
-      this.dialogShooting = true
-    },
-    async shootingConfirm () {
-      this.$store.set('progress', true)
-      let formData = new FormData()
-      formData.append("operate", 'shooting')
-      formData.append("template_id", this.template_id)
-      formData.append("username", this.username)
-      formData.append("selected", JSON.stringify(this.selected))
+      formData.append("selected", JSON.stringify(this.data))
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'

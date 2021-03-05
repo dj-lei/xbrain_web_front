@@ -10,8 +10,26 @@ import InlineCode from '@editorjs/inline-code'
 import Delimiter from '@editorjs/delimiter'
 import ImageTool from '@editorjs/image'
 import urls from './urls'
+import * as d3 from 'd3'
+import * as math from 'mathjs'
 
 export default {
+    getUrlParams (urlStr) {
+      if (typeof urlStr == "undefined") {
+        var url = decodeURI(location.search)
+       } else {
+        var url = "?" + urlStr.split("?")[1]
+       }
+       var theRequest = new Object()
+       if (url.indexOf("?") != -1) {
+        var str = url.substr(1)
+        var strs = str.split("&")
+        for (var i = 0; i < strs.length; i++) {
+          theRequest[strs[i].split("=")[0]] = decodeURI(strs[i].split("=")[1])
+        }
+       }
+       return theRequest
+    },
     getTime () {
       let yy = new Date().getFullYear();
       let mm = new Date().getMonth()+1;
@@ -74,6 +92,47 @@ export default {
         }
       }
       return []
+    },
+
+    dedupe(array){
+      return Array.from(new Set(array))
+     },
+
+    getRootVar(expression){
+      expression = window.atob(expression)
+      let vars = expression.match(/([a-zA-Z][\w.]+)/g)
+      let temp = []
+      vars.forEach((v) => {
+        let data = d3.select('span#'+v.replace('.','\\.')).node()
+        if (data !== null){
+          if (data.getAttribute('expression') !== null) {
+            temp = temp.concat(this.getRootVar(data.getAttribute('expression')))
+          }else{
+            temp.push(v)
+          }
+        }else{
+          temp.push(v)
+        }
+      })
+      return temp
+    },
+
+    calExpressDepend(expression, extVar){
+      expression = window.atob(expression)
+      let vars = expression.match(/([a-zA-Z][\w.]+)/g)
+      vars.forEach((v) => {
+        let data = d3.select('span#'+v.replace('.','\\.')).node()
+        if (data !== null){
+          if (data.getAttribute('expression') !== null) {
+            expression = expression.replace(v, this.calExpressDepend(data.getAttribute('expression'), extVar))
+          }else{
+            expression = expression.replace(v, window.atob(data.getAttribute('value')))
+          }
+        }else{
+          expression = expression.replace(v,extVar[v])
+        }
+      })
+      return math.evaluate(expression)
     },
 
     getEditorJSConfig(holder, data, readOnly=false) {
