@@ -40,7 +40,8 @@
               v-card(color='grey lighten-3')
                 v-card-title(class="headline") Detail
                 v-container
-                  v-card
+                  v-text-field(ref="group" v-model="group" required :rules="[() => !!group || 'This field is required']" dense outlined label="fill group or project")
+                  v-card  
                     div(id='editor')
                   v-spacer(class="mt-8")
                   v-row
@@ -100,6 +101,7 @@ export default {
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
+      group: '',
       search: '',
       data: [],
       editorData: {},
@@ -208,12 +210,17 @@ export default {
       this.editorData = val
     },
     async releaseTaskConfirm () {
+      if(this.group === ''){
+        this.$refs['group'].error = true 
+        return 
+      }
       this.$store.set('progress', true)
       this.editorData.save()
       .then((savedData) => {
         let formData = new FormData()
         formData.append("operate", 'release_task')
         formData.append("username", this.username)
+        formData.append("group", this.group)
         formData.append("template_id", this.tempData.id)
         formData.append("description", JSON.stringify(savedData))
         formData.append("logs_size", this.logs.length)

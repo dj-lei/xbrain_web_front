@@ -23,6 +23,7 @@
                     v-on:saveToServer="save"
                     v-on:newItem="newItem"
                     v-on:editItem="editItem"
+                    v-on:saveApiViewer="saveApiViewer"
                   )
             v-dialog(v-model="dialogSaveTemplate", max-width="500px")
               v-card
@@ -144,6 +145,7 @@ export default {
           this.svg_content = response.data.content.content
           this.dialog = true
           this.$nextTick(function(){
+            this.$refs.symbolEditor.updateViewersUrl(JSON.parse(response.data.content.api_viewer))
             this.$refs.symbolEditor.updateItem(this.svg_content)
           })
         })
@@ -219,7 +221,7 @@ export default {
 
       await this.$http.post(this.$urls.babel_save, formData, config).then(
         (response)=>{
-          console.log(response.data)
+          this.operateId = response.data.viewer_id
       }, (error) => {
         console.log(error)
       })
@@ -230,6 +232,31 @@ export default {
         this.$store.set('progress', false)
       },1000)
     },
+
+    async saveApiViewer(api_url){
+      this.$store.set('progress', true)
+      let formData = new FormData()
+      formData.append("operate", 'save_api_viewer')
+      formData.append("viewer_id", this.operateId)
+      formData.append("api_url", JSON.stringify(api_url))
+
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+
+      await this.$http.post(this.$urls.babel_save, formData, config).then(
+        (response)=>{
+          console.log(response)
+      }, (error) => {
+        console.log(error)
+      })
+      setTimeout(() =>{
+        // this.initialize()
+        this.$store.set('progress', false)
+      },1000)
+    }
   },
 }
 </script>

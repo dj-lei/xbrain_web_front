@@ -91,7 +91,18 @@
                 //-   v-text-field(v-model="selected" label="fill param" @change='initCtrlElm')
                 //- template(v-else)
                 v-combobox(v-model="selected_hardware_environment" :items='coverToList()' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
-                v-btn(dark @click='interactive' depressed) INTERACTIVE
+          template(v-else-if="select_mode === 'scene'")
+            v-row(class="d-flex justify-center")
+              v-col(class="pa-2")
+                v-btn( dark @click='interactive' depressed) INTERACTIVE
+            v-card(color="grey darken-4")
+              v-container(fluid)
+                v-card-title External Link
+                v-list(dense class="grow")
+                  template(v-for="url in externalUrls")
+                    v-list-item(target="_blank" :href="url.addr")
+                      v-list-item-title(v-text="url.name")
+                    v-divider
           template(v-if="select_mode !== 'data' && is_viewer !== true")
             v-row
               v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
@@ -101,20 +112,49 @@
               v-row
                 v-btn(color="primary", dark, @click="createCustomData") CUSTOM
               v-spacer(class="mt-3")
+              v-row
+                v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
+                v-btn(color="primary", text, dark, @click="saveApiBindData") REFRESH
               v-divider
               v-card
                 v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
-        v-dialog(v-model='dialogViewerConfig', dark, max-width="800px")
+        v-dialog(v-model='dialogViewerConfig',  max-width="800px")
           v-card
             v-container
               v-row
-                v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
+                v-text-field(class="ma-1" v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
               v-row
-                v-text-field(v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
+                v-text-field(class="ma-1" v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
               v-row
-                v-text-field(v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
+                v-text-field(class="ma-1" v-model="url_post_interactive_data" label="Api post interactive data" dense outlined)
+              v-card
+                v-data-table(:headers="externalUrlHeaders" :items="externalUrls" class="elevation-1" hide-default-footer)
+                  template(v-slot:top="")
+                    v-toolbar(flat)
+                      v-toolbar-title EXTERNAL LINK
+                      v-divider(class="mx-4" inset vertical)
+                      v-spacer
+                      v-dialog(v-model="dialogExternalUrl" max-width="500px")
+                        template(v-slot:activator="{ on, attrs }")
+                          v-btn(color="primary" dark class="mb-2" v-bind="attrs" v-on="on") New Item
+                        v-card
+                          v-card-text
+                            v-container
+                              v-row
+                                v-col(cols="12" sm="6" md="6")
+                                  v-text-field(v-model="editedItem.name" label="external link name" outlined dense)
+                                v-col(cols="12" sm="6" md="6")
+                                  v-text-field(v-model="editedItem.addr" label="external link addr" outlined dense)
+                          v-card-actions
+                            v-spacer
+                            v-btn(color="blue darken-1" text @click="dialogExternalUrl = false") CANCEL
+                            v-btn(color="blue darken-1" text @click="externalUrls.push(editedItem);editedItem = {};dialogExternalUrl = false") OK
+                  template(v-slot:item.actions="{ item,index }")
+                    v-icon(small @click="externalUrls.splice(externalUrls.indexOf(item), 1)") mdi-delete
               v-row
-                v-text-field(v-model="url_post_interactive_data" label="Api post interactive data" dense outlined)
+                v-spacer
+                v-btn(class="mt-3" color="primary", dark, @click="saveApiViewer") APPLY
+                v-spacer
 </template>
 
 <script>
@@ -153,21 +193,36 @@ export default {
       default () {
         return []
       }
-    }
+    },
   },
   data () {
     return {
       items: [],
-      url_get_bind_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
-      url_get_ins_env: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
-      url_post_config_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
-      url_post_interactive_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
+      url_get_bind_data: '',
+      url_get_ins_env: '',
+      url_post_config_read_data: '',
+      url_post_interactive_data: '',
+      externalUrls: [],
+      editedItem: {
+        name: '',
+        addr: '',
+      },
+      externalUrlHeaders: [
+        { text: 'Link Name', value: 'name' },
+        { text: 'Link Addr', value: 'addr' },
+        { text: 'Actions', value: 'actions', sortable: false },
+      ],
+      // url_get_bind_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
+      // url_get_ins_env: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
+      // url_post_config_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
+      // url_post_interactive_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
       selected_hardware_environment: '',
       run_flag: false,
       interval: '',
       dialogDataBind: false,
       dialogExpression: false,
       dialogViewerConfig: false,
+      dialogExternalUrl: false,
       express: '',
       error_flag: false,
       error_messages: '',
@@ -199,7 +254,7 @@ export default {
       bind_data: [],
       data: {},
       original_attributes: ['style','xmlns'],
-      select_mode: '',
+      select_mode: 'scene',
       path_points: '',
       polygon_points: '',
       text: '',
@@ -242,7 +297,6 @@ export default {
       }
     }
     this.$common.setBrowserTitle("new")
-    this.queryBackendData()
     this.svg = d3.select("#viz").append("g").attr("id", "new")
     this.gx = d3.select("#viz").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
     this.gy = d3.select("#viz").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
@@ -495,16 +549,16 @@ export default {
         this.boxSelection(this.elm, false)
       }
       this.elm = ''
-      this.select_mode = ''
+      this.select_mode = 'scene'
     },
     async save(){
       await this.done()
       await d3.select("#new").selectAll("*").attr("transform", null)
       this.$emit('saveToServer', d3.select("#new"))
     },
-    log(){
-      // console.log(d3.select("#interactive\.layer"))
-      console.log(d3.select("#new").node())
+    log(item){
+      console.log(item)
+      // console.log(d3.select("#new").node())
     },
     expression(){
       this.dialogExpression = true
@@ -538,7 +592,7 @@ export default {
     },
     clear(){
       this.done()
-      this.select_mode=''
+      this.select_mode='scene'
       this.elm=''
       this.transform='translate(0,0) scale(1)'
       d3.select("#new").selectAll("*").remove()
@@ -593,7 +647,7 @@ export default {
             that.select_mode = 'data'
           }
         }
-        if (that.is_viewer === true){
+        if (that.is_viewer === true || d3.select(this.parentNode).attr("dom_type") === "g"){
           that.elm = d3.select("#"+d3.select(this).attr("id"))
           that.boxSelection(d3.select("#"+d3.select(this).attr("id")), true)
         }else{
@@ -741,11 +795,11 @@ export default {
                   if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
                     data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
                     data.innerHTML = data.getAttribute("id")+":"+he[data.getAttribute("id")]
-                  }else if(data.getAttribute('expression').search("$") === -1) {
+                  }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).search("$") === -1) {
                     let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he)
                     data.setAttribute("value", window.btoa(temp))
                     data.innerHTML = data.getAttribute("id")+":"+temp
-                  }else if(data.getAttribute('expression').search("$") !== -1 ) {
+                  }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).search("$") !== -1 ) {
                     let expression = window.atob(data.getAttribute('expression'))
                     let vars = expression.match(/(\$\{(.*?)\})/g)
                     if (vars !== null) {
@@ -778,11 +832,12 @@ export default {
           .attr('id', this.fill_id)
           .attr('value', window.btoa(this.fill_param))
           .attr('mode', window.btoa(this.selected))
-        this.elm.node().getElementsByTagName('span')[0].innerHTML = this.fill_id + ":" + this.fill_param
+        let express = this.elm.select('span').attr('expression') === null ? this.fill_param : window.atob(this.elm.select('span').attr('expression')) 
+        this.elm.node().getElementsByTagName('span')[0].innerHTML = this.fill_id + ":" + express
       }
     },
     async interactive(){
-      let tmp = []
+      let tmp = {}
 
       let formData = new FormData()
       formData.append("username", this.username)
@@ -793,7 +848,7 @@ export default {
       d3.selectAll("span").each(function(d, i) {
         let data = d3.select(this).node()
         if (window.atob(data.getAttribute("mode")) === 'interactive'){
-          tmp.push([data.getAttribute("id"), window.atob(data.getAttribute("value"))])
+          tmp[data.getAttribute("id")] = window.atob(data.getAttribute("value"))
         }
       })
       formData.append("key", JSON.stringify(tmp))
@@ -803,10 +858,33 @@ export default {
         'Content-Type': 'multipart/form-data'
         }
       }
-      await axios.post(this.url_hardware_environment_read_data, formData, config).then(
+      await axios.post(this.url_post_interactive_data, formData, config).then(
         (response)=>{
         // this.items = response.data.content
       })
+    },
+    async saveApiBindData(){
+      await this.$emit('saveApiBindData', this.url_get_bind_data)
+      this.queryBackendData()
+    },
+    saveApiViewer(){
+      let api_url = {}
+      api_url['url_get_ins_env'] = this.url_get_ins_env
+      api_url['url_post_config_read_data'] = this.url_post_config_read_data
+      api_url['url_post_interactive_data'] = this.url_post_interactive_data
+      api_url['externalUrls'] = this.externalUrls
+      this.$emit('saveApiViewer', api_url)
+    },
+    updateSymbolsUrl(val){
+      this.url_get_bind_data = val
+    },
+    updateViewersUrl(val){
+      if(typeof(val) !== 'undefined'){
+        this.url_get_ins_env = val['url_get_ins_env']
+        this.url_post_config_read_data = val['url_post_config_read_data']
+        this.url_post_interactive_data = val['url_post_interactive_data']
+        this.externalUrls = val['externalUrls']
+      }
     },
   },
 }

@@ -20,6 +20,7 @@
                     v-on:saveToServer="save"
                     v-on:newItem="newItem"
                     v-on:editItem="editItem"
+                    v-on:saveApiBindData="saveApiBindData"
                   )
             v-dialog(v-model="dialogSaveTemplate", max-width="500px")
               v-card
@@ -88,6 +89,7 @@ export default {
       symbol_types: [],
       flagUpdateOrAdd: false,
       operateId: '',
+      url_get_bind_data: '',
     }
   },
 
@@ -132,7 +134,9 @@ export default {
           this.svg_content = response.data.content.content
           this.dialog = true
           this.$nextTick(function(){
+            this.$refs.symbolEditor.updateSymbolsUrl(response.data.content.api_bind_data)
             this.$refs.symbolEditor.updateItem(this.svg_content)
+            this.$refs.symbolEditor.queryBackendData()
           })
         })
     },
@@ -225,6 +229,31 @@ export default {
         this.$store.set('progress', false)
       },1000)
     },
+
+    async saveApiBindData(api_url){
+      this.$store.set('progress', true)
+      let formData = new FormData()
+      formData.append("operate", 'save_api_bind_data')
+      formData.append("symbol_id", this.operateId)
+      formData.append("api_url", api_url)
+
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+
+      await this.$http.post(this.$urls.babel_save, formData, config).then(
+        (response)=>{
+          this.url_get_bind_data = api_url
+      }, (error) => {
+        console.log(error)
+      })
+      setTimeout(() =>{
+        // this.initialize()
+        this.$store.set('progress', false)
+      },1000)
+    }
   },
 }
 </script>

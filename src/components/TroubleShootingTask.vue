@@ -80,6 +80,7 @@ export default {
       headers: [
         // { text: 'Id', value: 'id' },
         { text: 'TaskName', align: 'start', value: 'TaskName'},
+        { text: 'Group', value: 'Group' },
         { text: 'Status', value: 'Status' },
         { text: 'Date', value: 'Date' },
         { text: 'Actions', value: 'actions', sortable: false },
