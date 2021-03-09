@@ -162,7 +162,7 @@ import * as d3 from 'd3'
 import axios from 'axios'
 import * as echarts from 'echarts'
 import pako from 'pako'
-import * as math from 'mathjs'
+// import * as math from 'mathjs'
 
 export default {
   props: {
@@ -832,7 +832,7 @@ export default {
           .attr('id', this.fill_id)
           .attr('value', window.btoa(this.fill_param))
           .attr('mode', window.btoa(this.selected))
-        let express = this.elm.select('span').attr('expression') === null ? this.fill_param : window.atob(this.elm.select('span').attr('expression')) 
+        let express = this.elm.select('span').attr('expression') === null ? this.fill_param : window.atob(this.elm.select('span').attr('expression'))
         this.elm.node().getElementsByTagName('span')[0].innerHTML = this.fill_id + ":" + express
       }
     },
