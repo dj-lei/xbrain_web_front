@@ -39,7 +39,7 @@
                   v-spacer
             v-data-table(:headers="headers", :items="data", class="elevation-1")
               template(v-slot:item.Status="{ item }")
-                v-slider.caption(v-model="item.Status" :tick-labels="ticksLabels" :max="3" step="1" tick-size="4")
+                v-slider(v-model="item.Status" :tick-labels="ticksLabels" :max="3" step="1" tick-size="4")
                 //- v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
               template(v-slot:item.Schedule="{ item }")
                 v-slider(v-model="item.Schedule" :thumb-size="24" thumb-label="always")
