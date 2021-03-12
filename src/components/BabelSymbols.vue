@@ -173,8 +173,9 @@ export default {
       this.dialogDelete = false
     },
 
-    save (svg) {
+    save (svg, url) {
       this.svg_temp = svg
+      this.url_get_bind_data = url
       if (this.flagUpdateOrAdd === false) {
         this.dialogSaveTemplate = true
       }else{
@@ -203,6 +204,7 @@ export default {
       formData.append("data", url)
       formData.append("category", this.symbol_type)
       formData.append("symbol_name", this.symbol_name)
+      formData.append("api_url", this.url_get_bind_data)
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'

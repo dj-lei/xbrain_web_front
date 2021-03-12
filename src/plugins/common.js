@@ -94,9 +94,61 @@ export default {
       return []
     },
 
+    clearChildren(data){
+      var temp = JSON.parse(JSON.stringify(data))
+      temp.forEach((elm, index) => {
+        temp[index]['children'] = []
+      })
+      return temp
+    },
+
+    dictRetrievalNotWithChildren(node_data, node_id){
+      if(node_data instanceof Array){
+        for(var i=0; i<node_data.length; i++){
+          if (node_data[i]['id'] === node_id){
+            console.log(node_data[i])
+            let temp = this.clearChildren(node_data)
+            console.log(temp)
+            if (node_data[i].hasOwnProperty('children')){
+              let temp2 = this.clearChildren(node_data[i]['children'])
+              temp[i]['children'] = temp2
+            }
+            return temp
+          }else{
+            if (node_data[i].hasOwnProperty('children')){
+              let temp = this.dictRetrievalNotWithChildren(node_data[i]['children'], node_id)
+              if(temp instanceof Array){
+                continue
+              }else{
+                let temp2 = this.clearChildren(node_data)
+                temp2[i]['children'] = temp
+                return temp2
+              }
+            }else{
+              continue
+            }
+          }
+        }
+      }else{
+        if(node_data['id'] === node_id){
+          let temp = node_data
+          if (node_data.hasOwnProperty('children')){
+            temp['children'] = this.clearChildren(node_data['children'])
+            return temp
+          }
+          return node_data
+        }else if (node_data.hasOwnProperty('children')){
+          return this.dictRetrievalNotWithChildren(node_data['children'], node_id)
+        }else{
+          return []
+        }
+      }
+      return []
+    },
+
     dedupe(array){
       return Array.from(new Set(array))
-     },
+    },
 
     getRootVar(expression){
       expression = window.atob(expression)

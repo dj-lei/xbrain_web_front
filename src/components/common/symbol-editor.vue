@@ -78,11 +78,11 @@
                       v-treeview(:active.sync="variable" open-on-click dense hoverable activatable :items="items")
                     v-divider(vertical)
                     v-col(class="pa-2")
-                      v-textarea(v-model="express" label="Fill in the expression" auto-grow outlined :error="error_flag" :error-messages="error_messages")
+                      v-textarea(v-model="express" @keyup.enter="autocomplete" label="Fill in the expression" auto-grow outlined :error="error_flag" :error-messages="error_messages")
                       v-btn(dark :color="info_color" @click='checkExpression' depressed) CHECK
                         template(v-if="is_success === true")
                           v-icon(dark right) mdi-checkbox-marked-circle
-          template(v-else-if="select_mode === 'viewer'")
+          //- template(v-else-if="select_mode === 'viewer'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
                 //- template(v-if="ctrl_param_type === 'list'")
@@ -91,10 +91,11 @@
                 //-   v-text-field(v-model="selected" label="fill param" @change='initCtrlElm')
                 //- template(v-else)
                 v-combobox(v-model="selected_hardware_environment" :items='coverToList()' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
-          template(v-else-if="select_mode === 'scene'")
+          template(v-else-if="select_mode === 'scene' && is_viewer === true")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
                 v-btn( dark @click='interactive' depressed) INTERACTIVE
+                v-file-input(v-model="svgIns", @change="fileInsertSvg", solo, color="deep-purple accent-4",  label="Upload svg",  placeholder="Upload svg", dense, outlined, :show-size="1000")
             v-card(color="grey darken-4")
               v-container(fluid)
                 v-card-title External Link
@@ -121,7 +122,7 @@
         v-dialog(v-model='dialogViewerConfig',  max-width="800px")
           v-card
             v-container
-              v-row
+              //- v-row
                 v-text-field(class="ma-1" v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
               v-row
                 v-text-field(class="ma-1" v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
@@ -198,6 +199,7 @@ export default {
   data () {
     return {
       items: [],
+      svgIns: [],
       url_get_bind_data: '',
       url_get_ins_env: '',
       url_post_config_read_data: '',
@@ -264,10 +266,13 @@ export default {
     }
   },
   watch:{
-    dialogDataBind(val) {
-      if(val === false && this.bind_data.length > 0){
-        this.createData()
-      }
+    bind_data(val) {
+      // console.log(val)
+      // var temp = JSON.parse(JSON.stringify(this.full_data))
+      // this.items = this.$common.dictRetrievalNotWithChildren(temp, val[0])
+      // console.log(this.$common.dictRetrievalNotWithChildren(temp, val[0]))
+      this.createData()
+      this.dialogDataBind = false
     },
     variable(val) {
       this.express = this.express + val[0]
@@ -290,7 +295,9 @@ export default {
     document.onkeydown = function(e) {
       let key = e.keyCode
       // window.event.preventDefault()
+
       if (e.path[0].getAttribute('type') === 'text') return
+      if (e.path[0].toString().indexOf('TextArea') > -1) return
 
       if (key== 46 || key== 8) { //Del or Backspace
         _this.deleteElm()
@@ -298,8 +305,10 @@ export default {
     }
     this.$common.setBrowserTitle("new")
     this.svg = d3.select("#viz").append("g").attr("id", "new")
-    this.gx = d3.select("#viz").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
-    this.gy = d3.select("#viz").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
+
+    d3.select("#viz").append("g").attr("id", "axis")
+    this.gx = d3.select("#axis").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
+    this.gy = d3.select("#axis").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
     this.zoom = d3.zoom().scaleExtent([0.4, 8]).on("zoom", this.zoomed)
     d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
   },
@@ -307,8 +316,22 @@ export default {
     zoomed(event) {
       const {transform} = event
       this.transform = transform
-      this.major_elms.forEach((elm) => {
-        d3.selectAll(elm).call(g => g.attr("transform", transform))
+      d3.select("").selectAll(elm).call(g => g.attr("transform", transform))
+      // this.major_elms.forEach((elm) => {
+      //   d3.selectAll(elm).call(g => g.attr("transform", transform))
+      // })
+      // d3.select("#new").selectAll('g').each(function(d, i) {
+      //   if(d3.select(this).attr('transform').indexOf('matrix') > -1){
+      //     let matrix = d3.select(this).attr("transform").match(/([0-9+-.]+)/g)
+      //     let value = `matrix(${parseFloat(matrix[0]) * transform.k} 0 0 ${parseFloat(matrix[3]) * transform.k} ${matrix[4]} ${matrix[5]})`
+      //     console.log(value, transform)
+      //     d3.select(this).attr("transform", value)
+      //   }
+      // })
+      d3.select("#new").selectAll('g').each(function(d, i) {
+        if(d3.select(this).attr('dom_type') === 'g'){
+          d3.select(this).attr("transform", transform)
+        }
       })
       this.gx.call(this.xAxis, transform.rescaleX(this.x), transform)
       this.gy.call(this.yAxis, transform.rescaleY(this.y), transform)
@@ -349,7 +372,7 @@ export default {
           d3.select("#new").remove()
           d3.select('#viz').node().append(tmp)
           this.svg = d3.select("#new")
-          this.dragElements()
+          // this.dragElements()
         })
     },
     selectedItem(item){
@@ -378,8 +401,13 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
+          // console.log(JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' })))
           // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          this.items = response.data.content
+          // console.log(response.data.content)
+          // this.full_data = response.data.content
+          // var tmp = JSON.parse(JSON.stringify(response.data.content))
+          // this.items = [this.$common.dictRetrievalNotWithChildren(tmp, tmp['id'])]
+          this.items = [response.data.content]
         })
     },
     async addSymbolSvg (item) {
@@ -390,27 +418,7 @@ export default {
         },
         })
         .then(response => {
-          let that = this
-          d3.xml(response.data.content.content)
-          .then(data => {
-            let instance_id = item.symbol+"NewInstance"+this.instance_num
-            this.instance_num = this.instance_num + 1
-            let tmp = data.getElementsByTagName('g')[0]
-            tmp.setAttribute("id", instance_id)
-            tmp.setAttribute("dom_type", 'g')
-            tmp.setAttribute("class", that.is_viewer === true ? "hardware_environment" : null)
-            d3.select('#new').node().append(tmp)
-
-            that.major_elms.forEach((elm) => {
-              d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("id", instance_id).call(this.drag(g)))
-              d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("transform", that.transform))
-            })
-            d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
-              if (d3.select(this).attr("id").split("@").length > 1){
-                d3.select(this).attr("id", d3.select(this).attr("id").split("@")[1])
-              }
-            })
-          })
+          this.insertSvg(response.data.content.content)
         })
     },
     createPath() {
@@ -554,11 +562,10 @@ export default {
     async save(){
       await this.done()
       await d3.select("#new").selectAll("*").attr("transform", null)
-      this.$emit('saveToServer', d3.select("#new"))
+      this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
     },
-    log(item){
-      console.log(item)
-      // console.log(d3.select("#new").node())
+    log(){
+      console.log(d3.select("#viz").node())
     },
     expression(){
       this.dialogExpression = true
@@ -604,10 +611,10 @@ export default {
         if (that.elm !== ''){
           that.done()
         }
-        if (d3.select(this.parentNode).attr("dom_type") === "g" && d3.select(this).attr("dom_type") !== "data"){
+        if ((d3.select(this.parentNode).attr("dom_type") === "g" && d3.select(this).attr("dom_type") !== "data") || d3.select(this.parentNode.parentNode).attr("dom_type") === "g"){
           if (that.is_viewer === true){
             that.select_mode = 'viewer'
-            that.selected_hardware_environment = d3.select("#"+d3.select(this).attr("id")).attr("hardware_environment_name")
+            // that.selected_hardware_environment = d3.select("#"+d3.select(this).attr("id")).attr("hardware_environment_name")
           }
         }else{
           if (d3.select(this).attr("dom_type") === 'polygon') {
@@ -647,7 +654,7 @@ export default {
             that.select_mode = 'data'
           }
         }
-        if (that.is_viewer === true || d3.select(this.parentNode).attr("dom_type") === "g"){
+        if (that.is_viewer === true || d3.select(this.parentNode.parentNode).attr("dom_type") === "g"){
           that.elm = d3.select("#"+d3.select(this).attr("id"))
           that.boxSelection(d3.select("#"+d3.select(this).attr("id")), true)
         }else{
@@ -659,16 +666,13 @@ export default {
       }
       function dragged(event) {
         let scale_event = {}
+
         let k = that.transform === 'translate(0,0) scale(1)' ? 1 : that.transform.k
         scale_event['dx'] = parseInt(event.dx / k)
         scale_event['dy'] = parseInt(event.dy / k)
-        if (d3.select(this.parentNode).attr("dom_type") === "g"){
-          d3.select("#"+d3.select(this).attr("id")).selectAll("*").select(function() {
-            if(d3.select(this).attr("dom_type") !== "g"){
-              return this
-            }
-          }).each(function(d, i) {
-              that.render(d3.select(this), scale_event)
+        if (d3.select(this.parentNode.parentNode).attr("dom_type") === "g"){
+          d3.select("#"+d3.select(this).attr("id")).selectAll("g").each(function(d, i) {
+            that.render(d3.select(this), scale_event)
           })
         }else{
           that.render(d3.select(this), scale_event)
@@ -698,6 +702,9 @@ export default {
       if (elm.attr("dom_type") === 'polygon') {
         elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
       }else if(elm.attr("dom_type") === 'path'){
+        if(elm.style("stroke") === "none"){
+          return
+        }
         elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
       }else if(elm.attr("dom_type") === 'text'){
         elm.attr("fill", flag == true ? elm.attr("fill")+this.opt : elm.attr("fill").slice(0,7))
@@ -716,31 +723,35 @@ export default {
       }
     },
     render(element, event) {
-      if (element.attr("dom_type") === 'polygon') {
-        let points = element.attr("points").split(" ")
-        let result = []
-        points.forEach((point) => {
-          result.push((parseInt(point.split(",")[0]) + event.dx).toString()+','+(parseInt(point.split(",")[1]) + event.dy).toString())
-        })
-        element.attr("points", result.join(' '))
-      }else if(element.attr("dom_type") === 'path'){
-        let points = element.attr("d").match(/([0-9+-]+ [0-9+-]+|[A-Za-z])/g)
-        let result = []
-        points.forEach((point) => {
-          if (point.length > 1){
-            result.push((parseInt(point.split(" ")[0]) + event.dx).toString()+' '+(parseInt(point.split(" ")[1]) + event.dy).toString() + " ")
-          }else{
-            result.push(point)
-          }
-        })
-        element.attr("d", result.join(''))
-      }else if(element.attr("dom_type") === 'text'){
-        element.attr("x", parseInt(element.attr("x"))+event.dx)
-                .attr("y", parseInt(element.attr("y"))+event.dy)
-      }else if(element.attr("dom_type") === 'data'){
-        element.attr("x", parseInt(element.attr("x"))+event.dx)
-                .attr("y", parseInt(element.attr("y"))+event.dy)
-      }
+      let matrix = element.attr("transform").match(/([0-9+-.]+)/g)
+      let value = `matrix(${matrix[0]} 0 0 ${matrix[3]} ${parseInt(matrix[4]) + event.dx} ${parseInt(matrix[5]) + event.dy})`
+      element.attr("transform", value)
+      // if (element.attr("dom_type") === 'polygon') {
+      //   let points = element.attr("points").split(" ")
+      //   let result = []
+      //   points.forEach((point) => {
+      //     result.push((parseInt(point.split(",")[0]) + event.dx).toString()+','+(parseInt(point.split(",")[1]) + event.dy).toString())
+      //   })
+      //   element.attr("points", result.join(' '))
+      // }else if(element.attr("dom_type") === 'path'){
+      //   let points = element.attr("d").replaceAll(',', ' ').replaceAll('.0000', '')
+      //   points = points.match(/([0-9+-]+ [0-9+-]+|[A-Za-z])/g)
+      //   let result = []
+      //   points.forEach((point) => {
+      //     if (point.length > 1){
+      //       result.push((parseInt(point.split(" ")[0]) + event.dx).toString()+' '+(parseInt(point.split(" ")[1]) + event.dy).toString() + " ")
+      //     }else{
+      //       result.push(point)
+      //     }
+      //   })
+      //   element.attr("d", result.join(''))
+      // }else if(element.attr("dom_type") === 'text'){
+      //   element.attr("x", parseInt(element.attr("x"))+event.dx)
+      //           .attr("y", parseInt(element.attr("y"))+event.dy)
+      // }else if(element.attr("dom_type") === 'data'){
+      //   element.attr("x", parseInt(element.attr("x"))+event.dx)
+      //           .attr("y", parseInt(element.attr("y"))+event.dy)
+      // }
     },
     coverToList(){
       let tmp = []
@@ -768,7 +779,7 @@ export default {
             let formData = new FormData()
             formData.append("username", that.username)
             formData.append("operate", "hardware_environment_save_config")
-            formData.append("sid", d3.select(this).attr("hardware_environment_id"))
+            // formData.append("sid", d3.select(this).attr("hardware_environment_id"))
             formData.append("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
 
             d3.select(hardware).selectAll("span").each(function(d, i) {
@@ -780,7 +791,8 @@ export default {
               }
             })
             formData.append("key", that.$common.dedupe(tmp).join(','))
-            formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
+            formData.append("addr_map", 'a0fd644a734be4a00d86e9e917e3d51a_address_map')
+            // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
             let config = {
               headers: {
               'Content-Type': 'multipart/form-data'
@@ -864,7 +876,9 @@ export default {
       })
     },
     async saveApiBindData(){
-      await this.$emit('saveApiBindData', this.url_get_bind_data)
+      if(this.flagUpdateOrAdd === true){
+        await this.$emit('saveApiBindData', this.url_get_bind_data)
+      }
       this.queryBackendData()
     },
     saveApiViewer(){
@@ -885,6 +899,43 @@ export default {
         this.url_post_interactive_data = val['url_post_interactive_data']
         this.externalUrls = val['externalUrls']
       }
+    },
+    insertSvg(svg){
+      let that = this
+      d3.xml(svg)
+      .then(data => {
+        let instance_id = "NewInstance"+this.instance_num
+        this.instance_num = this.instance_num + 1
+        let tmp = data.getElementsByTagName('g')[0]
+        tmp.setAttribute("id", instance_id)
+        tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")
+        tmp.setAttribute("dom_type", 'g')
+        d3.select('#new').node().append(tmp)
+
+        that.major_elms.forEach((elm) => {
+          d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("id", instance_id).call(this.drag(g)))
+          // d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("transform", that.transform))
+          d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("dom_type", elm))
+        })
+        d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
+          if (d3.select(this).attr("id").split("@").length > 1){
+            d3.select(this).attr("id", d3.select(this).attr("id").split("@")[1])
+          }
+        })
+      })
+    },
+    fileInsertSvg(){
+      if(this.svgIns){
+        const reader = new FileReader()
+        reader.readAsDataURL(this.svgIns)
+        reader.onload = ()=>{
+          this.insertSvg(reader.result)
+        }
+        this.svgIns = []
+      }
+    },
+    autocomplete(){
+
     },
   },
 }
