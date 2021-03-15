@@ -18,7 +18,6 @@
                     v-bind:tools_category='symbols'
                     v-bind:is_viewer='is_viewer'
                     v-bind:username='username'
-                    v-bind:hardware_environment_list='hardware_environment_list'
                     v-on:dialogClose="dialogClose"
                     v-on:saveToServer="save"
                     v-on:newItem="newItem"
@@ -87,7 +86,6 @@ export default {
       viewer_name: '',
       flagUpdateOrAdd: false,
       operateId: '',
-      hardware_environment_list: [],
     }
   },
 
@@ -116,14 +114,6 @@ export default {
           this.data = response.data.content
         })
 
-      this.$http.get(this.$urls.babel_get, {
-        params: {
-          operate: 'hardware_environment_read_status',
-        },
-        })
-        .then(response => {
-          this.hardware_environment_list = response.data.content
-        })
     },
     dialogClose () {
       this.dialog = false

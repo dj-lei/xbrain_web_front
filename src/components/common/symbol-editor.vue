@@ -1,7 +1,7 @@
 <template lang="pug">
   v-card(class="d-flex justify-center mb-8")
     v-card(class="pa-2" color='grey lighten-3')
-      v-sheet(width="65")
+      v-sheet(width="85")
         v-list(dense class="grow")
           v-list-item
             v-list-item-title
@@ -12,6 +12,10 @@
             v-list-item-title SAVE
           v-list-item(@click="log")
             v-list-item-title LOG
+          template(v-if="is_viewer === false")
+            v-list-item(@click="importSvg")
+              v-list-item-title IMPORT
+              v-file-input(id="fileInput" v-model="svgIns" @change="fileInsertSvg" style="display:none" multiple)
           template(v-if='is_viewer === true')
             template(v-if='run_flag === false')
               v-list-item(@click="runOrStop")
@@ -22,7 +26,7 @@
             v-list-item(@click="dialogViewerConfig = true")
               v-list-item-title CONFIG
     v-card(class="pa-2" dark)
-      v-sheet(width="130")
+      v-sheet(width="115")
         v-list(dense class="grow")
           v-list-item(v-for="(tool, j) in tools_category" :key="j")
             v-list-group
@@ -82,20 +86,18 @@
                       v-btn(dark :color="info_color" @click='checkExpression' depressed) CHECK
                         template(v-if="is_success === true")
                           v-icon(dark right) mdi-checkbox-marked-circle
-          //- template(v-else-if="select_mode === 'viewer'")
+          template(v-else-if="select_mode === 'viewer'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
-                //- template(v-if="ctrl_param_type === 'list'")
-                //-   v-combobox(v-model="selected" :items="selected_items" label="selected param" @change='initCtrlElm')
-                //- template(v-else-if="ctrl_param_type === 'text'")
-                //-   v-text-field(v-model="selected" label="fill param" @change='initCtrlElm')
-                //- template(v-else)
-                v-combobox(v-model="selected_hardware_environment" :items='coverToList()' label="Hardware environment select" dense outlined @change="syncHardwareEnvironment")
-          template(v-else-if="select_mode === 'scene' && is_viewer === true")
-            v-row(class="d-flex justify-center")
-              v-col(class="pa-2")
+                v-combobox(v-model="selected_environment" :items='coverToList()' label="Environment select" dense outlined @change="syncEnvironment")
+                v-row(class="d-flex justify-center" v-for="key in comVar" :key="key.name")
+                  v-col(class="pa-2")
+                    v-text-field(v-model="key.value" :label="key.name" outlined dense @change="updateComVar")
                 v-btn( dark @click='interactive' depressed) INTERACTIVE
-                v-file-input(v-model="svgIns", @change="fileInsertSvg", solo, color="deep-purple accent-4",  label="Upload svg",  placeholder="Upload svg", dense, outlined, :show-size="1000")
+          template(v-else-if="select_mode === 'scene' && is_viewer === true")
+            //- v-row(class="d-flex justify-center")
+            //-   v-col(class="pa-2")
+            //-     v-btn( dark @click='interactive' depressed) INTERACTIVE             
             v-card(color="grey darken-4")
               v-container(fluid)
                 v-card-title External Link
@@ -104,7 +106,7 @@
                     v-list-item(target="_blank" :href="url.addr")
                       v-list-item-title(v-text="url.name")
                     v-divider
-          template(v-if="select_mode !== 'data' && is_viewer !== true")
+          template(v-if="select_mode !== 'data'")
             v-row
               v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
         v-dialog(v-model='dialogDataBind', dark, max-width="800px")
@@ -122,7 +124,7 @@
         v-dialog(v-model='dialogViewerConfig',  max-width="800px")
           v-card
             v-container
-              //- v-row
+              v-row
                 v-text-field(class="ma-1" v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
               v-row
                 v-text-field(class="ma-1" v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
@@ -132,7 +134,7 @@
                 v-data-table(:headers="externalUrlHeaders" :items="externalUrls" class="elevation-1" hide-default-footer)
                   template(v-slot:top="")
                     v-toolbar(flat)
-                      v-toolbar-title EXTERNAL LINK
+                      v-toolbar-title EXTERNAL LINK        
                       v-divider(class="mx-4" inset vertical)
                       v-spacer
                       v-dialog(v-model="dialogExternalUrl" max-width="500px")
@@ -163,7 +165,7 @@ import * as d3 from 'd3'
 import axios from 'axios'
 import * as echarts from 'echarts'
 import pako from 'pako'
-// import * as math from 'mathjs'
+import * as math from 'mathjs'
 
 export default {
   props: {
@@ -189,21 +191,17 @@ export default {
       type: String,
       default: 'visitor'
     },
-    hardware_environment_list:{
-      type: Array,
-      default () {
-        return []
-      }
-    },
   },
   data () {
     return {
       items: [],
       svgIns: [],
+      comVar: [],
       url_get_bind_data: '',
       url_get_ins_env: '',
       url_post_config_read_data: '',
       url_post_interactive_data: '',
+      environment_list: [],
       externalUrls: [],
       editedItem: {
         name: '',
@@ -218,7 +216,7 @@ export default {
       // url_get_ins_env: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
       // url_post_config_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
       // url_post_interactive_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
-      selected_hardware_environment: '',
+      selected_environment: '',
       run_flag: false,
       interval: '',
       dialogDataBind: false,
@@ -263,14 +261,13 @@ export default {
       instance_num: 0,
       opt: '20',
       transform: 'translate(0,0) scale(1)',
+      matrix: 'matrix(1 0 0 1 0 0)',
+      drag:'',
+      viewer_drag:'',
     }
   },
   watch:{
-    bind_data(val) {
-      // console.log(val)
-      // var temp = JSON.parse(JSON.stringify(this.full_data))
-      // this.items = this.$common.dictRetrievalNotWithChildren(temp, val[0])
-      // console.log(this.$common.dictRetrievalNotWithChildren(temp, val[0]))
+    bind_data() {
       this.createData()
       this.dialogDataBind = false
     },
@@ -283,7 +280,7 @@ export default {
     }
   },
   mounted () {
-    var _this = this
+    let that = this
     this.x = d3.scaleLinear()
       .domain([0, this.canvas_width])
       .range([0, this.canvas_width])
@@ -300,7 +297,7 @@ export default {
       if (e.path[0].toString().indexOf('TextArea') > -1) return
 
       if (key== 46 || key== 8) { //Del or Backspace
-        _this.deleteElm()
+        that.deleteElm()
       }
     }
     this.$common.setBrowserTitle("new")
@@ -311,28 +308,72 @@ export default {
     this.gy = d3.select("#axis").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
     this.zoom = d3.zoom().scaleExtent([0.4, 8]).on("zoom", this.zoomed)
     d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
+
+    function dragstarted(event) {
+      if (that.elm !== ''){
+        that.done()
+      }
+      that.elm = d3.select(this)
+      that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
+
+      if (that.is_viewer === true && d3.select(this).attr("dom_type") === 'g'){
+        that.select_mode = 'viewer'
+        that.selected_environment = d3.select(this).attr("environment_name")
+        that.comVar = JSON.parse(d3.select(this).attr("params"))
+        
+      }else if(d3.select(this).attr("dom_type") !== 'g'){
+        if (d3.select(this).select('.children').attr("dom_type") === 'polygon') {
+          that.select_mode = 'polygon'
+          that.hexa = that.$common.colorRGBtoHex(d3.select(this).select('.children').style("stroke"))
+          that.polygon_points = d3.select(this).select('.children').attr("points")
+        }else if(d3.select(this).select('.children').attr("dom_type") === 'text'){
+          that.hexa = d3.select(this).select('.children').attr("fill")
+          that.select_mode = 'text'
+          that.text = d3.select(this).select('.children').text()
+        }else if(d3.select(this).select('.children').attr("dom_type") === 'path'){
+          that.hexa = that.$common.colorRGBtoHex(d3.select(this).select('.children').style("stroke"))
+          that.select_mode = 'path'
+          that.path_points = d3.select(this).select('.children').attr("d")
+        }else if(d3.select(this).select('.children').attr("dom_type") === 'data'){
+          let data = {}
+          that.data = {}
+          if (d3.select(this).node().getElementsByTagName('span').length > 0){
+            data = d3.select(this).node().getElementsByTagName('span')[0]
+          }else{
+            data = d3.select(this).node().getElementsByTagName('div')[0]
+          }
+          for(let i=0;i < data.attributes.length;i++){
+            if(that.original_attributes.toString().indexOf(data.attributes[i].name) == -1){
+              if('id' == data.attributes[i].name){
+                that.fill_id = data.getAttribute(data.attributes[i].name)
+              }else if('value' == data.attributes[i].name){
+                that.fill_param = window.atob(data.getAttribute(data.attributes[i].name))
+              }else if('mode' == data.attributes[i].name){
+                that.selected = window.atob(data.getAttribute(data.attributes[i].name))
+              }else if('expression' == data.attributes[i].name){
+                that.express = window.atob(data.getAttribute(data.attributes[i].name))
+              }
+              that.data[data.attributes[i].name] = 'id' !== data.attributes[i].name ? window.atob(data.getAttribute(data.attributes[i].name)) : data.getAttribute(data.attributes[i].name)
+            }
+          }
+          that.select_mode = 'data'
+        }
+      }
+    }
+    function dragged(event) {
+      // d3.select(this).attr("transform", `matrix(${typeof(that.transform.k) === "undefined" ? 1 : that.transform.k} 0 0 ${typeof(that.transform.k) === "undefined" ? 1 : that.transform.k} ${event.x} ${event.y})`)
+      d3.select(this).attr("transform", `matrix(1 0 0 1 ${event.x} ${event.y})`)
+    }
+    this.drag = d3.drag().on("start", dragstarted).on("drag", dragged)
+    this.viewer_drag = d3.drag().on("start", dragstarted)
   },
   methods: {
     zoomed(event) {
       const {transform} = event
       this.transform = transform
-      d3.select("").selectAll(elm).call(g => g.attr("transform", transform))
-      // this.major_elms.forEach((elm) => {
-      //   d3.selectAll(elm).call(g => g.attr("transform", transform))
-      // })
-      // d3.select("#new").selectAll('g').each(function(d, i) {
-      //   if(d3.select(this).attr('transform').indexOf('matrix') > -1){
-      //     let matrix = d3.select(this).attr("transform").match(/([0-9+-.]+)/g)
-      //     let value = `matrix(${parseFloat(matrix[0]) * transform.k} 0 0 ${parseFloat(matrix[3]) * transform.k} ${matrix[4]} ${matrix[5]})`
-      //     console.log(value, transform)
-      //     d3.select(this).attr("transform", value)
-      //   }
-      // })
-      d3.select("#new").selectAll('g').each(function(d, i) {
-        if(d3.select(this).attr('dom_type') === 'g'){
-          d3.select(this).attr("transform", transform)
-        }
-      })
+      d3.select("#axis").selectAll('text').call(g => g.attr("transform", transform))
+      d3.select("#new").attr("transform", transform)
+
       this.gx.call(this.xAxis, transform.rescaleX(this.x), transform)
       this.gy.call(this.yAxis, transform.rescaleY(this.y), transform)
     },
@@ -367,12 +408,11 @@ export default {
       this.clear()
       d3.xml(val)
         .then(data => {
-          // console.log(data.documentElement)
           let tmp = data.getElementsByTagName('g')[0]
           d3.select("#new").remove()
           d3.select('#viz').node().append(tmp)
           this.svg = d3.select("#new")
-          // this.dragElements()
+          this.dragElements()
         })
     },
     selectedItem(item){
@@ -407,7 +447,17 @@ export default {
           // this.full_data = response.data.content
           // var tmp = JSON.parse(JSON.stringify(response.data.content))
           // this.items = [this.$common.dictRetrievalNotWithChildren(tmp, tmp['id'])]
-          this.items = [response.data.content]
+          this.items = response.data.content
+        })
+    },
+    async queryInsEnv(){
+      await axios.get(this.url_get_ins_env, {
+        params: {
+          operate: 'hardware_environment_read_status',
+        },
+        })
+        .then(response => {
+          this.environment_list = response.data.content
         })
     },
     async addSymbolSvg (item) {
@@ -421,39 +471,45 @@ export default {
           this.insertSvg(response.data.content.content)
         })
     },
+    createCheckBox(elm,x,y,w,h) {
+      elm.append('rect')
+        .attr("class", "check_box")
+        .attr('x',x)
+        .attr('y',y)
+        .attr('width',w)
+        .attr('height',h)
+        .attr('fill','none')
+        .style('stroke', "#0000FF50")
+        .style('stroke-width', 2)
+    },
     createPath() {
-      this.svg.append('path')
-        .attr("id", this.$common.generateUUID())
-        .attr("d", this.path_points) //'M50 150Q300 50 300 150T450 150'
-        .attr("dom_type", 'path')
-        .attr("transform", this.transform)
-        .style("fill", 'none')
-        .style('stroke', this.hexa)
-        .style('stroke-width', 5)
-        .call(this.drag(this.svg))
+      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+        .append('path')
+          .attr("class", "children")
+          .attr("dom_type", 'path')
+          .attr("d", this.path_points) //'M50 150Q300 50 300 150T450 150'
+          .style("fill", 'none')
+          .style('stroke', this.hexa)
+          .style('stroke-width', 5)
     },
     createPolygon() { // 100,100 100,400 300,400 300,100
-      this.svg.append("polygon")
-        .attr("id", this.$common.generateUUID())
-        .attr("dom_type", 'polygon')
-        .attr("points", this.polygon_points)
-        .attr("transform", this.transform)
-        .style("fill", "none")
-        .style('stroke', this.hexa)
-        .style('stroke-width', 5)
-        .call(this.drag(this.svg))
+      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+        .append("polygon")
+          .attr("class", "children")
+          .attr("dom_type", 'polygon')
+          .attr("points", this.polygon_points)
+          .style("fill", "none")
+          .style('stroke', this.hexa)
+          .style('stroke-width', 5)
     },
     createText() {
-      this.svg.append("text")
-        .attr("id", this.$common.generateUUID())
-        .attr("dom_type", 'text')
-        .attr("x", this.canvas_width / 2)
-        .attr("y", this.canvas_height / 2)
-        .attr("fill", this.hexa)
-        .attr("transform", this.transform)
-        // .attr("font-weight", "bold")
-        .text(this.text)
-        .call(this.drag(this.svg))
+      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+        .append("text")
+          .attr("class", "children")
+          .attr("dom_type", 'text')
+          .attr("fill", this.hexa)
+          // .attr("font-weight", "bold")
+          .text(this.text)
     },
     createData(){
       this.data = this.$common.jsonSearchId(this.items, this.bind_data)
@@ -467,72 +523,66 @@ export default {
         }
       })
       if (this.data['type'] === 'echarts'){
-        this.svg.append("foreignObject")
+        this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+        .append("foreignObject")
           .attr("id", uuid)
           .attr("dom_type", 'data')
-          .attr("x", this.canvas_width / 2)
-          .attr("y", this.canvas_height / 2)
+          .attr("class", 'children')
           .attr("width", 600)
           .attr("height", 400)
-          .attr("transform", this.transform)
         .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
-        .call(this.drag(this.svg))
         // echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
       }else{
-        this.svg.append("foreignObject")
+        this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+        .append("foreignObject")
           .attr("id", uuid)
           .attr("dom_type", 'data')
-          .attr("x", this.canvas_width / 2)
-          .attr("y", this.canvas_height / 2)
-          .attr("width", 150)
-          .attr("height", 50)
-          .attr("transform", this.transform)
+          .attr("class", 'children')
+          .attr("width", this.data['id'].length*10)
+          .attr("height", 25)
         .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml"> <span '+content+' style="color: '+this.hexa+'">'+this.data['id']+'</span> </div>')
-        .call(this.drag(this.svg))
       }
     },
     createCustomData(){
       let uuid = this.$common.generateUUID()
       let content = ' id='+uuid+' value='+window.btoa('content')+' mode='+window.btoa('normal')
-      this.svg.append("foreignObject")
+      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+      .append("foreignObject")
         .attr("id", uuid)
         .attr("dom_type", 'data')
-        .attr("x", this.canvas_width / 2)
-        .attr("y", this.canvas_height / 2)
-        .attr("width", 150)
-        .attr("height", 50)
-        .attr("transform", this.transform)
+        .attr("class", 'children')
+        .attr("width", uuid.length*10)
+        .attr("height", 25)
       .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml"> <span '+content+' style="color: '+this.hexa+'"> '+uuid+":"+"content"+' </span> </div>')
-      .call(this.drag(this.svg))
     },
     updateColor(){
       if (this.elm !== ''){
-        if(this.elm.attr("dom_type") === 'text'){
-          this.elm.attr("fill", this.hexa+this.opt)
-        }else if(this.elm.attr("dom_type") === 'data'){
-          this.elm.select('span').attr("style", "color: "+this.hexa+this.opt)
+        if(this.elm.select('.children').attr("dom_type") === 'text'){
+          this.elm.select('.children').attr("fill", this.hexa)
+        }else if(this.elm.select('.children').attr("dom_type") === 'data'){
+          this.elm.select('span').attr("style", "color: "+this.hexa)
         }else{
-          this.elm.style("stroke", this.hexa+this.opt)
+          this.elm.select('.children').style("stroke", this.hexa)
         }
       }
     },
     updatePath(){
       if (this.elm !== ''){
-        this.elm.attr("d", this.path_points)
+        this.elm.select('.children').attr("d", this.path_points)
       }else{
         this.createPath()
       }
     },
     updatePolygon(){
       if (this.elm !== ''){
-        this.elm.attr("points", this.polygon_points)
+        this.elm.select('.children').attr("points", this.polygon_points)
       }else{
         this.createPolygon()
       }
     },
     updateText(){
       if (this.elm !== ''){
-        this.elm.text(this.text)
+        this.elm.select('.children').text(this.text)
       }else{
         this.createText()
       }
@@ -545,6 +595,11 @@ export default {
         data.innerHTML = this.data_name+":"+this.data_value
       }
     },
+    updateComVar(){
+      if (this.elm !== ''){
+        this.elm.attr('params', JSON.stringify(this.comVar))
+      }
+    },
     deleteElm() {
       if (this.elm !== ''){
         this.elm.remove()
@@ -554,18 +609,29 @@ export default {
     },
     done() {
       if (this.elm !== ''){
-        this.boxSelection(this.elm, false)
+        this.elm.select('.check_box').remove()
       }
       this.elm = ''
       this.select_mode = 'scene'
     },
     async save(){
       await this.done()
-      await d3.select("#new").selectAll("*").attr("transform", null)
-      this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
+      let params = []
+      if(this.items.length > 0){
+        this.items[0].params.forEach((key) => {
+          params.push({'name': key.name, 'value': 'content'})
+        })
+        d3.select("#new").attr("params", JSON.stringify(params))
+        d3.select("#new").attr("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
+      }
+      await d3.select("#new").attr("transform", 'translate(0,0) scale(1)')
+      await this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
+      if(this.is_viewer === true){
+        this.saveApiViewer()
+      }
     },
     log(){
-      console.log(d3.select("#viz").node())
+      console.log(d3.select("#new").node())
     },
     expression(){
       this.dialogExpression = true
@@ -573,15 +639,19 @@ export default {
     checkExpression(){
       if (this.elm !== ''){
         let data = {}
-        if (this.express.search("$") !== -1) {
+        
+        if (this.express.indexOf("$") > -1) {
           data = this.elm.node().getElementsByTagName('span')[0]
           data.setAttribute("expression", window.btoa(this.express))
-          data.innerHTML = data.getAttribute('id') + ":" + this.express
+          let str_length = data.getAttribute('id') + ":" + this.express
+          this.elm.select('.children').attr("width", str_length.length*10)
+          data.innerHTML = str_length
           this.info_color = 'success'
           this.is_success = true
           return
         }
         try{
+          console.log(this.express)
           const node = math.parse(this.express)
           if (this.elm.node().getElementsByTagName('span').length > 0){
             data = this.elm.node().getElementsByTagName('span')[0]
@@ -589,6 +659,9 @@ export default {
             data = this.elm.node().getElementsByTagName('div')[0]
           }
           data.setAttribute("expression", window.btoa(this.express))
+          let str_length = data.getAttribute('id') + ":" + this.express
+          this.elm.select('.children').attr("width", str_length.length*10)
+          data.innerHTML = str_length
           this.info_color = 'success'
           this.is_success = true
         }catch(err){
@@ -605,166 +678,34 @@ export default {
       d3.select("#new").selectAll("*").remove()
       d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity)
     },
-    drag(elm) {
-      let that = this
-      function dragstarted(event) {
-        if (that.elm !== ''){
-          that.done()
-        }
-        if ((d3.select(this.parentNode).attr("dom_type") === "g" && d3.select(this).attr("dom_type") !== "data") || d3.select(this.parentNode.parentNode).attr("dom_type") === "g"){
-          if (that.is_viewer === true){
-            that.select_mode = 'viewer'
-            // that.selected_hardware_environment = d3.select("#"+d3.select(this).attr("id")).attr("hardware_environment_name")
-          }
-        }else{
-          if (d3.select(this).attr("dom_type") === 'polygon') {
-            that.select_mode = 'polygon'
-            that.hexa = that.$common.colorRGBtoHex(d3.select(this).style("stroke"))
-            that.polygon_points = d3.select(this).attr("points")
-          }else if(d3.select(this).attr("dom_type") === 'text'){
-            that.hexa = d3.select(this).attr("fill")
-            that.select_mode = 'text'
-            that.text = d3.select(this).text()
-          }else if(d3.select(this).attr("dom_type") === 'path'){
-            that.hexa = that.$common.colorRGBtoHex(d3.select(this).style("stroke"))
-            that.select_mode = 'path'
-            that.path_points = d3.select(this).attr("d")
-          }else if(d3.select(this).attr("dom_type") === 'data'){
-            let data = {}
-            that.data = {}
-            if (d3.select(this).node().getElementsByTagName('span').length > 0){
-              data = d3.select(this).node().getElementsByTagName('span')[0]
-            }else{
-              data = d3.select(this).node().getElementsByTagName('div')[0]
-            }
-            for(let i=0;i < data.attributes.length;i++){
-              if(that.original_attributes.toString().indexOf(data.attributes[i].name) == -1){
-                if('id' == data.attributes[i].name){
-                  that.fill_id = data.getAttribute(data.attributes[i].name)
-                }else if('value' == data.attributes[i].name){
-                  that.fill_param = window.atob(data.getAttribute(data.attributes[i].name))
-                }else if('mode' == data.attributes[i].name){
-                  that.selected = window.atob(data.getAttribute(data.attributes[i].name))
-                }else if('expression' == data.attributes[i].name){
-                  that.express = window.atob(data.getAttribute(data.attributes[i].name))
-                }
-                that.data[data.attributes[i].name] = 'id' !== data.attributes[i].name ? window.atob(data.getAttribute(data.attributes[i].name)) : data.getAttribute(data.attributes[i].name)
-              }
-            }
-            that.select_mode = 'data'
-          }
-        }
-        if (that.is_viewer === true || d3.select(this.parentNode.parentNode).attr("dom_type") === "g"){
-          that.elm = d3.select("#"+d3.select(this).attr("id"))
-          that.boxSelection(d3.select("#"+d3.select(this).attr("id")), true)
-        }else{
-          that.elm = d3.select(this)
-          setTimeout(() =>{
-            that.boxSelection(d3.select(this), true)
-          },100)
-        }
-      }
-      function dragged(event) {
-        let scale_event = {}
-
-        let k = that.transform === 'translate(0,0) scale(1)' ? 1 : that.transform.k
-        scale_event['dx'] = parseInt(event.dx / k)
-        scale_event['dy'] = parseInt(event.dy / k)
-        if (d3.select(this.parentNode.parentNode).attr("dom_type") === "g"){
-          d3.select("#"+d3.select(this).attr("id")).selectAll("g").each(function(d, i) {
-            that.render(d3.select(this), scale_event)
-          })
-        }else{
-          that.render(d3.select(this), scale_event)
-        }
-      }
-      function dragended(event) {
-        if (d3.select(this).attr("dom_type") === 'polygon') {
-          that.polygon_points = d3.select(this).attr("points")
-        }else if(d3.select(this).attr("dom_type") === 'text'){
-          that.text = d3.select(this).text()
-        }else if(d3.select(this).attr("dom_type") === 'path'){
-          that.path_points = d3.select(this).attr("d")
-        }
-      }
-      return d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended)
-    },
     dragElements(){
-      this.major_elms.forEach((elm) => {
-        d3.selectAll(elm).call(g => g.call(this.drag(g)))
-      })
-    },
-    boxSelection(elm, flag){
       let that = this
-      if (elm.attr("dom_type") === 'polygon') {
-        elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
-      }else if(elm.attr("dom_type") === 'path'){
-        if(elm.style("stroke") === "none"){
-          return
-        }
-        elm.style("stroke", flag == true ? this.$common.colorRGBtoHex(elm.style("stroke"))+this.opt : this.$common.colorRGBtoHex(elm.style("stroke")).slice(0,7))
-      }else if(elm.attr("dom_type") === 'text'){
-        elm.attr("fill", flag == true ? elm.attr("fill")+this.opt : elm.attr("fill").slice(0,7))
-      }else if(elm.attr("dom_type") === 'data'){
-        if(elm.node().getElementsByTagName('span').length > 0){
-          elm.select('span').attr("style", flag == true ? "color: "+elm.select('span').attr("style").split(" ")[1]+this.opt : "color: "+elm.select('span').attr("style").split(" ")[1].slice(0,7))
-        }
-      }else if(elm.attr("dom_type") === 'g'){
-        elm.selectAll('*').select(function() {
-          if(d3.select(this).attr("dom_type") !== "g"){
-            return this
+      d3.select("#new").each(function(d, i) {
+        d3.selectAll(this.childNodes).each(function(d, i) {
+          d3.select(this).call(that.drag)
+        })
+      })
+      if(that.is_viewer === true){
+        d3.selectAll(".data").each(function(d, i) {
+          if (d3.select(this).attr("mode") !== null){
+            d3.select(this.parentNode.parentNode).call(that.viewer_drag)
           }
-        }).each(function(d, i) {
-          that.boxSelection(d3.select(this), flag)
         })
       }
     },
-    render(element, event) {
-      let matrix = element.attr("transform").match(/([0-9+-.]+)/g)
-      let value = `matrix(${matrix[0]} 0 0 ${matrix[3]} ${parseInt(matrix[4]) + event.dx} ${parseInt(matrix[5]) + event.dy})`
-      element.attr("transform", value)
-      // if (element.attr("dom_type") === 'polygon') {
-      //   let points = element.attr("points").split(" ")
-      //   let result = []
-      //   points.forEach((point) => {
-      //     result.push((parseInt(point.split(",")[0]) + event.dx).toString()+','+(parseInt(point.split(",")[1]) + event.dy).toString())
-      //   })
-      //   element.attr("points", result.join(' '))
-      // }else if(element.attr("dom_type") === 'path'){
-      //   let points = element.attr("d").replaceAll(',', ' ').replaceAll('.0000', '')
-      //   points = points.match(/([0-9+-]+ [0-9+-]+|[A-Za-z])/g)
-      //   let result = []
-      //   points.forEach((point) => {
-      //     if (point.length > 1){
-      //       result.push((parseInt(point.split(" ")[0]) + event.dx).toString()+' '+(parseInt(point.split(" ")[1]) + event.dy).toString() + " ")
-      //     }else{
-      //       result.push(point)
-      //     }
-      //   })
-      //   element.attr("d", result.join(''))
-      // }else if(element.attr("dom_type") === 'text'){
-      //   element.attr("x", parseInt(element.attr("x"))+event.dx)
-      //           .attr("y", parseInt(element.attr("y"))+event.dy)
-      // }else if(element.attr("dom_type") === 'data'){
-      //   element.attr("x", parseInt(element.attr("x"))+event.dx)
-      //           .attr("y", parseInt(element.attr("y"))+event.dy)
-      // }
-    },
     coverToList(){
       let tmp = []
-      JSON.stringify(this.hardware_environment_list).match(/\"name\":\"(.*?)\"/g).forEach((elm) => {
+      JSON.stringify(this.environment_list).match(/\"name\":\"(.*?)\"/g).forEach((elm) => {
         tmp.push(elm.split(":")[1].replace(/\"/g,''))
       })
       return tmp
     },
-    syncHardwareEnvironment(){
+    syncEnvironment(){
       this.hardware_environment_list.forEach((e) => {
-        if (e['name'] === this.selected_hardware_environment) {
-          this.elm.attr("hardware_environment_id", e['id'])
-          this.elm.attr("hardware_environment_name", e['name'])
+        if (e['name'] === this.selected_environment) {
+          this.elm.attr("environment_id", e['id'])
+          this.elm.attr("environment_name", e['name'])
+          this.elm.attr("class", "environment")
         }
       })
     },
@@ -773,25 +714,30 @@ export default {
         let that = this
         this.run_flag = true
         this.interval = setInterval(function() {
-          d3.selectAll(".hardware_environment").each(function(d, i) {
+          d3.selectAll(".environment").each(function(d, i) {
             let tmp = []
             let hardware = this
             let formData = new FormData()
             formData.append("username", that.username)
             formData.append("operate", "hardware_environment_save_config")
-            // formData.append("sid", d3.select(this).attr("hardware_environment_id"))
-            formData.append("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
+            formData.append("sid", d3.select(this).attr("environment_id"))
+            formData.append("docid", d3.select(this).attr("docid"))
 
             d3.select(hardware).selectAll("span").each(function(d, i) {
               let data = d3.select(this).node()
               if (data.getAttribute('expression') !== null) {
                 tmp = tmp.concat(that.$common.getRootVar(data.getAttribute("expression")))
               }else{
-                tmp.push(data.getAttribute("id"))
+                if (data.getAttribute('mode') === null) {
+                  tmp.push(data.getAttribute("id"))
+                }
+                
               }
             })
+            JSON.parse(d3.select(hardware).attr('params')).forEach((key) =>{
+              formData.append(key.name, key.value)
+            })
             formData.append("key", that.$common.dedupe(tmp).join(','))
-            formData.append("addr_map", 'a0fd644a734be4a00d86e9e917e3d51a_address_map')
             // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
             let config = {
               headers: {
@@ -826,6 +772,7 @@ export default {
                       data.innerHTML = data.getAttribute("id")+":"+temp
                     }
                   }
+                  d3.select(this.parentNode).attr('width', data.innerHTML.length * 10)
                 })
 
             }, (error) => {
@@ -845,25 +792,31 @@ export default {
           .attr('value', window.btoa(this.fill_param))
           .attr('mode', window.btoa(this.selected))
         let express = this.elm.select('span').attr('expression') === null ? this.fill_param : window.atob(this.elm.select('span').attr('expression'))
-        this.elm.node().getElementsByTagName('span')[0].innerHTML = this.fill_id + ":" + express
+        let str_length = this.fill_id + ":" + express
+        this.elm.select('.children').attr("width", str_length.length*10)
+        this.elm.node().getElementsByTagName('span')[0].innerHTML = str_length
       }
     },
     async interactive(){
-      let tmp = {}
-
+      let res = []
+      
       let formData = new FormData()
       formData.append("username", this.username)
       formData.append("operate", "hardware_environment_save_config")
-      formData.append("sid", "")
-      formData.append("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
+      formData.append("sid", this.elm.attr("environment_id"))
+      formData.append("docid", this.elm.attr("docid"))
 
-      d3.selectAll("span").each(function(d, i) {
+      this.elm.selectAll("span").each(function(d, i) {
+        let tmp = {}
         let data = d3.select(this).node()
         if (window.atob(data.getAttribute("mode")) === 'interactive'){
-          tmp[data.getAttribute("id")] = window.atob(data.getAttribute("value"))
+          tmp['id'] = data.getAttribute("id")
+          tmp['value'] = window.atob(data.getAttribute("value"))
+          tmp['expression'] = data.getAttribute("expression") !== null ? window.atob(data.getAttribute("expression")) : ""
+          res.push(tmp)
         }
       })
-      formData.append("key", JSON.stringify(tmp))
+      formData.append("key", JSON.stringify(res))
 
       let config = {
         headers: {
@@ -881,13 +834,16 @@ export default {
       }
       this.queryBackendData()
     },
-    saveApiViewer(){
+    async saveApiViewer(){
       let api_url = {}
       api_url['url_get_ins_env'] = this.url_get_ins_env
       api_url['url_post_config_read_data'] = this.url_post_config_read_data
       api_url['url_post_interactive_data'] = this.url_post_interactive_data
       api_url['externalUrls'] = this.externalUrls
-      this.$emit('saveApiViewer', api_url)
+      if(this.flagUpdateOrAdd === true){
+        await this.$emit('saveApiViewer', api_url)
+      }
+      this.queryInsEnv()
     },
     updateSymbolsUrl(val){
       this.url_get_bind_data = val
@@ -904,30 +860,29 @@ export default {
       let that = this
       d3.xml(svg)
       .then(data => {
-        let instance_id = "NewInstance"+this.instance_num
-        this.instance_num = this.instance_num + 1
+        let instance_id = this.$common.generateUUID()
         let tmp = data.getElementsByTagName('g')[0]
         tmp.setAttribute("id", instance_id)
         tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")
         tmp.setAttribute("dom_type", 'g')
         d3.select('#new').node().append(tmp)
-
-        that.major_elms.forEach((elm) => {
-          d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("id", instance_id).call(this.drag(g)))
-          // d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("transform", that.transform))
-          d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("dom_type", elm))
-        })
-        d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
-          if (d3.select(this).attr("id").split("@").length > 1){
-            d3.select(this).attr("id", d3.select(this).attr("id").split("@")[1])
-          }
-        })
+        d3.select('#'+instance_id).call(that.drag)
+        // that.major_elms.forEach((elm) => {
+        //   d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("dom_type", elm))
+        // })
+        if(that.is_viewer === true){
+          d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
+            if (d3.select(this).attr("mode") !== null){
+              d3.select(this.parentNode.parentNode).call(that.viewer_drag)
+            }
+          })
+        }
       })
     },
     fileInsertSvg(){
-      if(this.svgIns){
+      if(this.svgIns.length > 0){
         const reader = new FileReader()
-        reader.readAsDataURL(this.svgIns)
+        reader.readAsDataURL(this.svgIns[0])
         reader.onload = ()=>{
           this.insertSvg(reader.result)
         }
@@ -937,6 +892,9 @@ export default {
     autocomplete(){
 
     },
+    importSvg(){
+      document.getElementById('fileInput').click()
+    }
   },
 }
 </script>
