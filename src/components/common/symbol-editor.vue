@@ -722,8 +722,8 @@ export default {
             let hardware = this
             let formData = new FormData()
             formData.append("username", that.username)
-            formData.append("operate", "hardware_environment_save_config")
-            formData.append("url", d3.select(this).attr("server"))
+            // formData.append("operate", "hardware_environment_save_config")
+            // formData.append("url", d3.select(this).attr("server"))
             formData.append("sid", d3.select(this).attr("environment_id"))
             formData.append("docid", d3.select(this).attr("docid"))
 
@@ -739,7 +739,7 @@ export default {
               }
             })
             JSON.parse(d3.select(hardware).attr('params')).forEach((key) =>{
-              formData.append(key.name, key.value)
+              formData.append("addr_map", key.value)
             })
             formData.append("key", that.$common.dedupe(tmp).join(','))
             // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
@@ -748,10 +748,11 @@ export default {
               'Content-Type': 'multipart/form-data'
               }
             }
-            that.$http.post(that.$urls.babel_save, formData, config)
+            axios.post(d3.select(hardware).attr('server'), formData, config)
             .then(
               (response)=>{
-                let he = response.data.content
+                console.log(response)
+                let he = response.data
 
                 d3.select(hardware).selectAll("span").each(function(d, i) {
                   let data = d3.select(this).node()
@@ -807,8 +808,8 @@ export default {
 
       let formData = new FormData()
       formData.append("username", this.username)
-      formData.append("operate", "post_interactive_data")
-      formData.append("url", this.url_post_interactive_data)
+      // formData.append("operate", "post_interactive_data")
+      // formData.append("url", this.url_post_interactive_data)
       formData.append("sid", this.elm.attr("environment_id"))
       formData.append("docid", this.elm.attr("docid"))
 
@@ -829,7 +830,7 @@ export default {
         'Content-Type': 'multipart/form-data'
         }
       }
-      await this.$http.post(this.$urls.babel_save, formData, config).then(
+      await axios.post(this.elm.attr("server"), formData, config).then(
         (response)=>{
         console.log(response.data.content)
       })
@@ -843,8 +844,8 @@ export default {
     async saveApiViewer(){
       let api_url = {}
       api_url['url_get_ins_env'] = this.url_get_ins_env
-      api_url['url_post_config_read_data'] = this.url_post_config_read_data
-      api_url['url_post_interactive_data'] = this.url_post_interactive_data
+      // api_url['url_post_config_read_data'] = this.url_post_config_read_data
+      // api_url['url_post_interactive_data'] = this.url_post_interactive_data
       api_url['externalUrls'] = this.externalUrls
       if(this.flagUpdateOrAdd === true){
         await this.$emit('saveApiViewer', api_url)
@@ -857,8 +858,8 @@ export default {
     updateViewersUrl(val){
       if(typeof(val) !== 'undefined'){
         this.url_get_ins_env = val['url_get_ins_env']
-        this.url_post_config_read_data = val['url_post_config_read_data']
-        this.url_post_interactive_data = val['url_post_interactive_data']
+        // this.url_post_config_read_data = val['url_post_config_read_data']
+        // this.url_post_interactive_data = val['url_post_interactive_data']
         this.externalUrls = val['externalUrls']
       }
     },
