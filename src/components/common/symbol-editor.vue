@@ -12,6 +12,8 @@
             v-list-item-title SAVE
           v-list-item(@click="log")
             v-list-item-title LOG
+          v-list-item(@click="dialogConfig = true")
+            v-list-item-title CONFIG
           template(v-if="is_viewer === false")
             v-list-item(@click="importSvg")
               v-list-item-title IMPORT
@@ -23,8 +25,6 @@
             template(v-else)
               v-list-item(@click="runOrStop")
                 v-list-item-title STOP
-            v-list-item(@click="dialogViewerConfig = true")
-              v-list-item-title CONFIG
     v-card(class="pa-2" dark)
       v-sheet(width="115")
         v-list(dense class="grow")
@@ -74,7 +74,7 @@
             v-row
               v-col(class="pa-2")
                 v-btn(dark, @click="expression") EXPRESSION
-            v-dialog(v-model="dialogExpression", max-width="900px")
+            v-dialog(v-model="dialogExpression", max-width="1000px")
               v-card
                 v-container(fluid)
                   v-row(class="d-flex justify-center")
@@ -97,7 +97,7 @@
           template(v-else-if="select_mode === 'scene' && is_viewer === true")
             //- v-row(class="d-flex justify-center")
             //-   v-col(class="pa-2")
-            //-     v-btn( dark @click='interactive' depressed) INTERACTIVE             
+            //-     v-btn( dark @click='interactive' depressed) INTERACTIVE
             v-card(color="grey darken-4")
               v-container(fluid)
                 v-card-title External Link
@@ -115,48 +115,55 @@
               v-row
                 v-btn(color="primary", dark, @click="createCustomData") CUSTOM
               v-spacer(class="mt-3")
-              v-row
+              //- v-row
                 v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
                 v-btn(color="primary", text, dark, @click="saveApiBindData") REFRESH
               v-divider
               v-card
                 v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
-        v-dialog(v-model='dialogViewerConfig',  max-width="800px")
+        v-dialog(v-model='dialogConfig',  max-width="800px")
           v-card
             v-container
-              v-row
-                v-text-field(class="ma-1" v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
-              v-row
-                v-text-field(class="ma-1" v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
-              v-row
-                v-text-field(class="ma-1" v-model="url_post_interactive_data" label="Api post interactive data" dense outlined)
-              v-card
-                v-data-table(:headers="externalUrlHeaders" :items="externalUrls" class="elevation-1" hide-default-footer)
-                  template(v-slot:top="")
-                    v-toolbar(flat)
-                      v-toolbar-title EXTERNAL LINK        
-                      v-divider(class="mx-4" inset vertical)
-                      v-spacer
-                      v-dialog(v-model="dialogExternalUrl" max-width="500px")
-                        template(v-slot:activator="{ on, attrs }")
-                          v-btn(color="primary" dark class="mb-2" v-bind="attrs" v-on="on") New Item
-                        v-card
-                          v-card-text
-                            v-container
-                              v-row
-                                v-col(cols="12" sm="6" md="6")
-                                  v-text-field(v-model="editedItem.name" label="external link name" outlined dense)
-                                v-col(cols="12" sm="6" md="6")
-                                  v-text-field(v-model="editedItem.addr" label="external link addr" outlined dense)
-                          v-card-actions
-                            v-spacer
-                            v-btn(color="blue darken-1" text @click="dialogExternalUrl = false") CANCEL
-                            v-btn(color="blue darken-1" text @click="externalUrls.push(editedItem);editedItem = {};dialogExternalUrl = false") OK
-                  template(v-slot:item.actions="{ item,index }")
-                    v-icon(small @click="externalUrls.splice(externalUrls.indexOf(item), 1)") mdi-delete
+              template(v-if="is_viewer === true")
+                v-row
+                  v-text-field(class="ma-1" v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
+                  //- v-row
+                    v-text-field(class="ma-1" v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
+                  //- v-row
+                    v-text-field(class="ma-1" v-model="url_post_interactive_data" label="Api post interactive data" dense outlined)
+                v-card
+                  v-data-table(:headers="externalUrlHeaders" :items="externalUrls" class="elevation-1" hide-default-footer)
+                    template(v-slot:top="")
+                      v-toolbar(flat)
+                        v-toolbar-title EXTERNAL LINK
+                        v-divider(class="mx-4" inset vertical)
+                        v-spacer
+                        v-dialog(v-model="dialogExternalUrl" max-width="500px")
+                          template(v-slot:activator="{ on, attrs }")
+                            v-btn(color="primary" dark class="mb-2" v-bind="attrs" v-on="on") New Item
+                          v-card
+                            v-card-text
+                              v-container
+                                v-row
+                                  v-col(cols="12" sm="6" md="6")
+                                    v-text-field(v-model="editedItem.name" label="external link name" outlined dense)
+                                  v-col(cols="12" sm="6" md="6")
+                                    v-text-field(v-model="editedItem.addr" label="external link addr" outlined dense)
+                            v-card-actions
+                              v-spacer
+                              v-btn(color="blue darken-1" text @click="dialogExternalUrl = false") CANCEL
+                              v-btn(color="blue darken-1" text @click="externalUrls.push(editedItem);editedItem = {};dialogExternalUrl = false") OK
+                    template(v-slot:item.actions="{ item,index }")
+                      v-icon(small @click="externalUrls.splice(externalUrls.indexOf(item), 1)") mdi-delete
+              template(v-else)
+                v-row
+                  v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
               v-row
                 v-spacer
-                v-btn(class="mt-3" color="primary", dark, @click="saveApiViewer") APPLY
+                template(v-if="is_viewer === true")
+                  v-btn(class="mt-3" color="primary", dark, @click="saveApiViewer") APPLY
+                template(v-else)
+                  v-btn(class="mt-3" color="primary", dark, @click="saveApiBindData") APPLY
                 v-spacer
 </template>
 
@@ -221,7 +228,7 @@ export default {
       interval: '',
       dialogDataBind: false,
       dialogExpression: false,
-      dialogViewerConfig: false,
+      dialogConfig: false,
       dialogExternalUrl: false,
       express: '',
       error_flag: false,
@@ -320,7 +327,6 @@ export default {
         that.select_mode = 'viewer'
         that.selected_environment = d3.select(this).attr("environment_name")
         that.comVar = JSON.parse(d3.select(this).attr("params"))
-        
       }else if(d3.select(this).attr("dom_type") !== 'g'){
         if (d3.select(this).select('.children').attr("dom_type") === 'polygon') {
           that.select_mode = 'polygon'
@@ -361,8 +367,11 @@ export default {
       }
     }
     function dragged(event) {
+      // console.log(event)
       // d3.select(this).attr("transform", `matrix(${typeof(that.transform.k) === "undefined" ? 1 : that.transform.k} 0 0 ${typeof(that.transform.k) === "undefined" ? 1 : that.transform.k} ${event.x} ${event.y})`)
-      d3.select(this).attr("transform", `matrix(1 0 0 1 ${event.x} ${event.y})`)
+      if(Math.abs(event.dx) >= 1 || Math.abs(event.dy) >= 1){
+        d3.select(this).attr("transform", `matrix(1 0 0 1 ${event.x} ${event.y})`)
+      }
     }
     this.drag = d3.drag().on("start", dragstarted).on("drag", dragged)
     this.viewer_drag = d3.drag().on("start", dragstarted)
@@ -371,6 +380,7 @@ export default {
     zoomed(event) {
       const {transform} = event
       this.transform = transform
+
       d3.select("#axis").selectAll('text').call(g => g.attr("transform", transform))
       d3.select("#new").attr("transform", transform)
 
@@ -441,21 +451,12 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
-          // console.log(JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' })))
-          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          // console.log(response.data.content)
-          // this.full_data = response.data.content
-          // var tmp = JSON.parse(JSON.stringify(response.data.content))
-          // this.items = [this.$common.dictRetrievalNotWithChildren(tmp, tmp['id'])]
-          this.items = response.data.content
+          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
         })
+      // this.items = [response.data.content]
     },
     async queryInsEnv(){
-      await axios.get(this.url_get_ins_env, {
-        params: {
-          operate: 'hardware_environment_read_status',
-        },
-        })
+      await axios.get(this.url_get_ins_env)
         .then(response => {
           this.environment_list = response.data.content
         })
@@ -622,7 +623,8 @@ export default {
           params.push({'name': key.name, 'value': 'content'})
         })
         d3.select("#new").attr("params", JSON.stringify(params))
-        d3.select("#new").attr("docid", 'a0fd644a734be4a00d86e9e917e3d51a')
+        d3.select("#new").attr("docid", this.items[0].id)
+        d3.select("#new").attr("server", this.items[0].server)
       }
       await d3.select("#new").attr("transform", 'translate(0,0) scale(1)')
       await this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
@@ -639,7 +641,7 @@ export default {
     checkExpression(){
       if (this.elm !== ''){
         let data = {}
-        
+
         if (this.express.indexOf("$") > -1) {
           data = this.elm.node().getElementsByTagName('span')[0]
           data.setAttribute("expression", window.btoa(this.express))
@@ -651,7 +653,6 @@ export default {
           return
         }
         try{
-          console.log(this.express)
           const node = math.parse(this.express)
           if (this.elm.node().getElementsByTagName('span').length > 0){
             data = this.elm.node().getElementsByTagName('span')[0]
@@ -695,13 +696,15 @@ export default {
     },
     coverToList(){
       let tmp = []
-      JSON.stringify(this.environment_list).match(/\"name\":\"(.*?)\"/g).forEach((elm) => {
-        tmp.push(elm.split(":")[1].replace(/\"/g,''))
-      })
+      if(this.environment_list.length > 0){
+        JSON.stringify(this.environment_list).match(/\"name\":\"(.*?)\"/g).forEach((elm) => {
+          tmp.push(elm.split(":")[1].replace(/\"/g,''))
+        })
+      }
       return tmp
     },
     syncEnvironment(){
-      this.hardware_environment_list.forEach((e) => {
+      this.environment_list.forEach((e) => {
         if (e['name'] === this.selected_environment) {
           this.elm.attr("environment_id", e['id'])
           this.elm.attr("environment_name", e['name'])
@@ -720,6 +723,7 @@ export default {
             let formData = new FormData()
             formData.append("username", that.username)
             formData.append("operate", "hardware_environment_save_config")
+            formData.append("url", d3.select(this).attr("server"))
             formData.append("sid", d3.select(this).attr("environment_id"))
             formData.append("docid", d3.select(this).attr("docid"))
 
@@ -731,7 +735,7 @@ export default {
                 if (data.getAttribute('mode') === null) {
                   tmp.push(data.getAttribute("id"))
                 }
-                
+
               }
             })
             JSON.parse(d3.select(hardware).attr('params')).forEach((key) =>{
@@ -744,7 +748,8 @@ export default {
               'Content-Type': 'multipart/form-data'
               }
             }
-            axios.post(that.url_post_config_read_data, formData, config).then(
+            that.$http.post(that.$urls.babel_save, formData, config)
+            .then(
               (response)=>{
                 let he = response.data.content
 
@@ -765,14 +770,14 @@ export default {
                         expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he))
                       })
                       data.setAttribute("value", window.btoa(expression))
-                      data.innerHTML = expression
+                      data.innerHTML = data.getAttribute("id")+":"+expression
                     }else{
                       let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he)
                       data.setAttribute("value", window.btoa(temp))
                       data.innerHTML = data.getAttribute("id")+":"+temp
                     }
                   }
-                  d3.select(this.parentNode).attr('width', data.innerHTML.length * 10)
+                  d3.select(this.parentNode.parentNode).attr('width', data.innerHTML.length * 10)
                 })
 
             }, (error) => {
@@ -799,10 +804,11 @@ export default {
     },
     async interactive(){
       let res = []
-      
+
       let formData = new FormData()
       formData.append("username", this.username)
-      formData.append("operate", "hardware_environment_save_config")
+      formData.append("operate", "post_interactive_data")
+      formData.append("url", this.url_post_interactive_data)
       formData.append("sid", this.elm.attr("environment_id"))
       formData.append("docid", this.elm.attr("docid"))
 
@@ -823,9 +829,9 @@ export default {
         'Content-Type': 'multipart/form-data'
         }
       }
-      await axios.post(this.url_post_interactive_data, formData, config).then(
+      await this.$http.post(this.$urls.babel_save, formData, config).then(
         (response)=>{
-        // this.items = response.data.content
+        console.log(response.data.content)
       })
     },
     async saveApiBindData(){
