@@ -155,7 +155,7 @@ export default {
       let vars = expression.match(/([a-zA-Z][\w.]+)/g)
       let temp = []
       vars.forEach((v) => {
-        let data = d3.select('span#'+v.replace('.','\\.')).node()
+        let data = d3.select('path#'+v.replace('.','\\.')).node()
         if (data !== null){
           if (data.getAttribute('expression') !== null) {
             temp = temp.concat(this.getRootVar(data.getAttribute('expression')))
@@ -171,14 +171,14 @@ export default {
       return temp
     },
 
-    calExpressDepend(expression, extVar){
+    calExpressDepend(expression, extVar, node){
       expression = window.atob(expression)
       let vars = expression.match(/([a-zA-Z][\w.]+)/g)
       vars.forEach((v) => {
-        let data = d3.select('span#'+v.replace('.','\\.')).node()
+        let data = d3.select(node).select('path#'+v.replace('.','\\.')).node()
         if (data !== null){
           if (data.getAttribute('expression') !== null) {
-            expression = expression.replace(v, this.calExpressDepend(data.getAttribute('expression'), extVar))
+            expression = expression.replace(v, this.calExpressDepend(data.getAttribute('expression'), extVar, node))
           }else{
             expression = expression.replace(v, window.atob(data.getAttribute('value')))
           }

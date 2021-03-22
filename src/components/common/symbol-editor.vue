@@ -95,9 +95,6 @@
                     v-text-field(v-model="key.value" :label="key.name" outlined dense @change="updateComVar")
                 v-btn( dark @click='interactive' depressed) INTERACTIVE
           template(v-else-if="select_mode === 'scene' && is_viewer === true")
-            //- v-row(class="d-flex justify-center")
-            //-   v-col(class="pa-2")
-            //-     v-btn( dark @click='interactive' depressed) INTERACTIVE
             v-card(color="grey darken-4")
               v-container(fluid)
                 v-card-title External Link
@@ -283,6 +280,18 @@ export default {
     express(val) {
       this.info_color = 'info'
       this.is_success = false
+    },
+    run_flag(val){
+      if(val === true){
+        let that = this
+        d3.selectAll('path').each(function(d, i) {
+          if(d3.select(this).attr('dom_type') === 'data'){
+            d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-10).style('fill', that.hexa).text(window.atob(d3.select(this).attr('value')))
+          }
+        })
+      }else{
+        d3.selectAll('.tip').remove()
+      }
     }
   },
   mounted () {
@@ -451,9 +460,9 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
-          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          this.items = response.data.content
         })
-      // this.items = [response.data.content]
     },
     async queryInsEnv(){
       await axios.get(this.url_get_ins_env)
@@ -561,7 +570,9 @@ export default {
         .html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
     },
     updateColor(){
-      // console.log(this.elm.node())
+      if (this.run_flag === true){
+        d3.selectAll('.tip').call(g => g.style("fill", this.hexa))
+      }
       if (this.elm !== ''){
         if(this.elm.attr("dom_type") === 'g'){
           return
@@ -690,15 +701,19 @@ export default {
       d3.selectAll(".children").each(function(d, i) {
         if(d3.select(this).attr('dom_type') === 'data'){
           d3.select(this.parentNode).on("mouseenter", (event, d) => {
-            if (d3.select(this).attr("mode") !== null){
-              let express = d3.select(this).attr('expression') === null ? window.atob(d3.select(this).attr('value')) : window.atob(d3.select(this).attr('expression'))
-              d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id')+':'+express)
-            }else{
-              d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id'))
+            if(that.run_flag === false){
+              if (d3.select(this).attr("mode") !== null){
+                let express = d3.select(this).attr('expression') === null ? window.atob(d3.select(this).attr('value')) : window.atob(d3.select(this).attr('expression'))
+                d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id')+':'+express)
+              }else{
+                d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id'))
+              }
             }
           })
           .on("mouseleave", (event, d) => {
-            d3.select(this.parentNode).selectAll('.tip').remove()
+            if(that.run_flag === false){
+              d3.select(this.parentNode).selectAll('.tip').remove()
+            }
           })
           if(that.is_viewer === true){
             if (d3.select(this).attr("mode") !== null){
@@ -736,20 +751,21 @@ export default {
             let hardware = this
             let formData = new FormData()
             formData.append("username", that.username)
-            // formData.append("operate", "hardware_environment_save_config")
+            formData.append("operate", "hardware_environment_save_config")
             // formData.append("url", d3.select(this).attr("server"))
             formData.append("sid", d3.select(this).attr("environment_id"))
             formData.append("docid", d3.select(this).attr("docid"))
 
-            d3.select(hardware).selectAll("span").each(function(d, i) {
-              let data = d3.select(this).node()
-              if (data.getAttribute('expression') !== null) {
-                tmp = tmp.concat(that.$common.getRootVar(data.getAttribute("expression")))
-              }else{
-                if (data.getAttribute('mode') === null) {
-                  tmp.push(data.getAttribute("id"))
+            d3.select(hardware).selectAll("path").each(function(d, i) {
+              if(d3.select(this).attr('dom_type') === 'data'){
+                let data = d3.select(this).node()
+                if (data.getAttribute('expression') !== null) {
+                  tmp = tmp.concat(that.$common.getRootVar(data.getAttribute("expression")))
+                }else{
+                  if (data.getAttribute('mode') === null) {
+                    tmp.push(data.getAttribute("id"))
+                  }
                 }
-
               }
             })
             JSON.parse(d3.select(hardware).attr('params')).forEach((key) =>{
@@ -765,36 +781,36 @@ export default {
             axios.post(d3.select(hardware).attr('server'), formData, config)
             .then(
               (response)=>{
-                console.log(response)
                 let he = response.data
-
-                d3.select(hardware).selectAll("span").each(function(d, i) {
-                  let data = d3.select(this).node()
-                  if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
-                    data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
-                    data.innerHTML = data.getAttribute("id")+":"+he[data.getAttribute("id")]
-                  }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).search("$") === -1) {
-                    let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he)
-                    data.setAttribute("value", window.btoa(temp))
-                    data.innerHTML = data.getAttribute("id")+":"+temp
-                  }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).search("$") !== -1 ) {
-                    let expression = window.atob(data.getAttribute('expression'))
-                    let vars = expression.match(/(\$\{(.*?)\})/g)
-                    if (vars !== null) {
-                      vars.forEach((v) => {
-                        expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he))
-                      })
-                      data.setAttribute("value", window.btoa(expression))
-                      data.innerHTML = data.getAttribute("id")+":"+expression
-                    }else{
-                      let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he)
+                // console.log(he)
+                d3.select(hardware).selectAll("path").each(function(d, i) {
+                  if(d3.select(this).attr('dom_type') === 'data'){
+                    let data = d3.select(this).node()
+                    if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
+                      data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
+                    }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") === -1) {
+                      let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
                       data.setAttribute("value", window.btoa(temp))
-                      data.innerHTML = data.getAttribute("id")+":"+temp
+                    }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") !== -1 ) {
+                      let expression = window.atob(data.getAttribute('expression'))
+                      let vars = expression.match(/(\$\{(.*?)\})/g)
+                      if (vars !== null) {
+                        vars.forEach((v) => {
+                          expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he, hardware))
+                        })
+                        data.setAttribute("value", window.btoa(expression))
+                      }else{
+                        let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
+                        data.setAttribute("value", window.btoa(temp))
+                      }
                     }
                   }
-                  d3.select(this.parentNode.parentNode).attr('width', data.innerHTML.length * 10)
                 })
-
+                d3.select(hardware).selectAll('.tip').each(function(d, i) {
+                  let path = d3.select(this.parentNode).select('path')
+                  d3.select(this).text(window.atob(path.attr('value')))
+                })
+                // that.refreshData()
             }, (error) => {
               console.log(error)
             })
@@ -813,6 +829,12 @@ export default {
           .attr('mode', window.btoa(this.selected))
       }
     },
+    refreshData(){
+      d3.selectAll('.tip').each(function(d, i) {
+        let path = d3.select(this).select(function() { return this.parentNode }).select('path')
+        d3.select(this).text(path.attr('id')+':'+window.atob(path.attr('value')))
+      })
+    },
     async interactive(){
       let res = []
 
@@ -823,14 +845,16 @@ export default {
       formData.append("sid", this.elm.attr("environment_id"))
       formData.append("docid", this.elm.attr("docid"))
 
-      this.elm.selectAll("span").each(function(d, i) {
-        let tmp = {}
-        let data = d3.select(this).node()
-        if (window.atob(data.getAttribute("mode")) === 'interactive'){
-          tmp['id'] = data.getAttribute("id")
-          tmp['value'] = window.atob(data.getAttribute("value"))
-          tmp['expression'] = data.getAttribute("expression") !== null ? window.atob(data.getAttribute("expression")) : ""
-          res.push(tmp)
+      this.elm.selectAll("path").each(function(d, i) {
+        if(d3.select(this).attr('dom_type') === 'data'){
+          let tmp = {}
+          let data = d3.select(this).node()
+          if (window.atob(data.getAttribute("mode")) === 'interactive'){
+            tmp['id'] = data.getAttribute("id")
+            tmp['value'] = window.atob(data.getAttribute("value"))
+            tmp['expression'] = data.getAttribute("expression") !== null ? window.atob(data.getAttribute("expression")) : ""
+            res.push(tmp)
+          }
         }
       })
       formData.append("key", JSON.stringify(res))
@@ -883,28 +907,7 @@ export default {
         tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")
         tmp.setAttribute("dom_type", 'g')
         d3.select('#new').node().append(tmp)
-        d3.select('#'+instance_id).call(that.drag)
-        
-        d3.select('#'+instance_id).selectAll(".children").each(function(d, i) {
-          if(d3.select(this).attr('dom_type') === 'data'){
-            d3.select(this.parentNode).on("mouseenter", (event, d) => {
-              if (d3.select(this).attr("mode") !== null){
-                let express = d3.select(this).attr('expression') === null ? window.atob(d3.select(this).attr('value')) : window.atob(d3.select(this).attr('expression'))
-                d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id')+':'+express)
-              }else{
-                d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id'))
-              }
-            })
-            .on("mouseleave", (event, d) => {
-              d3.select(this.parentNode).selectAll('.tip').remove()
-            })
-            if(that.is_viewer === true){
-              if (d3.select(this).attr("mode") !== null){
-                d3.select(this.parentNode).call(that.viewer_drag)
-              }
-            }
-          }
-        })
+        that.dragElements()
       })
     },
     fileInsertSvg(){
