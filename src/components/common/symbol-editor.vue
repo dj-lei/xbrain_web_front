@@ -106,9 +106,8 @@
                     v-list-item(target="_blank" :href="url.addr")
                       v-list-item-title(v-text="url.name")
                     v-divider
-          template(v-if="select_mode !== 'data'")
-            v-row
-              v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
+          v-row
+            v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
         v-dialog(v-model='dialogDataBind', dark, max-width="800px")
           v-card
             v-container
@@ -301,7 +300,7 @@ export default {
       }
     }
     this.$common.setBrowserTitle("new")
-    this.svg = d3.select("#viz").append("g").attr("id", "new")
+    this.svg = d3.select("#viz").style("font", "12px sans-serif").append("g").attr("id", "new")
 
     d3.select("#viz").append("g").attr("id", "axis")
     this.gx = d3.select("#axis").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
@@ -337,12 +336,15 @@ export default {
         }else if(d3.select(this).select('.children').attr("dom_type") === 'data'){
           let data = {}
           that.data = {}
-          if (d3.select(this).node().getElementsByTagName('span').length > 0){
-            data = d3.select(this).node().getElementsByTagName('span')[0]
+          if (d3.select(this).node().getElementsByTagName('path').length > 0){
+            data = d3.select(this).node().getElementsByTagName('path')[0]
           }else{
             data = d3.select(this).node().getElementsByTagName('div')[0]
           }
           for(let i=0;i < data.attributes.length;i++){
+            if(['class', 'dom_type', 'd', 'fill', 'stroke', 'stroke-width'].indexOf(data.attributes[i].name)>-1){
+              continue
+            }
             if(that.original_attributes.toString().indexOf(data.attributes[i].name) == -1){
               if('id' == data.attributes[i].name){
                 that.fill_id = data.getAttribute(data.attributes[i].name)
@@ -362,7 +364,7 @@ export default {
     }
     function dragged(event) {
       // d3.select(this).attr("transform", `matrix(${typeof(that.transform.k) === "undefined" ? 1 : that.transform.k} 0 0 ${typeof(that.transform.k) === "undefined" ? 1 : that.transform.k} ${event.x} ${event.y})`)
-      d3.select(this).attr("transform", `matrix(1 0 0 1 ${event.x} ${event.y})`)
+      d3.select(this).attr("transform", `matrix(1 0 0 1 ${event.x-this.getBBox().x} ${event.y-this.getBBox().y})`)
     }
     this.drag = d3.drag().on("start", dragstarted).on("drag", dragged)
     this.viewer_drag = d3.drag().on("start", dragstarted)
@@ -533,31 +535,38 @@ export default {
         .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
         // echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
       }else{
-        this.svg.append('g').attr("transform", this.matrix).call(this.drag)
-        .append("foreignObject")
-          .attr("id", uuid)
-          .attr("dom_type", 'data')
-          .attr("class", 'children')
-          .attr("width", this.data['id'].length*10)
-          .attr("height", 25)
-        .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml"> <span '+content+' style="color: '+this.hexa+'">'+this.data['id']+'</span> </div>')
+        let g = this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+        g.attr("pointer-events", "all")
+          .on("mouseenter", (event, d) => {
+            g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(g.select('path').attr('id'))
+          })
+          .on("mouseleave", (event, d) => {
+            g.selectAll('.tip').remove()
+          })
+          .html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
       }
     },
     createCustomData(){
       let uuid = this.$common.generateUUID()
       let content = ' id='+uuid+' value='+window.btoa('content')+' mode='+window.btoa('normal')
-      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
-      .append("foreignObject")
-        .attr("id", uuid)
-        .attr("dom_type", 'data')
-        .attr("class", 'children')
-        .attr("width", uuid.length*10)
-        .attr("height", 25)
-      .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml"> <span '+content+' style="color: '+this.hexa+'"> '+uuid+":"+"content"+' </span> </div>')
+      let g = this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+
+      g.attr("pointer-events", "all")
+        .on("mouseenter", (event, d) => {
+          let express = g.select('path').attr('expression') === null ? window.atob(g.select('path').attr('value')) : window.atob(g.select('path').attr('expression'))
+          g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(g.select('path').attr('id')+':'+express)
+        })
+        .on("mouseleave", (event, d) => {
+          g.selectAll('.tip').remove()
+        })
+        .html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
     },
     updateColor(){
+      // console.log(this.elm.node())
       if (this.elm !== ''){
-        if(this.elm.select('.children').attr("dom_type") === 'text'){
+        if(this.elm.attr("dom_type") === 'g'){
+          return
+        }else if(this.elm.select('.children').attr("dom_type") === 'text'){
           this.elm.select('.children').attr("fill", this.hexa)
         }else if(this.elm.select('.children').attr("dom_type") === 'data'){
           this.elm.select('span').attr("style", "color: "+this.hexa)
@@ -641,27 +650,20 @@ export default {
         let data = {}
         
         if (this.express.indexOf("$") > -1) {
-          data = this.elm.node().getElementsByTagName('span')[0]
+          data = this.elm.node().getElementsByTagName('path')[0]
           data.setAttribute("expression", window.btoa(this.express))
-          let str_length = data.getAttribute('id') + ":" + this.express
-          this.elm.select('.children').attr("width", str_length.length*10)
-          data.innerHTML = str_length
           this.info_color = 'success'
           this.is_success = true
           return
         }
         try{
-          console.log(this.express)
           const node = math.parse(this.express)
-          if (this.elm.node().getElementsByTagName('span').length > 0){
-            data = this.elm.node().getElementsByTagName('span')[0]
+          if (this.elm.node().getElementsByTagName('path').length > 0){
+            data = this.elm.node().getElementsByTagName('path')[0]
           }else{
             data = this.elm.node().getElementsByTagName('div')[0]
           }
           data.setAttribute("expression", window.btoa(this.express))
-          let str_length = data.getAttribute('id') + ":" + this.express
-          this.elm.select('.children').attr("width", str_length.length*10)
-          data.innerHTML = str_length
           this.info_color = 'success'
           this.is_success = true
         }catch(err){
@@ -685,13 +687,26 @@ export default {
           d3.select(this).call(that.drag)
         })
       })
-      if(that.is_viewer === true){
-        d3.selectAll(".data").each(function(d, i) {
-          if (d3.select(this).attr("mode") !== null){
-            d3.select(this.parentNode.parentNode).call(that.viewer_drag)
+      d3.selectAll(".children").each(function(d, i) {
+        if(d3.select(this).attr('dom_type') === 'data'){
+          d3.select(this.parentNode).on("mouseenter", (event, d) => {
+            if (d3.select(this).attr("mode") !== null){
+              let express = d3.select(this).attr('expression') === null ? window.atob(d3.select(this).attr('value')) : window.atob(d3.select(this).attr('expression'))
+              d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id')+':'+express)
+            }else{
+              d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id'))
+            }
+          })
+          .on("mouseleave", (event, d) => {
+            d3.select(this.parentNode).selectAll('.tip').remove()
+          })
+          if(that.is_viewer === true){
+            if (d3.select(this).attr("mode") !== null){
+              d3.select(this.parentNode).call(that.viewer_drag)
+            }
           }
-        })
-      }
+        }
+      })
     },
     coverToList(){
       let tmp = []
@@ -787,14 +802,10 @@ export default {
     },
     initCtrlElm(){
       if (this.elm !== ''){
-        this.elm.select('span')
+        this.elm.select('path')
           .attr('id', this.fill_id)
           .attr('value', window.btoa(this.fill_param))
           .attr('mode', window.btoa(this.selected))
-        let express = this.elm.select('span').attr('expression') === null ? this.fill_param : window.atob(this.elm.select('span').attr('expression'))
-        let str_length = this.fill_id + ":" + express
-        this.elm.select('.children').attr("width", str_length.length*10)
-        this.elm.node().getElementsByTagName('span')[0].innerHTML = str_length
       }
     },
     async interactive(){
@@ -867,16 +878,27 @@ export default {
         tmp.setAttribute("dom_type", 'g')
         d3.select('#new').node().append(tmp)
         d3.select('#'+instance_id).call(that.drag)
-        // that.major_elms.forEach((elm) => {
-        //   d3.select('#'+instance_id).selectAll(elm).call(g => g.attr("dom_type", elm))
-        // })
-        if(that.is_viewer === true){
-          d3.select('#'+instance_id).selectAll(".data").each(function(d, i) {
-            if (d3.select(this).attr("mode") !== null){
-              d3.select(this.parentNode.parentNode).call(that.viewer_drag)
+        
+        d3.select('#'+instance_id).selectAll(".children").each(function(d, i) {
+          if(d3.select(this).attr('dom_type') === 'data'){
+            d3.select(this.parentNode).on("mouseenter", (event, d) => {
+              if (d3.select(this).attr("mode") !== null){
+                let express = d3.select(this).attr('expression') === null ? window.atob(d3.select(this).attr('value')) : window.atob(d3.select(this).attr('expression'))
+                d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id')+':'+express)
+              }else{
+                d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id'))
+              }
+            })
+            .on("mouseleave", (event, d) => {
+              d3.select(this.parentNode).selectAll('.tip').remove()
+            })
+            if(that.is_viewer === true){
+              if (d3.select(this).attr("mode") !== null){
+                d3.select(this.parentNode).call(that.viewer_drag)
+              }
             }
-          })
-        }
+          }
+        })
       })
     },
     fileInsertSvg(){

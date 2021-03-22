@@ -17,6 +17,10 @@ export const urls = {
     user_management_save: "user_management/save",
     page_management_get: "page_management/get",
     page_management_save: "page_management/save",
+
+    semantic_search_file_name: "semantic_search_file_name",
+    semantic_search_file_dir: "semantic_search_file_dir",
+    semantic_search_file_content: "semantic_search_file_content",
   }
 
 export default urls

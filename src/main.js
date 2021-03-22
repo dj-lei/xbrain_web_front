@@ -13,6 +13,7 @@ import common from '@/plugins/common'
 import TroubleShootingTemplateEdit from './components/TroubleShootingTemplateEdit'
 import TroubleShootingTask from './components/TroubleShootingTask'
 import Pinmux from './components/Pinmux'
+import Hunter from './components/Hunter'
 import Feedback from './components/Feedback'
 import BabelSymbols from './components/BabelSymbols'
 import BabelViewer from './components/BabelViewer'
@@ -35,6 +36,7 @@ Vue.prototype.$common = common
 const routes = [
   { path: '/', component: Pinmux },
   { path: '/pinmux', component: Pinmux },
+  { path: '/hunter', component: Hunter },
   { path: '/trouble_shooting_template_edit', component: TroubleShootingTemplateEdit },
   { path: '/trouble_shooting_task', component: TroubleShootingTask },
   { path: '/feedback', component: Feedback },
