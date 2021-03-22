@@ -135,7 +135,10 @@ export default {
           this.svg_content = response.data.content.content
           this.dialog = true
           this.$nextTick(function(){
-            this.$refs.symbolEditor.updateViewersUrl(JSON.parse(response.data.content.api_viewer))
+            if(typeof(response.data.content.api_viewer) !== 'undefined'){
+              this.$refs.symbolEditor.updateViewersUrl(JSON.parse(response.data.content.api_viewer))
+              this.$refs.symbolEditor.queryInsEnv()
+            }
             this.$refs.symbolEditor.updateItem(this.svg_content)
           })
         })
