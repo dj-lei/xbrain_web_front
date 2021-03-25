@@ -20,8 +20,11 @@
               v-expansion-panel(v-for="(item,i) in items" :key="i")
                 v-expansion-panel-header(disable-icon-rotate) {{ item.name }}
                   template(v-slot:actions="")
-                    v-icon(color="green" @click.stop="loadDoc") mdi-export
+                    //- v-icon(color="green" @click.stop="loadDoc(item.path)") mdi-export
                 v-expansion-panel-content {{ item.path }}
+        v-dialog(v-model='dialogDocDisplay')
+          v-card
+            div(v-html="html")
                 
           
 </template>
@@ -36,9 +39,10 @@ export default {
   },
   data () {
     return {
-      dialog: false,
+      dialogDocDisplay: false,
       items: [],
       text: '',
+      html: '',
       selected_mode: '',
     }
   },
@@ -50,27 +54,36 @@ export default {
   methods: {
     async initialize () {
     },
-    async search(){
-      let url = ''
-      if (this.selected_mode === 'FileName'){
-        url = "http://localhost:8001/extract/semantic_search_file_name"
-      }else if(this.selected_mode === 'FileDir'){
-        url = "http://localhost:8001/extract/semantic_search_file_dir"
-      }else if(this.selected_mode === 'FileContent'){
-        url = "http://localhost:8001/extract/semantic_search_file_content"
-      }
-      await axios.get(url, {
+    // async search(){
+    //   let url = ''
+    //   if (this.selected_mode === 'FileName'){
+    //     url = "http://localhost:8001/extract/semantic_search_file_name"
+    //   }else if(this.selected_mode === 'FileDir'){
+    //     url = "http://localhost:8001/extract/semantic_search_file_dir"
+    //   }else if(this.selected_mode === 'FileContent'){
+    //     url = "http://localhost:8001/extract/semantic_search_file_content"
+    //   }
+    //   await axios.get(url, {
+    //     params: {
+    //         text: this.text
+    //     },
+    //     })
+    //     .then(response => {
+    //       this.items = response.data.content
+    //     })
+    // },
+    async search(path){
+      await axios.get("http://localhost:8001/extract/get_doc_html", {
         params: {
-            text: this.text
+            path: String.raw`D:/projects/xbrain_spider/sites/PDURadioChengduFirmware/Shared Documents/Training/Global SW/G3/XENON1/Xenon X1 Users Guide.docx`
         },
         })
         .then(response => {
-          this.items = response.data.content
+          this.html = response.data
+          this.dialogDocDisplay = true
         })
-    },
-    async loadDoc(){
-      console.log('--------')
     }
   },
 }
 </script>
+

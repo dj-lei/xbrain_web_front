@@ -10,6 +10,7 @@ import InlineCode from '@editorjs/inline-code'
 import Delimiter from '@editorjs/delimiter'
 import ImageTool from '@editorjs/image'
 import urls from './urls'
+import axios from 'axios'
 import * as d3 from 'd3'
 import * as math from 'mathjs'
 
@@ -150,40 +151,82 @@ export default {
       return Array.from(new Set(array))
     },
 
-    getRootVar(expression){
+    queryEnvId(e){
+      if(d3.select('path#'+e.replace('.','\\.')).node() !== null){
+        return d3.select('path#'+e.replace('.','\\.')).node()
+      }else if(d3.select('div#'+e.replace('.','\\.')).node() !== null){
+        return d3.select('div#'+e.replace('.','\\.')).node()
+      }
+      return null  
+    },
+
+    async getRootVar(expression, data_pool){
       expression = window.atob(expression)
-      let vars = expression.match(/([a-zA-Z][\w.]+)/g)
-      let temp = []
+      // let vars = expression.match(/([a-zA-Z][\w.]+)/g)
+      let vars = expression.match(/([a-zA-Z$][\w.${}]+)/g)
       vars.forEach((v) => {
-        let data = d3.select('path#'+v.replace('.','\\.')).node()
-        if (data !== null){
-          if (data.getAttribute('expression') !== null) {
-            temp = temp.concat(this.getRootVar(data.getAttribute('expression')))
-          }else{ 
-            if (data.getAttribute('mode') === null) {
-              temp.push(v)
+        if(v.indexOf("$") > -1){
+          v.match(/(\$\{(.*?)\})/g).forEach((elm) => {
+            let trace_var = elm.replace('$','').replace('{','').replace('}','')
+            let trace_data = this.queryEnvId(trace_var)
+            if (trace_data !== null){
+              if (trace_data.getAttribute('expression') !== null) {
+                this.getRootVar(trace_data.getAttribute('expression'), data_pool)
+              }else{ 
+                if (trace_data.getAttribute('mode') === null) {
+                  data_pool.push(trace_var)
+                }
+              }
+            }else{
+              data_pool.push(trace_var)
             }
-          }
+          })
         }else{
-          temp.push(v)
+          let data = this.queryEnvId(v)
+          if (data !== null){
+            if (data.getAttribute('expression') !== null) {
+              this.getRootVar(data.getAttribute('expression'), data_pool)
+            }else{ 
+              if (data.getAttribute('mode') === null) {
+                data_pool.push(v)
+              }
+            }
+          }else{
+            data_pool.push(v)
+          }
         }
       })
-      return temp
     },
 
     calExpressDepend(expression, extVar, node){
       expression = window.atob(expression)
-      let vars = expression.match(/([a-zA-Z][\w.]+)/g)
+      let vars = expression.match(/([a-zA-Z$][\w.${}]+)/g)
       vars.forEach((v) => {
-        let data = d3.select(node).select('path#'+v.replace('.','\\.')).node()
-        if (data !== null){
-          if (data.getAttribute('expression') !== null) {
-            expression = expression.replace(v, this.calExpressDepend(data.getAttribute('expression'), extVar, node))
-          }else{
-            expression = expression.replace(v, window.atob(data.getAttribute('value')))
-          }
+        if(v.indexOf("$") > -1){
+          v.match(/(\$\{(.*?)\})/g).forEach((elm) => {
+            let trace_var = elm.replace('$','').replace('{','').replace('}','')
+            let trace_data = this.queryEnvId(trace_var)
+            if (trace_data !== null){
+              if (trace_data.getAttribute('expression') !== null) {
+                expression = expression.replace(v, this.calExpressDepend(trace_data.getAttribute('expression'), extVar, node))
+              }else{
+                expression = expression.replace(v, window.atob(trace_data.getAttribute('value')))
+              }
+            }else{
+              expression = expression.replace(v,extVar[v])
+            }
+          })
         }else{
-          expression = expression.replace(v,extVar[v])
+          let data = this.queryEnvId(v)
+          if (data !== null){
+            if (data.getAttribute('expression') !== null) {
+              expression = expression.replace(v, this.calExpressDepend(data.getAttribute('expression'), extVar, node))
+            }else{
+              expression = expression.replace(v, window.atob(data.getAttribute('value')))
+            }
+          }else{
+            expression = expression.replace(v,extVar[v])
+          }
         }
       })
       return math.evaluate(expression)
@@ -267,6 +310,50 @@ export default {
         onChange: function() {
 
         }
+      }
+    },
+
+    //****************************create custom data element************************//
+    createStringVar(node){
+      let custom_elm = node.append('input')
+      custom_elm.attr("type", "text")
+        .attr("value", "0")
+        .style("border-style", "solid")
+        .style("width", "40px")
+      node.attr("value", window.btoa("0"))
+      custom_elm.on("change", function(d) {
+        node.attr("value", window.btoa(d3.select(this).property("value")))
+      })
+    },
+
+    createSelectVar(node, range){
+      let custom_elm = node.append('select')
+      custom_elm.style("border-style", "solid")
+        .style("width", "40px")
+        .selectAll('myOptions') 
+          .data(range)
+        .enter()
+          .append('option')
+        .text(function (d) { return d }) // text showed in the menu
+        .attr("value", function (d) { return d })
+      custom_elm.on("change", function(d) {
+        d3.select(this.parentNode).attr("value", window.btoa(d3.select(this).property("value")))
+      })
+      node.attr("range", window.btoa(range.join(',')))
+      .attr("value", window.btoa(range[0])) 
+    },
+
+    bindEvent(node){
+      if(!node.select('select').empty()){
+        node.select('select').on("change", function(d) {
+          d3.select(this.parentNode).attr("value", window.btoa(d3.select(this).property("value")))
+        })
+      }else if(!node.select('input').empty()){
+        node.select('input').on("change", function(d) {
+          node.attr("value", window.btoa(d3.select(this).property("value")))
+        })
+      }else{
+        
       }
     }
   }

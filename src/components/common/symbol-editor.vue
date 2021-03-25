@@ -48,6 +48,11 @@
           v-toolbar(dark)
             v-toolbar-title {{ select_mode }}
           v-spacer(class="mt-3")
+          template(v-if="elm !== ''")
+            template(v-if="lock === false")
+              v-btn(dark, @click="unlock") LOCK
+            template(v-else)
+              v-btn(dark, @click="unlock") UNLOCK
           template(v-if="select_mode === 'path'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
@@ -67,13 +72,16 @@
                   v-combobox(v-model="selected" :items="['normal', 'interactive']" label="select mode" @change='initCtrlElm')
                 template(v-else-if="key === 'id' && Object.keys(data).indexOf('mode') > -1")
                   v-text-field(v-model="fill_id" label="fill id" @change="initCtrlElm")
+                template(v-else-if="key === 'range' && Object.keys(data).indexOf('mode') > -1")
+                  v-text-field(v-model="fill_range" label="fill range" @change="initCtrlElm")
                 template(v-else-if="key === 'value' && Object.keys(data).indexOf('mode') > -1")
-                  v-text-field(v-model="fill_param" label="fill param" @change="initCtrlElm")
+                  v-text-field(v-model="fill_param" label="fill param" :disabled="data['element'] === 'path'? false : true"  @change="initCtrlElm")
                 template(v-else)
                   v-text-field(:value="data[key]" :label="key" disabled dense)
-            v-row
-              v-col(class="pa-2")
-                v-btn(dark, @click="expression") EXPRESSION
+            template(v-if="data['element'] === 'path' && Object.keys(data).indexOf('mode') > -1 ? true : false")
+              v-row
+                v-col(class="pa-2")
+                  v-btn(dark, @click="expression") EXPRESSION
             v-dialog(v-model="dialogExpression", max-width="1000px")
               v-card
                 v-container(fluid)
@@ -82,7 +90,7 @@
                       v-treeview(:active.sync="variable" open-on-click dense hoverable activatable :items="items")
                     v-divider(vertical)
                     v-col(class="pa-2")
-                      v-textarea(v-model="express" @keyup.enter="autocomplete" label="Fill in the expression" auto-grow outlined :error="error_flag" :error-messages="error_messages")
+                      v-textarea(v-model="express" @key.enter="autocomplete" label="Fill in the expression" auto-grow outlined :error="error_flag" :error-messages="error_messages")
                       v-btn(dark :color="info_color" @click='checkExpression' depressed) CHECK
                         template(v-if="is_success === true")
                           v-icon(dark right) mdi-checkbox-marked-circle
@@ -111,6 +119,9 @@
             v-container
               v-row
                 v-btn(color="primary", dark, @click="createCustomData") CUSTOM
+                v-divider(class="mx-4" inset vertical)
+                v-combobox(v-model="custom_mode" :items="['string', 'list', 'expression']" outlined dense)
+                v-spacer
               v-spacer(class="mt-3")
               //- v-row
                 v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
@@ -221,6 +232,7 @@ export default {
       // url_post_config_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
       // url_post_interactive_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
       selected_environment: '',
+      lock: false,
       run_flag: false,
       interval: '',
       dialogDataBind: false,
@@ -234,6 +246,7 @@ export default {
       info_color: 'info',
       variable: [],
       selected: '',
+      fill_range: '',
       fill_param: '',
       fill_id: '',
       hexa: '#FF00FF',
@@ -259,6 +272,7 @@ export default {
       data: {},
       original_attributes: ['style','xmlns'],
       select_mode: 'scene',
+      custom_mode: 'string',
       path_points: '',
       polygon_points: '',
       text: '',
@@ -268,6 +282,7 @@ export default {
       matrix: 'matrix(1 0 0 1 0 0)',
       drag:'',
       viewer_drag:'',
+      query_data_pool:[],
     }
   },
   watch:{
@@ -291,7 +306,7 @@ export default {
           }
         })
       }else{
-        d3.selectAll('.tip').remove()
+        // d3.selectAll('.tip').remove()
       }
     }
   },
@@ -308,7 +323,8 @@ export default {
     document.onkeydown = function(e) {
       let key = e.keyCode
       // window.event.preventDefault()
-
+      that.error_flag = false
+      that.error_messages = ''
       if (e.path[0].getAttribute('type') === 'text') return
       if (e.path[0].toString().indexOf('TextArea') > -1) return
 
@@ -330,6 +346,7 @@ export default {
         that.done()
       }
       that.elm = d3.select(this)
+      that.lock = d3.select(this).attr('drag_event') === 'true' ? false : true
       that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
 
       if (that.is_viewer === true && d3.select(this).attr("dom_type") === 'g'){
@@ -354,8 +371,10 @@ export default {
           that.data = {}
           if (d3.select(this).node().getElementsByTagName('path').length > 0){
             data = d3.select(this).node().getElementsByTagName('path')[0]
+            that.data['element'] = 'path'
           }else{
             data = d3.select(this).node().getElementsByTagName('div')[0]
+            that.data['element'] = 'div'
           }
           for(let i=0;i < data.attributes.length;i++){
             if(['class', 'dom_type', 'd', 'fill', 'stroke', 'stroke-width'].indexOf(data.attributes[i].name)>-1){
@@ -364,6 +383,8 @@ export default {
             if(that.original_attributes.toString().indexOf(data.attributes[i].name) == -1){
               if('id' == data.attributes[i].name){
                 that.fill_id = data.getAttribute(data.attributes[i].name)
+              }else if('range' == data.attributes[i].name){
+                that.fill_range = window.atob(data.getAttribute(data.attributes[i].name))
               }else if('value' == data.attributes[i].name){
                 that.fill_param = window.atob(data.getAttribute(data.attributes[i].name))
               }else if('mode' == data.attributes[i].name){
@@ -461,8 +482,8 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
-          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          // this.items = response.data.content
+          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          this.items = response.data.content
         })
     },
     async queryInsEnv(){
@@ -494,7 +515,7 @@ export default {
         .style('stroke-width', 2)
     },
     createPath() {
-      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+      this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
         .append('path')
           .attr("class", "children")
           .attr("dom_type", 'path')
@@ -504,7 +525,7 @@ export default {
           .style('stroke-width', 5)
     },
     createPolygon() { // 100,100 100,400 300,400 300,100
-      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+      this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
         .append("polygon")
           .attr("class", "children")
           .attr("dom_type", 'polygon')
@@ -514,7 +535,7 @@ export default {
           .style('stroke-width', 5)
     },
     createText() {
-      this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+      this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
         .append("text")
           .attr("class", "children")
           .attr("dom_type", 'text')
@@ -544,31 +565,37 @@ export default {
         .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
         // echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
       }else{
-        let g = this.svg.append('g').attr("transform", this.matrix).call(this.drag)
-        g.attr("pointer-events", "all")
+        let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+        // g.attr("pointer-events", "all")
           // .on("mouseenter", (event, d) => {
           //   g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(g.select('path').attr('name'))
           // })
           // .on("mouseleave", (event, d) => {
           //   g.selectAll('.tip').remove()
           // })
-          .html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
+        g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
       }
     },
     createCustomData(){
       let uuid = this.$common.generateUUID()
-      let content = ' id='+uuid+' value='+window.btoa('content')+' mode='+window.btoa('normal')
-      let g = this.svg.append('g').attr("transform", this.matrix).call(this.drag)
+      let content = ' id='+uuid+' value='+window.btoa('0')+' mode='+window.btoa('normal')
+      let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
 
-      g.attr("pointer-events", "all")
-        // .on("mouseenter", (event, d) => {
-        //   let express = g.select('path').attr('expression') === null ? window.atob(g.select('path').attr('value')) : window.atob(g.select('path').attr('expression'))
-        //   g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(express)
-        // })
-        // .on("mouseleave", (event, d) => {
-        //   g.selectAll('.tip').remove()
-        // })
-        .html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
+      if (this.custom_mode === 'expression'){
+        g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
+        return
+      }
+
+      g.append("foreignObject")
+          .attr("width", 40)
+          .attr("height", 20)
+        .html('<div id='+uuid+' class="children" dom_type="data"'+content+'>')
+
+      if(this.custom_mode === 'string'){
+        this.$common.createStringVar(d3.select("#"+uuid))
+      }else if (this.custom_mode === 'list'){
+        this.$common.createSelectVar(d3.select("#"+uuid), ["init1","init2","init3"])
+      }
     },
     updateColor(){
       if (this.run_flag === true){
@@ -651,7 +678,7 @@ export default {
         this.saveApiViewer()
       }
     },
-    log(){
+    async log(){
       console.log(d3.select("#new").node())
     },
     expression(){
@@ -660,24 +687,27 @@ export default {
     checkExpression(){
       if (this.elm !== ''){
         let data = {}
-
-        if (this.express.indexOf("$") > -1) {
-          data = this.elm.node().getElementsByTagName('path')[0]
-          data.setAttribute("expression", window.btoa(this.express))
-          this.info_color = 'success'
-          this.is_success = true
-          return
+        let new_express = this.express
+        let tmp = this.express.match(/\$\{.*?\}/g)
+        if (tmp !== null){
+          tmp.forEach((elm) => {
+            new_express = new_express.replace(elm,'$')
+          })
         }
         try{
-          const node = math.parse(this.express)
+          const node = math.parse(new_express)
           if (this.elm.node().getElementsByTagName('path').length > 0){
             data = this.elm.node().getElementsByTagName('path')[0]
           }else{
             data = this.elm.node().getElementsByTagName('div')[0]
           }
-          data.setAttribute("expression", window.btoa(this.express))
           this.info_color = 'success'
           this.is_success = true
+          if (this.express === ''){
+            data.removeAttribute('expression') 
+          }else{
+            data.setAttribute("expression", window.btoa(this.express))
+          }
         }catch(err){
           this.error_flag = true
           this.error_messages = err.toString()
@@ -696,26 +726,16 @@ export default {
       let that = this
       d3.select("#new").each(function(d, i) {
         d3.selectAll(this.childNodes).each(function(d, i) {
-          d3.select(this).call(that.drag)
+          if (d3.select(this).attr('drag_event') === 'true'){
+            d3.select(this).call(that.drag)
+          }else{
+            d3.select(this).call(that.viewer_drag)
+          }
         })
       })
       d3.selectAll(".children").each(function(d, i) {
         if(d3.select(this).attr('dom_type') === 'data'){
-          // d3.select(this.parentNode).on("mouseenter", (event, d) => {
-          //   if(that.run_flag === false){
-          //     if (d3.select(this).attr("mode") !== null){
-          //       let express = d3.select(this).attr('expression') === null ? window.atob(d3.select(this).attr('value')) : window.atob(d3.select(this).attr('expression'))
-          //       d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id')+':'+express)
-          //     }else{
-          //       d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(d3.select(this).attr('id'))
-          //     }
-          //   }
-          // })
-          // .on("mouseleave", (event, d) => {
-          //   if(that.run_flag === false){
-          //     d3.select(this.parentNode).selectAll('.tip').remove()
-          //   }
-          // })
+          that.$common.bindEvent(d3.select(this))
           if(that.is_viewer === true){
             d3.select(this.parentNode).call(that.viewer_drag)
           }
@@ -744,40 +764,52 @@ export default {
       if(this.run_flag === false){
         let that = this
         this.run_flag = true
+        this.query_data_pool = []
         this.interval = setInterval(function() {
           d3.selectAll(".environment").each(function(d, i) {
-            let tmp = []
             let hardware = this
-            let formData = new FormData()
-            formData.append("username", that.username)
-            formData.append("operate", "hardware_environment_save_config")
-            // formData.append("url", d3.select(this).attr("server"))
-            formData.append("sid", d3.select(this).attr("environment_id"))
-            formData.append("docid", d3.select(this).attr("docid"))
+            let query_struc = {
+              'username': that.username,
+              'operate': "hardware_environment_save_config",
+              'url': d3.select(hardware).attr('server'),
+              'sid': d3.select(hardware).attr("environment_id"),
+              'docid': d3.select(hardware).attr("docid"),
+              'params':d3.select(hardware).attr('params'),
+            }
+
+            // let formData = new FormData()
+            // formData.append("username", that.username)
+            // formData.append("operate", "hardware_environment_save_config")
+            // formData.append("sid", sid)
+            // formData.append("docid", docid)
 
             d3.select(hardware).selectAll("path").each(function(d, i) {
               if(d3.select(this).attr('dom_type') === 'data'){
                 let data = d3.select(this).node()
                 if (data.getAttribute('expression') !== null) {
-                  tmp = tmp.concat(that.$common.getRootVar(data.getAttribute("expression")))
+                  that.$common.getRootVar(data.getAttribute("expression"), that.query_data_pool)
                 }else{
                   if (data.getAttribute('mode') === null) {
-                    tmp.push(data.getAttribute("id"))
+                    that.query_data_pool.push(data.getAttribute("id"))
                   }
                 }
               }
             })
-            JSON.parse(d3.select(hardware).attr('params')).forEach((key) =>{
-              formData.append("addr_map", key.value)
+            JSON.parse(query_struc['params']).forEach((key) =>{
+              query_struc["addr_map"] = key.value
             })
-            formData.append("key", that.$common.dedupe(tmp).join(','))
+            query_struc["key"] = that.$common.dedupe(that.query_data_pool).join(',')
             // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
             let config = {
               headers: {
               'Content-Type': 'multipart/form-data'
               }
             }
-            axios.post(d3.select(hardware).attr('server'), formData, config)
+            let formData = new FormData()
+            for ( let key in query_struc) {
+                formData.append(key, query_struc[key])
+            }
+            axios.post(query_struc['url'], formData, config)
             .then(
               (response)=>{
                 let he = response.data
@@ -797,7 +829,16 @@ export default {
                         vars.forEach((v) => {
                           expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he, hardware))
                         })
-                        data.setAttribute("value", window.btoa(expression))
+                        try{
+                          let result = that.$common.calExpressDepend(window.btoa(expression), he, hardware)
+                          if(typeof(result) === 'undefined'){
+                            data.setAttribute("value", window.btoa(expression))
+                          }else{
+                            data.setAttribute("value", window.btoa(result))
+                          } 
+                        }catch(err){
+                          data.setAttribute("value", window.btoa(expression))
+                        }
                       }else{
                         let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
                         data.setAttribute("value", window.btoa(temp))
@@ -809,7 +850,6 @@ export default {
                   let path = d3.select(this.parentNode).select('path')
                   d3.select(this).text(window.atob(path.attr('value')))
                 })
-                // that.refreshData()
             }, (error) => {
               console.log(error)
             })
@@ -822,17 +862,21 @@ export default {
     },
     initCtrlElm(){
       if (this.elm !== ''){
-        this.elm.select('path')
-          .attr('id', this.fill_id)
-          .attr('value', window.btoa(this.fill_param))
-          .attr('mode', window.btoa(this.selected))
+        if(this.elm.select('path').empty()){
+          this.elm.select('div')
+            .attr('id', this.fill_id)
+            .attr('mode', window.btoa(this.selected))
+          if(this.elm.select('div').node().hasAttribute('range')){
+            this.elm.select('select').remove()
+            this.$common.createSelectVar(this.elm.select('div'),this.fill_range.split(','))
+          }
+        }else{
+          this.elm.select('path')
+            .attr('id', this.fill_id)
+            .attr('value', window.btoa(this.fill_param))
+            .attr('mode', window.btoa(this.selected))
+        }
       }
-    },
-    refreshData(){
-      d3.selectAll('.tip').each(function(d, i) {
-        let path = d3.select(this).select(function() { return this.parentNode }).select('path')
-        d3.select(this).text(path.attr('id')+':'+window.atob(path.attr('value')))
-      })
     },
     async interactive(){
       let res = []
@@ -844,7 +888,7 @@ export default {
       formData.append("sid", this.elm.attr("environment_id"))
       formData.append("docid", this.elm.attr("docid"))
 
-      this.elm.selectAll("path").each(function(d, i) {
+      this.elm.selectAll(".children").each(function(d, i) {
         if(d3.select(this).attr('dom_type') === 'data'){
           let tmp = {}
           let data = d3.select(this).node()
@@ -905,6 +949,7 @@ export default {
         tmp.setAttribute("id", instance_id)
         tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")
         tmp.setAttribute("dom_type", 'g')
+        tmp.setAttribute("drag_event", 'true')
         d3.select('#new').node().append(tmp)
         that.dragElements()
       })
@@ -920,11 +965,25 @@ export default {
       }
     },
     autocomplete(){
-
+      this.error_flag = false
+      this.error_messages = ''
     },
     importSvg(){
       document.getElementById('fileInput').click()
-    }
+    },
+    unlock(){
+      if (this.elm !== ''){
+        if (this.elm.attr('drag_event') === 'true'){
+          this.lock = true
+          this.elm.attr('drag_event', 'false')
+          this.elm.call(this.viewer_drag)
+        }else{
+          this.lock = false
+          this.elm.attr('drag_event', 'true')
+          this.elm.call(this.drag)
+        }
+      }
+    },
   },
 }
 </script>
