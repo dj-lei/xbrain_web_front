@@ -44,16 +44,37 @@
                   v-btn(color="blue darken-1" text @click="closeDelete") Cancel
                   v-btn(color="blue darken-1" text @click="deleteItemConfirm") OK
                   v-spacer
-      v-data-table(:headers="headers", :items="data", sort-by="SymbolName", class="elevation-1")
-        template(v-slot:item.actions="{ item }")
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
-            span edit
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
-            span delete
+            v-dialog(v-model="dialogConfig" max-width="500px")
+              v-card
+                v-card-title
+                  span(class="headline") Config
+                v-card-text
+                  v-container
+                    v-row
+                      v-combobox(v-model='symbol_type' :items="symbol_types" label="Symbol Type")
+                    v-row
+                      v-text-field(v-model='symbol_name', label="Symbol name")
+                    v-row
+                      v-spacer
+                      v-btn(class="mt-3" color="primary", dark, @click="configItemConfirm") APPLY
+                      v-spacer
+      v-card
+        v-card-title
+          v-text-field(v-model="search" label="Search" single-line hide-details)
+        v-data-table(:search="search" :headers="headers", :items="data", sort-by="SymbolName", class="elevation-1")
+          template(v-slot:item.actions="{ item }")
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
+              span edit
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+              span delete
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="configItem(item)") mdi-memory
+              span config
 </template>
 
 <script>
@@ -71,16 +92,18 @@ export default {
     return {
       dialog: false,
       dialogDelete: false,
+      dialogConfig: false,
       dialogSaveTemplate: false,
       headers: [
         // { text: 'Id', value: 'id' },
         { text: 'Category', align: 'start', value: 'Category'},
         { text: 'SymbolName', align: 'start', value: 'SymbolName'},
-        { text: 'Icon', align: 'start', value: 'Icon'},
+        // { text: 'Icon', align: 'start', value: 'Icon'},
         { text: 'CreatedTime', value: 'CreatedTime' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
+      search: '',
       symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
       svg_content: '',
       svg_temp: {},
@@ -162,6 +185,40 @@ export default {
             this.$store.set('progress', false)
           },1000)
         })
+    },
+
+    configItem (item) {
+      this.dialogConfig = true
+      this.operateId = item.id
+      this.symbol_type = item.Category
+      this.symbol_name = item.SymbolName
+    },
+
+    async configItemConfirm () {
+      this.$store.set('progress', true)
+
+      let formData = new FormData()
+      formData.append("symbol_id", this.operateId)
+      formData.append("category", this.symbol_type)
+      formData.append("symbol_name", this.symbol_name)
+      formData.append("operate", 'symbol_update')
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+
+      await this.$http.post(this.$urls.babel_save, formData, config).then(
+        (response)=>{
+          console.log(response.data)
+      }, (error) => {
+        console.log(error)
+      })
+      setTimeout(() =>{
+        this.dialogConfig = false
+        this.initialize()
+        this.$store.set('progress', false)
+      },1000)
     },
 
     close () {
@@ -255,7 +312,7 @@ export default {
         // this.initialize()
         this.$store.set('progress', false)
       },1000)
-    }
+    },
   },
 }
 </script>

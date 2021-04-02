@@ -4,28 +4,60 @@
       v-sheet(width="85")
         v-list(dense class="grow")
           v-list-item
-            v-list-item-title
-              v-icon(@click="$emit('dialogClose')") mdi-close
-          v-list-item(@click="newItem")
-            v-list-item-title NEW
-          v-list-item(@click="save")
-            v-list-item-title SAVE
-          v-list-item(@click="log")
-            v-list-item-title LOG
-          v-list-item(@click="dialogConfig = true")
-            v-list-item-title CONFIG
-          template(v-if="is_viewer === false")
-            v-list-item(@click="importSvg")
-              v-list-item-title IMPORT
-              v-file-input(id="fileInput" v-model="svgIns" @change="fileInsertSvg" style="display:none" multiple)
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(class="ml-4", v-bind="attrs", v-on="on", @click="$emit('dialogClose')") mdi-keyboard-backspace
+              span BACK
+          v-list-item
+            p V/D
+            v-switch(v-model="edit_mode" dense)
+          template(v-if="edit_mode === true")
+            v-list-item
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(color="grey darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="newItem") mdi-file
+                span NEW
+            v-list-item
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(color="orange lighten-2", class="ml-4", v-bind="attrs", v-on="on", @click="save") mdi-content-save
+                span SAVE
+            v-list-item
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(color="light-blue lighten-1", class="ml-4", v-bind="attrs", v-on="on", @click="log") mdi-file-document-box
+                span LOG
+            v-list-item
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(color="brown darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="dialogConfig = true") mdi-memory
+                span CONFIG
+            v-list-item
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(color="red darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="dialogHotKey = true") mdi-chili-mild
+                span HOTKEY
+            template(v-if="is_viewer === false")
+              v-list-item
+                v-tooltip(bottom)
+                  template(v-slot:activator="{ on,attrs }")
+                    v-icon(color="cyan lighten-1", class="ml-4", v-bind="attrs", v-on="on", @click="importSvg") mdi-file-import
+                  span IMPORT
+                v-file-input(id="fileInput" v-model="svgIns" @change="fileInsertSvg" style="display:none" multiple)
           template(v-if='is_viewer === true')
             template(v-if='run_flag === false')
-              v-list-item(@click="runOrStop")
-                v-list-item-title RUN
+              v-list-item
+                v-tooltip(bottom)
+                  template(v-slot:activator="{ on,attrs }")
+                    v-icon(color="success", class="ml-4", v-bind="attrs", v-on="on", @click="runOrStop") mdi-play
+                  span PLAY
             template(v-else)
-              v-list-item(@click="runOrStop")
-                v-list-item-title STOP
-    v-card(class="pa-2" dark)
+              v-list-item
+                v-tooltip(bottom)
+                  template(v-slot:activator="{ on,attrs }")
+                    v-icon(color="error", class="ml-4", v-bind="attrs", v-on="on", @click="runOrStop") mdi-play-pause
+                  span PAUSE
+    v-card(class="pa-2" dark v-show="edit_mode")
       v-sheet(width="115")
         v-list(dense class="grow")
           v-list-item(v-for="(tool, j) in tools_category" :key="j")
@@ -42,7 +74,7 @@
       v-sheet(color="grey lighten-4" :height="canvas_height" :width="canvas_width"  @dblclick="done")
         div(id="painting")
           svg(id="viz" :height="canvas_height" :width="canvas_width" class="container-border")
-    v-card(class="pa-2" dark)
+    v-card(class="pa-2" dark v-show="edit_mode")
       v-sheet(width="300")
         template(v-if="select_mode !== ''")
           v-toolbar(dark)
@@ -102,6 +134,10 @@
                   v-col(class="pa-2")
                     v-text-field(v-model="key.value" :label="key.name" outlined dense @change="updateComVar")
                 v-btn( dark @click='interactive' depressed) INTERACTIVE
+          template(v-else-if="select_mode === 'chart'")
+            v-row(class="d-flex justify-center")
+              v-col(class="pa-2")
+                v-text-field(v-model="chart_text" label="Bind ID" outlined dense @change="updateBindId")
           template(v-else-if="select_mode === 'scene' && is_viewer === true")
             v-card(color="grey darken-4")
               v-container(fluid)
@@ -111,7 +147,7 @@
                     v-list-item(target="_blank" :href="url.addr")
                       v-list-item-title(v-text="url.name")
                     v-divider
-          template(v-else-if="select_mode !== 'data'")
+          template(v-if="select_mode !== 'data' && select_mode !== 'scene' && select_mode !== 'chart'")
             v-row
               v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
         v-dialog(v-model='dialogDataBind', dark, max-width="800px")
@@ -120,12 +156,9 @@
               v-row
                 v-btn(color="primary", dark, @click="createCustomData") CUSTOM
                 v-divider(class="mx-4" inset vertical)
-                v-combobox(v-model="custom_mode" :items="['string', 'list', 'expression']" outlined dense)
+                v-combobox(v-model="custom_mode" :items="['string', 'list', 'expression', 'chart']" outlined dense)
                 v-spacer
               v-spacer(class="mt-3")
-              //- v-row
-                v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
-                v-btn(color="primary", text, dark, @click="saveApiBindData") REFRESH
               v-divider
               v-card
                 v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
@@ -135,10 +168,6 @@
               template(v-if="is_viewer === true")
                 v-row
                   v-text-field(class="ma-1" v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
-                  //- v-row
-                    v-text-field(class="ma-1" v-model="url_post_config_read_data" label="Api post config params and read data" dense outlined)
-                  //- v-row
-                    v-text-field(class="ma-1" v-model="url_post_interactive_data" label="Api post interactive data" dense outlined)
                 v-card
                   v-data-table(:headers="externalUrlHeaders" :items="externalUrls" class="elevation-1" hide-default-footer)
                     template(v-slot:top="")
@@ -173,6 +202,15 @@
                 template(v-else)
                   v-btn(class="mt-3" color="primary", dark, @click="saveApiBindData") APPLY
                 v-spacer
+        v-dialog(v-model='dialogHotKey',  max-width="200px")
+          v-card
+            v-card-title
+              span(class="headline") Hot Key
+            v-divider
+            v-container
+              p CTRL+C | copy element
+              p CTRL+V | paste element
+              p CTRL+S | save instance
 </template>
 
 <script>
@@ -209,6 +247,7 @@ export default {
   },
   data () {
     return {
+      edit_mode:false,
       items: [],
       svgIns: [],
       comVar: [],
@@ -216,6 +255,7 @@ export default {
       url_get_ins_env: '',
       url_post_config_read_data: '',
       url_post_interactive_data: '',
+      selected_environment: '',
       environment_list: [],
       externalUrls: [],
       editedItem: {
@@ -228,13 +268,10 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       // url_get_bind_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
-      // url_get_ins_env: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=hardware_environment_read_status' : 'http://10.166.152.49/ru/babel/get?operate=hardware_environment_read_status',
-      // url_post_config_read_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
-      // url_post_interactive_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/save' : 'http://10.166.152.49/ru/babel/save',
-      selected_environment: '',
       lock: false,
       run_flag: false,
       interval: '',
+      dialogHotKey: false,
       dialogDataBind: false,
       dialogExpression: false,
       dialogConfig: false,
@@ -250,8 +287,8 @@ export default {
       fill_param: '',
       fill_id: '',
       hexa: '#FF00FF',
-      canvas_width: 950,
-      canvas_height: 730,
+      canvas_width: 1400,
+      canvas_height: 750,
       margin: {
         top: 20,
         right: 40,
@@ -265,8 +302,9 @@ export default {
       gy:[],
       x:[],
       y:[],
+      mouse_position:{'x':0, 'y':0},
       elm: '',
-      major_elms: ['polygon','path','text','foreignObject'],
+      copy_elm: '',
       label: '',
       bind_data: [],
       data: {},
@@ -276,16 +314,26 @@ export default {
       path_points: '',
       polygon_points: '',
       text: '',
-      instance_num: 0,
-      opt: '20',
       transform: 'translate(0,0) scale(1)',
       matrix: 'matrix(1 0 0 1 0 0)',
       drag:'',
       viewer_drag:'',
+      chart_text:'',
+      refresh_interval: 1000,
       query_data_pool:[],
+      history_data_pool:{},
+      env_pool:[],
     }
   },
   watch:{
+    edit_mode(val){
+      if(val === true){
+        this.canvas_width = 950
+      }else{
+        this.canvas_width = 1400
+      }
+      this.resetCoordinates()
+    },
     bind_data() {
       this.createData()
       this.dialogDataBind = false
@@ -312,14 +360,7 @@ export default {
   },
   mounted () {
     let that = this
-    this.x = d3.scaleLinear()
-      .domain([0, this.canvas_width])
-      .range([0, this.canvas_width])
-
-    this.y = d3.scaleLinear()
-      .domain([0, this.canvas_height])
-      .range([0, this.canvas_height])
-
+    
     document.onkeydown = function(e) {
       let key = e.keyCode
       // window.event.preventDefault()
@@ -327,32 +368,40 @@ export default {
       that.error_messages = ''
       if (e.path[0].getAttribute('type') === 'text') return
       if (e.path[0].toString().indexOf('TextArea') > -1) return
-
-      if (key== 46 || key== 8) { //Del or Backspace
-        that.deleteElm()
+      if (e.ctrlKey){
+        if(key == 67){
+          that.copy()
+        }else if(key == 86){
+          that.paste()
+        }else if(key == 83){
+          that.save()
+        }
       }
+      if (key== 46 || key== 8) { //Del or Backspace
+        that.delete()
+      }
+      return false
+    }
+    if(this.is_viewer !== true){
+      this.edit_mode = true
     }
     this.$common.setBrowserTitle("new")
     this.svg = d3.select("#viz").style("font", "12px sans-serif").append("g").attr("id", "new")
-
-    d3.select("#viz").append("g").attr("id", "axis")
-    this.gx = d3.select("#axis").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
-    this.gy = d3.select("#axis").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
-    this.zoom = d3.zoom().scaleExtent([0.4, 8]).on("zoom", this.zoomed)
-    d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
+    this.resetCoordinates()
 
     function dragstarted(event) {
       if (that.elm !== ''){
         that.done()
       }
       that.elm = d3.select(this)
+      that.mouse_position = {'x': event.x, 'y': event.y}
       that.lock = d3.select(this).attr('drag_event') === 'true' ? false : true
       that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
 
       if (that.is_viewer === true && d3.select(this).attr("dom_type") === 'g'){
         that.select_mode = 'viewer'
-        that.selected_environment = d3.select(this).attr("environment_name")
-        that.comVar = JSON.parse(d3.select(this).attr("params"))
+        that.selected_environment = d3.select(this.parentNode).attr("environment_name")
+        that.comVar = JSON.parse(d3.select(this.parentNode).attr("params"))
       }else if(d3.select(this).attr("dom_type") !== 'g'){
         if (d3.select(this).select('.children').attr("dom_type") === 'polygon') {
           that.select_mode = 'polygon'
@@ -396,18 +445,41 @@ export default {
             }
           }
           that.select_mode = 'data'
+        }else if(d3.select(this).select('.children').attr("dom_type") === 'chart'){
+          that.select_mode = 'chart'
+          that.chart_text = window.atob(d3.select(this).select('.children').attr('bind_id'))
         }
       }
     }
     function dragged(event) {
-      if(Math.abs(event.dx) >= 1 || Math.abs(event.dy) >= 1){
-        d3.select(this).attr("transform", `matrix(1 0 0 1 ${event.x-this.getBBox().x} ${event.y-this.getBBox().y})`)
+      // console.log(event)
+      if(Math.abs(that.mouse_position.x - event.x) >= 20 || Math.abs(that.mouse_position.y - event.y) >= 20){
+        d3.select(this).attr("transform", `matrix(1 0 0 1 ${this.getBBox().x - (that.mouse_position.x - event.x)} ${this.getBBox().y - (that.mouse_position.y - event.y)})`)
       }
     }
     this.drag = d3.drag().on("start", dragstarted).on("drag", dragged)
     this.viewer_drag = d3.drag().on("start", dragstarted)
   },
   methods: {
+    resetCoordinates(){
+      this.x = d3.scaleLinear()
+        .domain([0, this.canvas_width])
+        .range([0, this.canvas_width])
+
+      this.y = d3.scaleLinear()
+        .domain([0, this.canvas_height])
+        .range([0, this.canvas_height])
+      if(d3.select("#axis").empty()){
+        d3.select("#viz").append("g").attr("id", "axis")
+      }else{
+        d3.select("#axis").selectAll('g').remove()
+      }
+      
+      this.gx = d3.select("#axis").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
+      this.gy = d3.select("#axis").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
+      this.zoom = d3.zoom().scaleExtent([0.4, 8]).on("zoom", this.zoomed)
+      d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
+    },
     zoomed(event) {
       const {transform} = event
       this.transform = transform
@@ -417,6 +489,41 @@ export default {
 
       this.gx.call(this.xAxis, transform.rescaleX(this.x), transform)
       this.gy.call(this.yAxis, transform.rescaleY(this.y), transform)
+    },
+    dragElements(){
+      let that = this
+      d3.select("#new").each(function(d, i) {
+        d3.selectAll(this.childNodes).each(function(d, i) {
+          if(d3.select(this).attr('class') === 'environment'){
+            d3.selectAll(this.childNodes).each(function(d, i) {
+              if (d3.select(this).attr('drag_event') === 'true'){
+                d3.select(this).call(that.drag)
+              }else{
+                d3.select(this).call(that.viewer_drag)
+              }
+            })
+          }else{
+            if (d3.select(this).attr('drag_event') === 'true'){
+              d3.select(this).call(that.drag)
+            }else{
+              d3.select(this).call(that.viewer_drag)
+            }
+          }
+        })
+      })
+      d3.selectAll(".children").each(function(d, i) {
+        if(d3.select(this).attr('dom_type') === 'data'){
+          that.$common.bindEvent(d3.select(this))
+          if(that.is_viewer === true){
+            d3.select(this.parentNode).call(that.viewer_drag)
+          }
+        }
+        if(d3.select(this).attr('dom_type') === 'chart'){
+          if(that.is_viewer === true){
+            d3.select(this.parentNode.parentNode).call(that.viewer_drag)
+          }
+        }
+      })
     },
     xAxis(g, x, transform){
       g.attr("transform", `translate(${-transform.x},${-transform.y+this.margin.top})`)
@@ -468,12 +575,6 @@ export default {
         this.text = ''
         this.select_mode = 'text'
       }else if(item.symbol == 'data'){
-        this.data_type = ''
-        this.data_id = ''
-        this.data_name = ''
-        this.data_range = ''
-        this.data_value = ''
-        // this.select_mode = 'data'
         this.dialogDataBind = true
       }else{
         this.addSymbolSvg(item)
@@ -554,27 +655,15 @@ export default {
           content += ' '+key+'='+window.btoa(this.data[key])
         }
       })
-      if (this.data['type'] === 'echarts'){
-        this.svg.append('g').attr("transform", this.matrix).call(this.drag)
-        .append("foreignObject")
-          .attr("id", uuid)
-          .attr("dom_type", 'data')
-          .attr("class", 'children')
-          .attr("width", 600)
-          .attr("height", 400)
-        .html('<div class="data"'+content+' xmlns="http://www.w3.org/1999/xhtml" style="background:yellow;width: 600px;height:400px;">')
-        // echarts.init(document.getElementById(uuid+'_'+data['id'])).setOption(data['value'])
-      }else{
-        let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
-        // g.attr("pointer-events", "all")
-          // .on("mouseenter", (event, d) => {
-          //   g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(g.select('path').attr('name'))
-          // })
-          // .on("mouseleave", (event, d) => {
-          //   g.selectAll('.tip').remove()
-          // })
-        g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
-      }
+      let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+      g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
+      // g.attr("pointer-events", "all")
+        // .on("mouseenter", (event, d) => {
+        //   g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(g.select('path').attr('name'))
+        // })
+        // .on("mouseleave", (event, d) => {
+        //   g.selectAll('.tip').remove()
+        // })
     },
     createCustomData(){
       let uuid = this.$common.generateUUID()
@@ -595,6 +684,9 @@ export default {
         this.$common.createStringVar(d3.select("#"+uuid))
       }else if (this.custom_mode === 'list'){
         this.$common.createSelectVar(d3.select("#"+uuid), ["init1","init2","init3"])
+      }else if (this.custom_mode === 'chart'){
+        d3.select("#"+uuid).select(function() { return this.parentNode }).attr("width", 300).attr("height", 200)
+        d3.select("#"+uuid).attr("dom_type","chart").attr("bind_id",window.btoa("id")).attr("style", "background:white;width: 300px;height:200px;")
       }
     },
     updateColor(){
@@ -644,14 +736,53 @@ export default {
     },
     updateComVar(){
       if (this.elm !== ''){
-        this.elm.attr('params', JSON.stringify(this.comVar))
+        this.elm.select(function() { return this.parentNode }).attr('params', JSON.stringify(this.comVar))
       }
     },
-    deleteElm() {
+    updateBindId(){
+      if (this.elm !== ''){
+        this.elm.select('div').attr('bind_id', window.btoa(this.chart_text) )
+      }
+    },
+    updateSymbolsUrl(val){
+      this.url_get_bind_data = val
+    },
+    updateViewersUrl(val){
+      if(typeof(val) !== 'undefined'){
+        this.url_get_ins_env = val['url_get_ins_env']
+        this.externalUrls = val['externalUrls']
+      }
+    },
+    unlock(){
+      if (this.elm !== ''){
+        if (this.elm.attr('drag_event') === 'true'){
+          this.lock = true
+          this.elm.attr('drag_event', 'false')
+          this.elm.call(this.viewer_drag)
+        }else{
+          this.lock = false
+          this.elm.attr('drag_event', 'true')
+          this.elm.call(this.drag)
+        }
+      }
+    },
+    delete() {
       if (this.elm !== ''){
         this.elm.remove()
         this.elm = ''
         this.select_mode = ''
+      }
+    },
+    copy() {
+      if (this.elm !== ''){
+        this.copy_elm = this.elm
+        this.copy_elm.select('.check_box').remove()
+      }
+    },
+    paste() {
+      if (this.copy_elm !== ''){
+        this.copy_elm.clone([true])
+        this.dragElements()
       }
     },
     done() {
@@ -661,8 +792,16 @@ export default {
       this.elm = ''
       this.select_mode = 'scene'
     },
+    clear(){
+      this.done()
+      this.select_mode='scene'
+      this.elm=''
+      this.transform='translate(0,0) scale(1)'
+      d3.select("#new").selectAll("*").remove()
+      d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity)
+    },
     async save(){
-      await this.done()
+      this.done()
       let params = []
       if(this.items.length > 0){
         this.items[0].params.forEach((key) => {
@@ -672,11 +811,26 @@ export default {
         d3.select("#new").attr("docid", this.items[0].id)
         d3.select("#new").attr("server", this.items[0].server)
       }
-      await d3.select("#new").attr("transform", 'translate(0,0) scale(1)')
+      // d3.select("#new").attr("transform", 'translate(0,0) scale(1)')
       await this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
       if(this.is_viewer === true){
         this.saveApiViewer()
       }
+    },
+    async saveApiBindData(){
+      if(this.flagUpdateOrAdd === true){
+        await this.$emit('saveApiBindData', this.url_get_bind_data)
+      }
+      this.queryBackendData()
+    },
+    async saveApiViewer(){
+      let api_url = {}
+      api_url['url_get_ins_env'] = this.url_get_ins_env
+      api_url['externalUrls'] = this.externalUrls
+      if(this.flagUpdateOrAdd === true){
+        await this.$emit('saveApiViewer', api_url)
+      }
+      this.queryInsEnv()
     },
     async log(){
       console.log(d3.select("#new").node())
@@ -714,34 +868,6 @@ export default {
         }
       }
     },
-    clear(){
-      this.done()
-      this.select_mode='scene'
-      this.elm=''
-      this.transform='translate(0,0) scale(1)'
-      d3.select("#new").selectAll("*").remove()
-      d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity)
-    },
-    dragElements(){
-      let that = this
-      d3.select("#new").each(function(d, i) {
-        d3.selectAll(this.childNodes).each(function(d, i) {
-          if (d3.select(this).attr('drag_event') === 'true'){
-            d3.select(this).call(that.drag)
-          }else{
-            d3.select(this).call(that.viewer_drag)
-          }
-        })
-      })
-      d3.selectAll(".children").each(function(d, i) {
-        if(d3.select(this).attr('dom_type') === 'data'){
-          that.$common.bindEvent(d3.select(this))
-          if(that.is_viewer === true){
-            d3.select(this.parentNode).call(that.viewer_drag)
-          }
-        }
-      })
-    },
     coverToList(){
       let tmp = []
       if(this.environment_list.length > 0){
@@ -754,17 +880,50 @@ export default {
     syncEnvironment(){
       this.environment_list.forEach((e) => {
         if (e['name'] === this.selected_environment) {
-          this.elm.attr("environment_id", e['id'])
-          this.elm.attr("environment_name", e['name'])
-          this.elm.attr("class", "environment")
+          if(!d3.select("#"+e['id']).empty()){
+            d3.select("#"+e['id']).node().append(this.elm.node())
+          }else{
+            d3.select("#new").append('g')
+            .attr("id", e['id'])
+            .attr("environment_name", e['name'])
+            .attr("params", this.elm.attr('params'))
+            .attr("docid", this.elm.attr('docid'))
+            .attr("server", this.elm.attr('server'))
+            .attr("class", "environment")
+            .node().append(this.elm.node())
+          }
+          this.$common.clearGNode()
+          this.env_pool.push(e['id'])
+          this.env_pool = this.$common.dedupe(this.env_pool)
         }
       })
+    },
+    initCtrlElm(){
+      if (this.elm !== ''){
+        if(this.elm.select('path').empty()){
+          this.elm.select('div')
+            .attr('id', this.fill_id)
+            .attr('mode', window.btoa(this.selected))
+          if(this.elm.select('div').node().hasAttribute('range')){
+            this.elm.select('select').remove()
+            this.$common.createSelectVar(this.elm.select('div'),this.fill_range.split(','))
+          }
+        }else{
+          this.elm.select('path')
+            .attr('id', this.fill_id)
+            .attr('value', window.btoa(this.fill_param))
+            .attr('mode', window.btoa(this.selected))
+        }
+      }
     },
     async runOrStop(){
       if(this.run_flag === false){
         let that = this
         this.run_flag = true
         this.query_data_pool = []
+        d3.selectAll(".environment").each(function(d, i) {
+          that.history_data_pool[d3.select(this).attr('id')] = []
+        })
         this.interval = setInterval(function() {
           d3.selectAll(".environment").each(function(d, i) {
             let hardware = this
@@ -772,16 +931,10 @@ export default {
               'username': that.username,
               'operate': "hardware_environment_save_config",
               'url': d3.select(hardware).attr('server'),
-              'sid': d3.select(hardware).attr("environment_id"),
+              'sid': d3.select(hardware).attr("id"),
               'docid': d3.select(hardware).attr("docid"),
               'params':d3.select(hardware).attr('params'),
             }
-
-            // let formData = new FormData()
-            // formData.append("username", that.username)
-            // formData.append("operate", "hardware_environment_save_config")
-            // formData.append("sid", sid)
-            // formData.append("docid", docid)
 
             d3.select(hardware).selectAll("path").each(function(d, i) {
               if(d3.select(this).attr('dom_type') === 'data'){
@@ -814,6 +967,7 @@ export default {
               (response)=>{
                 let he = response.data
                 // console.log(he)
+                let data_slice = {}
                 d3.select(hardware).selectAll("path").each(function(d, i) {
                   if(d3.select(this).attr('dom_type') === 'data'){
                     let data = d3.select(this).node()
@@ -844,51 +998,57 @@ export default {
                         data.setAttribute("value", window.btoa(temp))
                       }
                     }
+                    data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
                   }
                 })
+                that.history_data_pool[d3.select(hardware).attr('id')].push(data_slice)
                 d3.select(hardware).selectAll('.tip').each(function(d, i) {
                   let path = d3.select(this.parentNode).select('path')
                   d3.select(this).text(window.atob(path.attr('value')))
+                })
+                d3.select(hardware).selectAll('.children').each(function(d, i) {
+                  if(d3.select(this).attr('dom_type') === 'chart'){
+                    let series = []
+                    let names = []
+                    if(d3.select(this).attr('bind_id') !== null){
+                      window.atob(d3.select(this).attr('bind_id')).split(',').forEach((id) => {
+                        let tmp = []
+                        names.push(id)
+                        that.history_data_pool[d3.select(hardware).attr('id')].forEach((slice) => {
+                          tmp.push(slice[id])
+                        })
+                        tmp = that.$common.sliceYAxisQueueHandle(tmp, 30)
+                        series.push({'name':id, 'type':'line', 'showSymbol':false, data:tmp})
+                      })
+                      let ins = echarts.getInstanceByDom(document.getElementById(d3.select(this).attr('id')))
+                      if (ins == null){
+                        echarts.init(document.getElementById(d3.select(this).attr('id'))).setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)))
+                      }else{
+                        ins.setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
+                      }
+                    }
+                  }
                 })
             }, (error) => {
               console.log(error)
             })
           })
-        },3000)
+        },this.refresh_interval)
       }else{
         clearInterval(this.interval)
         this.run_flag = false
-      }
-    },
-    initCtrlElm(){
-      if (this.elm !== ''){
-        if(this.elm.select('path').empty()){
-          this.elm.select('div')
-            .attr('id', this.fill_id)
-            .attr('mode', window.btoa(this.selected))
-          if(this.elm.select('div').node().hasAttribute('range')){
-            this.elm.select('select').remove()
-            this.$common.createSelectVar(this.elm.select('div'),this.fill_range.split(','))
-          }
-        }else{
-          this.elm.select('path')
-            .attr('id', this.fill_id)
-            .attr('value', window.btoa(this.fill_param))
-            .attr('mode', window.btoa(this.selected))
-        }
       }
     },
     async interactive(){
       let res = []
 
       let formData = new FormData()
+      let parent = this.elm.select(function() { return this.parentNode })
       formData.append("username", this.username)
-      // formData.append("operate", "post_interactive_data")
-      // formData.append("url", this.url_post_interactive_data)
-      formData.append("sid", this.elm.attr("environment_id"))
-      formData.append("docid", this.elm.attr("docid"))
+      formData.append("sid", parent.attr("id"))
+      formData.append("docid", parent.attr("docid"))
 
-      this.elm.selectAll(".children").each(function(d, i) {
+      parent.selectAll(".children").each(function(d, i) {
         if(d3.select(this).attr('dom_type') === 'data'){
           let tmp = {}
           let data = d3.select(this).node()
@@ -907,38 +1067,13 @@ export default {
         'Content-Type': 'multipart/form-data'
         }
       }
-      await axios.post(this.elm.attr("server"), formData, config).then(
+      await axios.post(parent.attr("server"), formData, config).then(
         (response)=>{
         console.log(response.data.content)
       })
     },
-    async saveApiBindData(){
-      if(this.flagUpdateOrAdd === true){
-        await this.$emit('saveApiBindData', this.url_get_bind_data)
-      }
-      this.queryBackendData()
-    },
-    async saveApiViewer(){
-      let api_url = {}
-      api_url['url_get_ins_env'] = this.url_get_ins_env
-      // api_url['url_post_config_read_data'] = this.url_post_config_read_data
-      // api_url['url_post_interactive_data'] = this.url_post_interactive_data
-      api_url['externalUrls'] = this.externalUrls
-      if(this.flagUpdateOrAdd === true){
-        await this.$emit('saveApiViewer', api_url)
-      }
-      this.queryInsEnv()
-    },
-    updateSymbolsUrl(val){
-      this.url_get_bind_data = val
-    },
-    updateViewersUrl(val){
-      if(typeof(val) !== 'undefined'){
-        this.url_get_ins_env = val['url_get_ins_env']
-        // this.url_post_config_read_data = val['url_post_config_read_data']
-        // this.url_post_interactive_data = val['url_post_interactive_data']
-        this.externalUrls = val['externalUrls']
-      }
+    importSvg(){
+      document.getElementById('fileInput').click()
     },
     insertSvg(svg){
       let that = this
@@ -967,22 +1102,6 @@ export default {
     autocomplete(){
       this.error_flag = false
       this.error_messages = ''
-    },
-    importSvg(){
-      document.getElementById('fileInput').click()
-    },
-    unlock(){
-      if (this.elm !== ''){
-        if (this.elm.attr('drag_event') === 'true'){
-          this.lock = true
-          this.elm.attr('drag_event', 'false')
-          this.elm.call(this.viewer_drag)
-        }else{
-          this.lock = false
-          this.elm.attr('drag_event', 'true')
-          this.elm.call(this.drag)
-        }
-      }
     },
   },
 }

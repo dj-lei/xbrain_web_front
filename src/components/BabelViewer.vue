@@ -44,16 +44,37 @@
                   v-btn(color="blue darken-1" text @click="closeDelete") Cancel
                   v-btn(color="blue darken-1" text @click="deleteItemConfirm") OK
                   v-spacer
-      v-data-table(:headers="headers", :items="data", sort-by="ViewerName", class="elevation-1")
-        template(v-slot:item.actions="{ item }")
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
-            span edit
-          v-tooltip(bottom)
-            template(v-slot:activator="{ on,attrs }")
-              v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
-            span delete
+            v-dialog(v-model="dialogConfig" max-width="500px")
+              v-card
+                v-card-title
+                  span(class="headline") Config
+                v-card-text
+                  v-container
+                    v-row
+                      v-text-field(v-model='viewer_group' label="Group Or Project Name")
+                    v-row
+                      v-text-field(v-model='viewer_name', label="Viewer name")
+                    v-row
+                      v-spacer
+                      v-btn(class="mt-3" color="primary", dark, @click="configItemConfirm") APPLY
+                      v-spacer
+      v-card
+        v-card-title
+          v-text-field(v-model="search" label="Search" single-line hide-details)
+        v-data-table(:search="search" :headers="headers", :items="data", sort-by="ViewerName", class="elevation-1")
+          template(v-slot:item.actions="{ item }")
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
+              span edit
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+              span delete
+            v-tooltip(bottom)
+              template(v-slot:activator="{ on,attrs }")
+                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="configItem(item)") mdi-memory
+              span config
 </template>
 
 <script>
@@ -72,18 +93,22 @@ export default {
       dialog: false,
       dialogSaveTemplate: false,
       dialogDelete: false,
+      dialogConfig: false,
       headers: [
         // { text: 'Id', value: 'id' },
         { text: 'ViewerName', align: 'start', value: 'ViewerName'},
+        { text: 'Group', align: 'start', value: 'Group'},
         { text: 'CreatedTime', value: 'CreatedTime' },
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       data: [],
+      search: '',
       is_viewer: true,
       symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
       svg_content: '',
       svg_temp: {},
       viewer_name: '',
+      viewer_group: '',
       flagUpdateOrAdd: false,
       operateId: '',
     }
@@ -164,6 +189,41 @@ export default {
           },1000)
         })
     },
+
+    configItem (item) {
+      this.dialogConfig = true
+      this.operateId = item.id
+      this.viewer_group = item.Group
+      this.viewer_name = item.ViewerName
+    },
+
+    async configItemConfirm () {
+      this.$store.set('progress', true)
+
+      let formData = new FormData()
+      formData.append("viewer_id", this.operateId)
+      formData.append("group", this.viewer_group)
+      formData.append("viewer_name", this.viewer_name)
+      formData.append("operate", 'viewer_update')
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+
+      await this.$http.post(this.$urls.babel_save, formData, config).then(
+        (response)=>{
+          console.log(response.data)
+      }, (error) => {
+        console.log(error)
+      })
+      setTimeout(() =>{
+        this.dialogConfig = false
+        this.initialize()
+        this.$store.set('progress', false)
+      },1000)
+    },
+
     close () {
       this.flagUpdateOrAdd = false
       this.dialogSaveTemplate = false
@@ -199,6 +259,7 @@ export default {
       let formData = new FormData()
       formData.append("data", url)
       formData.append("viewer_name", this.viewer_name)
+      formData.append("group", this.viewer_group)
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'

@@ -11,7 +11,7 @@
           v-col(cols="12" sm="6" md="9")
             v-text-field(v-model="text" label="search" outlined dense)
           v-col(cols="12" sm="6" md="1")
-            v-combobox(v-model="selected_mode" :items="['FileName', 'FileDir', 'FileContent']" label="mode" outlined dense)
+            v-combobox(v-model="selected_mode" :items="['FileName', 'FileDir', 'FileContent', 'ImageDesc', 'ImageContent']" label="mode" outlined dense)
           v-col(cols="12" sm="6" md="1")
             v-btn(color="primary", dark, @click="search") SEARCH
         v-card(color="grey lighten-4", dark, flat)
@@ -20,8 +20,9 @@
               v-expansion-panel(v-for="(item,i) in items" :key="i")
                 v-expansion-panel-header(disable-icon-rotate) {{ item.name }}
                   template(v-slot:actions="")
-                    //- v-icon(color="green" @click.stop="loadDoc(item.path)") mdi-export
-                v-expansion-panel-content {{ item.path }}
+                    v-icon(color="green" @click.stop="loadPdf(item.path)") mdi-export
+                v-expansion-panel-content 
+                  div(v-html="item.desc")
         v-dialog(v-model='dialogDocDisplay')
           v-card
             div(v-html="html")
@@ -54,34 +55,55 @@ export default {
   methods: {
     async initialize () {
     },
-    // async search(){
-    //   let url = ''
-    //   if (this.selected_mode === 'FileName'){
-    //     url = "http://localhost:8001/extract/semantic_search_file_name"
-    //   }else if(this.selected_mode === 'FileDir'){
-    //     url = "http://localhost:8001/extract/semantic_search_file_dir"
-    //   }else if(this.selected_mode === 'FileContent'){
-    //     url = "http://localhost:8001/extract/semantic_search_file_content"
-    //   }
-    //   await axios.get(url, {
-    //     params: {
-    //         text: this.text
-    //     },
-    //     })
-    //     .then(response => {
-    //       this.items = response.data.content
-    //     })
-    // },
-    async search(path){
-      await axios.get("http://localhost:8001/extract/get_doc_html", {
+    async search(){
+      let url = ''
+      this.items = []
+      if (this.selected_mode === 'FileName'){
+        url = "http://localhost:8001/extract/semantic_search_file_name"
+      }else if(this.selected_mode === 'FileDir'){
+        url = "http://localhost:8001/extract/semantic_search_file_dir"
+      }else if(this.selected_mode === 'FileContent'){
+        url = "http://localhost:8001/extract/semantic_search_file_content"
+      }else if(this.selected_mode === 'ImageDesc'){
+        url = "http://localhost:8001/extract/semantic_search_image_desc"
+      }else if(this.selected_mode === 'ImageContent'){
+        url = "http://localhost:8001/extract/semantic_search_image_content"
+      }
+      await axios.get(url, {
         params: {
-            path: String.raw`D:/projects/xbrain_spider/sites/PDURadioChengduFirmware/Shared Documents/Training/Global SW/G3/XENON1/Xenon X1 Users Guide.docx`
+            text: this.text
         },
         })
         .then(response => {
-          this.html = response.data
-          this.dialogDocDisplay = true
+          response.data.content.forEach(elm => {
+            let tmp = {}
+            if (this.selected_mode === 'FileName'){
+              tmp['name'] = elm.name
+              tmp['path'] = elm.path
+              tmp['desc'] = "Doc System: SharePoint <br/>File Name: "+tmp['name']+"<br/>Location: "+elm.path.split('sites')[1]
+            }else if(this.selected_mode === 'FileDir'){
+              tmp['name'] = elm.path.split('\\').pop()
+              tmp['path'] = elm.path
+              tmp['desc'] = "Doc System: SharePoint <br/>File Name: "+tmp['name']+"<br/>Location: "+elm.path.split('sites')[1]+"<br/>Chapter: "+elm.chapter+"<br/>Title: "+elm.title
+            }else if(this.selected_mode === 'FileContent'){
+              tmp['name'] = elm.path.split('\\').pop()
+              tmp['path'] = elm.path
+              tmp['desc'] = "Doc System: SharePoint <br/>File Name: "+tmp['name']+"<br/>Location: "+elm.path.split('sites')[1]+"<br/>Origin Text: "+elm.content
+            }else if(this.selected_mode === 'ImageDesc'){
+              tmp['name'] = elm.path.split('\\').pop()
+              tmp['path'] = elm.path
+              tmp['desc'] = "Doc System: SharePoint <br/>File Name: "+tmp['name']+"<br/>Location: "+elm.path.split('sites')[1]+"<br/>Summary: "+elm.desc
+            }else if(this.selected_mode === 'ImageContent'){
+              tmp['name'] = elm.path.split('\\').pop()
+              tmp['path'] = elm.path
+              tmp['desc'] = "Doc System: SharePoint <br/>File Name: "+tmp['name']+"<br/>Location: "+elm.path.split('sites')[1]+"<br/>Image Content: "+elm.content
+            }
+            this.items.push(tmp)
+          })
         })
+    },
+    async loadPdf(path){
+      window.open("http://localhost:8001/extract/get_pdf_html?path="+path.replace('.docx', '.pdf'), "resizeable,scrollbar")     
     }
   },
 }

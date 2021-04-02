@@ -31,14 +31,14 @@ export default {
        }
        return theRequest
     },
-    getTime () {
-      let yy = new Date().getFullYear();
-      let mm = new Date().getMonth()+1;
-      let dd = new Date().getDate();
-      let hh = new Date().getHours();
-      let mf = new Date().getMinutes()<10 ? '0'+new Date().getMinutes() : new Date().getMinutes();
-      let ss = new Date().getSeconds()<10 ? '0'+new Date().getSeconds() : new Date().getSeconds();
-      return yy+'-'+mm+'-'+dd+' '+hh+':'+mf+':'+ss
+    getTime (time_stamp) {
+      // let yy = new Date().getFullYear();
+      // let mm = new Date().getMonth()+1;
+      // let dd = new Date().getDate();
+      let hh = new Date(time_stamp).getHours()
+      let mf = new Date(time_stamp).getMinutes()<10 ? '0'+new Date(time_stamp).getMinutes() : new Date(time_stamp).getMinutes();
+      let ss = new Date(time_stamp).getSeconds()<10 ? '0'+new Date(time_stamp).getSeconds() : new Date(time_stamp).getSeconds();
+      return hh+':'+mf+':'+ss
     },
     colorRGBtoHex(color) {
       var rgb = color.split(',')
@@ -313,6 +313,56 @@ export default {
       }
     },
 
+    getChartConfig(names, data, xaxis){
+      return {
+        title: {
+            text: 'chart'
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        legend: {
+            data: names
+        },
+        grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+        },
+        toolbox: {
+            feature: {
+                saveAsImage: {}
+            }
+        },
+        xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: xaxis
+        },
+        yAxis: {
+            type: 'value',
+        },
+        series: data
+      }
+    },
+
+    sliceYAxisQueueHandle(data, slice_num){
+      if(data.length < slice_num){
+        return new Array(slice_num-data.length).fill(0).concat(data)
+      }else{
+        return data.slice(data.length - slice_num, data.length)
+      }
+    },
+
+    sliceXAxisQueueHandle(refresh_interval, slice_num){
+      let tmp = []
+      let cur_time = Date.parse(new Date())
+      for(let i=0;i<slice_num;i++){
+        tmp.push(this.getTime(cur_time - (slice_num-i)*refresh_interval))
+      }
+      return tmp
+    },
     //****************************create custom data element************************//
     createStringVar(node){
       let custom_elm = node.append('input')
@@ -355,5 +405,13 @@ export default {
       }else{
         
       }
+    },
+
+    clearGNode(){
+      d3.select("#new").selectAll("g").each(function(d, i) {
+        if(d3.selectAll(this.childNodes).empty()){
+          d3.select(this).remove()
+        }
+      })
     }
   }
