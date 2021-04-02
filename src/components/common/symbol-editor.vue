@@ -303,6 +303,7 @@ export default {
       x:[],
       y:[],
       mouse_position:{'x':0, 'y':0},
+      elm_position:{'x':0, 'y':0},
       elm: '',
       copy_elm: '',
       label: '',
@@ -360,7 +361,7 @@ export default {
   },
   mounted () {
     let that = this
-    
+
     document.onkeydown = function(e) {
       let key = e.keyCode
       // window.event.preventDefault()
@@ -395,6 +396,7 @@ export default {
       }
       that.elm = d3.select(this)
       that.mouse_position = {'x': event.x, 'y': event.y}
+      that.elm_position = {'x': d3.select(this).attr("transform").split(' ')[4], 'y': d3.select(this).attr("transform").split(' ')[5].replace(')', '')}
       that.lock = d3.select(this).attr('drag_event') === 'true' ? false : true
       that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
 
@@ -452,9 +454,8 @@ export default {
       }
     }
     function dragged(event) {
-      // console.log(event)
       if(Math.abs(that.mouse_position.x - event.x) >= 20 || Math.abs(that.mouse_position.y - event.y) >= 20){
-        d3.select(this).attr("transform", `matrix(1 0 0 1 ${this.getBBox().x - (that.mouse_position.x - event.x)} ${this.getBBox().y - (that.mouse_position.y - event.y)})`)
+        d3.select(this).attr("transform", `matrix(1 0 0 1 ${that.elm_position.x - (that.mouse_position.x - event.x)} ${that.elm_position.y - (that.mouse_position.y - event.y)})`)
       }
     }
     this.drag = d3.drag().on("start", dragstarted).on("drag", dragged)
@@ -474,7 +475,7 @@ export default {
       }else{
         d3.select("#axis").selectAll('g').remove()
       }
-      
+
       this.gx = d3.select("#axis").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
       this.gy = d3.select("#axis").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
       this.zoom = d3.zoom().scaleExtent([0.4, 8]).on("zoom", this.zoomed)
@@ -583,8 +584,8 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
-          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          this.items = response.data.content
+          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          // this.items = response.data.content
         })
     },
     async queryInsEnv(){
@@ -858,7 +859,7 @@ export default {
           this.info_color = 'success'
           this.is_success = true
           if (this.express === ''){
-            data.removeAttribute('expression') 
+            data.removeAttribute('expression')
           }else{
             data.setAttribute("expression", window.btoa(this.express))
           }
@@ -989,7 +990,7 @@ export default {
                             data.setAttribute("value", window.btoa(expression))
                           }else{
                             data.setAttribute("value", window.btoa(result))
-                          } 
+                          }
                         }catch(err){
                           data.setAttribute("value", window.btoa(expression))
                         }
