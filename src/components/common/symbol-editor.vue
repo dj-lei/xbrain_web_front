@@ -6,7 +6,7 @@
           v-list-item
             v-tooltip(bottom)
               template(v-slot:activator="{ on,attrs }")
-                v-icon(class="ml-4", v-bind="attrs", v-on="on", @click="$emit('dialogClose')") mdi-keyboard-backspace
+                v-icon(class="ml-4", v-bind="attrs", v-on="on", @click="back") mdi-keyboard-backspace
               span BACK
           v-list-item
             p V/D
@@ -287,8 +287,8 @@ export default {
       fill_param: '',
       fill_id: '',
       hexa: '#FF00FF',
-      canvas_width: 1400,
-      canvas_height: 750,
+      canvas_width: document.body.offsetWidth -570,
+      canvas_height: document.body.offsetHeight - 120,
       margin: {
         top: 20,
         right: 40,
@@ -329,9 +329,9 @@ export default {
   watch:{
     edit_mode(val){
       if(val === true){
-        this.canvas_width = 950
+        this.canvas_width = document.body.offsetWidth -570
       }else{
-        this.canvas_width = 1400
+        this.canvas_width = document.body.offsetWidth -120
       }
       this.resetCoordinates()
     },
@@ -361,7 +361,6 @@ export default {
   },
   mounted () {
     let that = this
-
     document.onkeydown = function(e) {
       let key = e.keyCode
       // window.event.preventDefault()
@@ -385,6 +384,8 @@ export default {
     }
     if(this.is_viewer !== true){
       this.edit_mode = true
+    }else{
+      this.canvas_width = document.body.offsetWidth -120
     }
     this.$common.setBrowserTitle("new")
     this.svg = d3.select("#viz").style("font", "12px sans-serif").append("g").attr("id", "new")
@@ -801,6 +802,16 @@ export default {
       d3.select("#new").selectAll("*").remove()
       d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity)
     },
+    async back(){
+      if(this.flagUpdateOrAdd === true){
+        await this.save()
+        setTimeout(() =>{
+          this.$emit('dialogClose')
+        },1100)
+      }else{
+        this.$emit('dialogClose')
+      }
+    },
     async save(){
       this.done()
       let params = []
@@ -834,6 +845,7 @@ export default {
       this.queryInsEnv()
     },
     async log(){
+      // console.log(d3.select("#ssh\\.root\\@10\\.166\\.147\\.40"))
       console.log(d3.select("#new").node())
     },
     expression(){
@@ -881,8 +893,8 @@ export default {
     syncEnvironment(){
       this.environment_list.forEach((e) => {
         if (e['name'] === this.selected_environment) {
-          if(!d3.select("#"+e['id']).empty()){
-            d3.select("#"+e['id']).node().append(this.elm.node())
+          if(!d3.select("#"+e['id'].replaceAll('.','\\.').replaceAll('@','\\@')).empty()){
+            d3.select("#"+e['id'].replaceAll('.','\\.').replaceAll('@','\\@')).node().append(this.elm.node())
           }else{
             d3.select("#new").append('g')
             .attr("id", e['id'])
