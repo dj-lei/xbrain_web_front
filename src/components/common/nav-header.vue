@@ -1,9 +1,9 @@
 <template lang='pug'>
-  v-app-bar.nav-header(color='black', dark, app, clipped-left, clipped-right, fixed)
+  v-toolbar(color="yellow darken-3")
     v-layout(row)
-      v-flex(xs1)
-        v-img.org-logo(src='./assets/logo.png')
-      v-flex(xs10)
+      //- v-flex(xs1)
+      //-   v-img.org-logo(src='./assets/logo.png')
+      //- v-flex(xs10)
       v-flex(xs1)
         v-menu(v-if='isAuthenticated', offset-y, bottom, min-width='200', transition='slide-y-transition', left)
           template(v-slot:activator='{ on: menu, attrs }')
@@ -16,7 +16,7 @@
                   tile
                   height='64'
                   )
-                  v-icon(color='grey') mdi-account-circle
+                  v-icon(color='white') mdi-account-circle
               span {{ username }}
           v-list(nav)
             v-list-item(@click='logout')
@@ -25,7 +25,7 @@
         v-tooltip(v-else, left)
           template(v-slot:activator='{ on }')
             v-btn(icon, v-on='on', color='grey darken-3', @click='goLogin')
-              v-icon(color='grey') mdi-account-circle
+              v-icon(color='white') mdi-account-circle
           span Login
     Login(ref="login")
 </template>

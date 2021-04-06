@@ -2,11 +2,11 @@
   div(id="app")
     v-app(id="inspire")
       template
-        v-card(color="grey lighten-4", dark, flat, height="50px")
-          v-toolbar(dense)
+        v-card(color="grey lighten-4", flat, height="50px")
+          v-toolbar(dense color="yellow darken-3" dark)
             v-toolbar-title Viewers
             v-divider(class="mx-4", inset, vertical)
-            v-btn(color="primary", dark, @click="newItem") New Viewer
+            v-btn(@click="newItem") New Viewer
             v-spacer
             template(v-if="dialog")
               v-dialog(v-model="dialog", fullscreen, transition="dialog-bottom-transition")

@@ -1,6 +1,7 @@
 <template lang="pug">
   div
-    v-list.py-2(dense, dark)
+    NavHeader
+    v-list.py-2(dense color="yellow darken-3" dark)
       template(v-for='item of pages')
         v-list-item(
           v-if='item.k === `link`'
@@ -17,8 +18,12 @@
 
 <script>
 import { get, sync } from 'vuex-pathify'
+import NavHeader from './nav-header'
 
 export default {
+  components: {
+    NavHeader
+  },
   data() {
     return {
     }

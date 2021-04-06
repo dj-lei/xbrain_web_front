@@ -2,7 +2,7 @@
   div(id="app")
     v-app(id="inspire")
       template
-        v-card(color="grey lighten-4", dark, flat, height="50px")
+        v-card(color="yellow darken-3", dark, flat, height="50px")
           v-dialog(v-model="dialogSaving" max-width="500px")
             v-card
               v-card-title(class="headline") Are you sure want to save this comment?
@@ -19,10 +19,10 @@
                 v-btn(color="blue darken-1" text @click="dialogClosing = false") Cancel
                 v-btn(color="blue darken-1" text @click="closingConfirm") OK
                 v-spacer
-          v-toolbar(dense)
+          v-toolbar(dense color="yellow darken-3" dark)
             v-toolbar-title Feedbacks
             v-divider(class="mx-4", inset, vertical)
-            v-btn(color="primary", dark, @click="newItem") New Feedback
+            v-btn(@click="newItem") New Feedback
             v-spacer
             v-dialog(v-model="dialogRichTextEdit", transition="dialog-bottom-transition", max-width="800px")
               v-card

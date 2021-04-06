@@ -1,12 +1,12 @@
 <template lang="pug">
   v-card(class="d-flex justify-center mb-8")
-    v-card(class="pa-2" color='grey lighten-3')
+    v-card(class="pa-2" color="yellow darken-3" dark)
       v-sheet(width="85")
-        v-list(dense class="grow")
+        v-list(dense class="grow" color="yellow darken-3")
           v-list-item
             v-tooltip(bottom)
               template(v-slot:activator="{ on,attrs }")
-                v-icon(class="ml-4", v-bind="attrs", v-on="on", @click="back") mdi-keyboard-backspace
+                v-icon(class="ml-4", v-bind="attrs", v-on="on", @click="dialogBack = true") mdi-keyboard-backspace
               span BACK
           v-list-item
             p V/D
@@ -20,7 +20,7 @@
             v-list-item
               v-tooltip(bottom)
                 template(v-slot:activator="{ on,attrs }")
-                  v-icon(color="orange lighten-2", class="ml-4", v-bind="attrs", v-on="on", @click="save") mdi-content-save
+                  v-icon(color="light-green darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="save") mdi-content-save
                 span SAVE
             v-list-item
               v-tooltip(bottom)
@@ -57,9 +57,9 @@
                   template(v-slot:activator="{ on,attrs }")
                     v-icon(color="error", class="ml-4", v-bind="attrs", v-on="on", @click="runOrStop") mdi-play-pause
                   span PAUSE
-    v-card(class="pa-2" dark v-show="edit_mode")
+    v-card(class="pa-2" v-show="edit_mode" color="yellow darken-3" dark)
       v-sheet(width="115")
-        v-list(dense class="grow")
+        v-list(dense class="grow" color="yellow darken-3")
           v-list-item(v-for="(tool, j) in tools_category" :key="j")
             v-list-group
               template(v-slot:activator="")
@@ -67,24 +67,24 @@
               v-list-item-group(color="success")
                 v-list-item(v-for="(item, i) in tool.symbols" :disabled='item.symbol === "data" && is_viewer === true' dense :key="item.id" @click="selectedItem(item)")
                   v-list-item-title(v-text="item.symbol")
-                  template(v-if='tool.title !== "basic" && is_viewer === false')
+                  template(v-if='tool.title !== "BASIC" && is_viewer === false')
                     v-list-item-icon
                       v-icon(@click.stop="editItem(item)") mdi-pencil
     v-card(class="pa-2")
       v-sheet(color="grey lighten-4" :height="canvas_height" :width="canvas_width"  @dblclick="done")
         div(id="painting")
           svg(id="viz" :height="canvas_height" :width="canvas_width" class="container-border")
-    v-card(class="pa-2" dark v-show="edit_mode")
-      v-sheet(width="300")
+    v-card(class="pa-2" v-show="edit_mode" color="yellow darken-3" dark)
+      v-sheet(width="300" color="yellow darken-3")
         template(v-if="select_mode !== ''")
-          v-toolbar(dark)
+          v-toolbar(color="yellow darken-3")
             v-toolbar-title {{ select_mode }}
           v-spacer(class="mt-3")
           template(v-if="elm !== ''")
             template(v-if="lock === false")
-              v-btn(dark, @click="unlock") LOCK
+              v-btn(@click="unlock") LOCK
             template(v-else)
-              v-btn(dark, @click="unlock") UNLOCK
+              v-btn(@click="unlock") UNLOCK
           template(v-if="select_mode === 'path'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
@@ -115,7 +115,7 @@
                 v-col(class="pa-2")
                   v-btn(dark, @click="expression") EXPRESSION
             v-dialog(v-model="dialogExpression", max-width="1000px")
-              v-card
+              v-card(color="yellow darken-3" dark)
                 v-container(fluid)
                   v-row(class="d-flex justify-center")
                     v-col(class="pa-2")
@@ -123,47 +123,47 @@
                     v-divider(vertical)
                     v-col(class="pa-2")
                       v-textarea(v-model="express" @key.enter="autocomplete" label="Fill in the expression" auto-grow outlined :error="error_flag" :error-messages="error_messages")
-                      v-btn(dark :color="info_color" @click='checkExpression' depressed) CHECK
+                      v-btn(@click='checkExpression' depressed) CHECK
                         template(v-if="is_success === true")
-                          v-icon(dark right) mdi-checkbox-marked-circle
+                          v-icon(color="light-green accent-3" dark right) mdi-checkbox-marked-circle
           template(v-else-if="select_mode === 'viewer'")
+            v-btn( dark @click='interactive' depressed) INTERACTIVE
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
                 v-combobox(v-model="selected_environment" :items='coverToList()' label="Environment select" dense outlined @change="syncEnvironment")
                 v-row(class="d-flex justify-center" v-for="key in comVar" :key="key.name")
                   v-col(class="pa-2")
                     v-text-field(v-model="key.value" :label="key.name" outlined dense @change="updateComVar")
-                v-btn( dark @click='interactive' depressed) INTERACTIVE
           template(v-else-if="select_mode === 'chart'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
                 v-text-field(v-model="chart_text" label="Bind ID" outlined dense @change="updateBindId")
           template(v-else-if="select_mode === 'scene' && is_viewer === true")
-            v-card(color="grey darken-4")
+            v-card(color="yellow darken-3" dark)
               v-container(fluid)
                 v-card-title External Link
-                v-list(dense class="grow")
+                v-list(dense class="grow" color="yellow darken-3")
                   template(v-for="url in externalUrls")
                     v-list-item(target="_blank" :href="url.addr")
                       v-list-item-title(v-text="url.name")
                     v-divider
           template(v-if="select_mode !== 'data' && select_mode !== 'scene' && select_mode !== 'chart'")
             v-row
-              v-color-picker(v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
+              v-color-picker(dark v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
         v-dialog(v-model='dialogDataBind', dark, max-width="800px")
-          v-card
+          v-card(color="yellow darken-3" dark)
             v-container
               v-row
-                v-btn(color="primary", dark, @click="createCustomData") CUSTOM
+                v-btn(@click="createCustomData") CUSTOM
                 v-divider(class="mx-4" inset vertical)
                 v-combobox(v-model="custom_mode" :items="['string', 'list', 'expression', 'chart']" outlined dense)
                 v-spacer
               v-spacer(class="mt-3")
               v-divider
-              v-card
+              v-card(color="yellow darken-3" dark)
                 v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
         v-dialog(v-model='dialogConfig',  max-width="800px")
-          v-card
+          v-card(color="yellow darken-3" dark)
             v-container
               template(v-if="is_viewer === true")
                 v-row
@@ -171,14 +171,14 @@
                 v-card
                   v-data-table(:headers="externalUrlHeaders" :items="externalUrls" class="elevation-1" hide-default-footer)
                     template(v-slot:top="")
-                      v-toolbar(flat)
+                      v-toolbar(flat color="yellow darken-3" dark)
                         v-toolbar-title EXTERNAL LINK
                         v-divider(class="mx-4" inset vertical)
                         v-spacer
                         v-dialog(v-model="dialogExternalUrl" max-width="500px")
                           template(v-slot:activator="{ on, attrs }")
-                            v-btn(color="primary" dark class="mb-2" v-bind="attrs" v-on="on") New Item
-                          v-card
+                            v-btn(class="mb-2" v-bind="attrs" v-on="on") New Item
+                          v-card(color="yellow darken-3" dark)
                             v-card-text
                               v-container
                                 v-row
@@ -188,8 +188,8 @@
                                     v-text-field(v-model="editedItem.addr" label="external link addr" outlined dense)
                             v-card-actions
                               v-spacer
-                              v-btn(color="blue darken-1" text @click="dialogExternalUrl = false") CANCEL
-                              v-btn(color="blue darken-1" text @click="externalUrls.push(editedItem);editedItem = {};dialogExternalUrl = false") OK
+                              v-btn(text @click="dialogExternalUrl = false") CANCEL
+                              v-btn(text @click="externalUrls.push(editedItem);editedItem = {};dialogExternalUrl = false") OK
                     template(v-slot:item.actions="{ item,index }")
                       v-icon(small @click="externalUrls.splice(externalUrls.indexOf(item), 1)") mdi-delete
               template(v-else)
@@ -198,12 +198,20 @@
               v-row
                 v-spacer
                 template(v-if="is_viewer === true")
-                  v-btn(class="mt-3" color="primary", dark, @click="saveApiViewer") APPLY
+                  v-btn(class="mt-3" @click="saveApiViewer") APPLY
                 template(v-else)
-                  v-btn(class="mt-3" color="primary", dark, @click="saveApiBindData") APPLY
+                  v-btn(class="mt-3" @click="saveApiBindData") APPLY
                 v-spacer
-        v-dialog(v-model='dialogHotKey',  max-width="200px")
-          v-card
+        v-dialog(v-model="dialogBack" max-width="410px")
+          v-card(color="yellow darken-3" dark)
+            v-card-title(class="headline") Do you want to save this symbol?
+            v-card-actions
+              v-spacer
+              v-btn(text @click="$emit('dialogClose')") CANCEL
+              v-btn(text @click="back") YES
+              v-spacer
+        v-dialog(v-model='dialogHotKey',  max-width="250px")
+          v-card(color="yellow darken-3" dark)
             v-card-title
               span(class="headline") Hot Key
             v-divider
@@ -211,6 +219,15 @@
               p CTRL+C | copy element
               p CTRL+V | paste element
               p CTRL+S | save instance
+              p CTRL+Z | undo operation
+              p ----------Q | path function
+              p ---------W | polygon function
+              p ----------E | text function
+              p ----------R | data function
+              p ----------X | lock/unlock
+        v-snackbar(v-model="snackbar", :timeout="1500" color="yellow darken-3") HAS COPY
+          template(v-slot:action="{ attrs }")
+            v-btn(text, v-bind="attrs", @click="snackbar = false") Close
 </template>
 
 <script>
@@ -268,6 +285,7 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false },
       ],
       // url_get_bind_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
+      snackbar: false,
       lock: false,
       run_flag: false,
       interval: '',
@@ -276,7 +294,9 @@ export default {
       dialogExpression: false,
       dialogConfig: false,
       dialogExternalUrl: false,
+      dialogBack: false,
       express: '',
+      move_flag: false,
       error_flag: false,
       error_messages: '',
       is_success: false,
@@ -286,9 +306,9 @@ export default {
       fill_range: '',
       fill_param: '',
       fill_id: '',
-      hexa: '#FF00FF',
-      canvas_width: document.body.offsetWidth -570,
-      canvas_height: document.body.offsetHeight - 120,
+      hexa: '#000000',
+      canvas_width: document.body.offsetWidth -580,
+      canvas_height: document.body.offsetHeight - 40,
       margin: {
         top: 20,
         right: 40,
@@ -323,13 +343,14 @@ export default {
       refresh_interval: 1000,
       query_data_pool:[],
       history_data_pool:{},
+      history_operate_pool:[],
       env_pool:[],
     }
   },
   watch:{
     edit_mode(val){
       if(val === true){
-        this.canvas_width = document.body.offsetWidth -570
+        this.canvas_width = document.body.offsetWidth -580
       }else{
         this.canvas_width = document.body.offsetWidth -120
       }
@@ -375,10 +396,27 @@ export default {
           that.paste()
         }else if(key == 83){
           that.save()
+        }else if(key == 90){
+          that.$common.historyOperatePop(that.history_operate_pool)
         }
       }
       if (key== 46 || key== 8) { //Del or Backspace
         that.delete()
+      }else if(key == 81){
+        that.path_points = ''
+        that.select_mode = 'path'
+      }else if(key == 87){
+        that.polygon_points = ''
+        that.select_mode = 'polygon'
+      }else if(key == 69){
+        that.text = ''
+        that.select_mode = 'text'
+      }else if(key == 82){
+        that.dialogDataBind = true
+      }else if(key == 88){
+        that.unlock()
+      }else if(key == 123){
+        let vConsole = new VConsole()
       }
       return false
     }
@@ -455,11 +493,19 @@ export default {
       }
     }
     function dragged(event) {
-      if(Math.abs(that.mouse_position.x - event.x) >= 20 || Math.abs(that.mouse_position.y - event.y) >= 20){
+      if(that.move_flag){
         d3.select(this).attr("transform", `matrix(1 0 0 1 ${that.elm_position.x - (that.mouse_position.x - event.x)} ${that.elm_position.y - (that.mouse_position.y - event.y)})`)
+      }else if(Math.abs(that.mouse_position.x - event.x) >= 30 || Math.abs(that.mouse_position.y - event.y) >= 30){
+        that.move_flag = true
       }
     }
-    this.drag = d3.drag().on("start", dragstarted).on("drag", dragged)
+    function dragended(event) {
+      if(that.move_flag){
+        that.move_flag = false
+        that.$common.historyOperatePush(that.history_operate_pool, 'move', {'ins':d3.select(this), 'origin_value':that.elm_position})
+      }
+    }
+    this.drag = d3.drag().on("start", dragstarted).on("drag", dragged).on("end", dragended)
     this.viewer_drag = d3.drag().on("start", dragstarted)
   },
   methods: {
@@ -585,8 +631,8 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
-          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          // this.items = response.data.content
+          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          this.items = response.data.content
         })
     },
     async queryInsEnv(){
@@ -618,7 +664,7 @@ export default {
         .style('stroke-width', 2)
     },
     createPath() {
-      this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+      let tmp = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
         .append('path')
           .attr("class", "children")
           .attr("dom_type", 'path')
@@ -626,9 +672,10 @@ export default {
           .style("fill", 'none')
           .style('stroke', this.hexa)
           .style('stroke-width', 5)
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', tmp)
     },
     createPolygon() { // 100,100 100,400 300,400 300,100
-      this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+      let tmp = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
         .append("polygon")
           .attr("class", "children")
           .attr("dom_type", 'polygon')
@@ -636,19 +683,21 @@ export default {
           .style("fill", "none")
           .style('stroke', this.hexa)
           .style('stroke-width', 5)
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', tmp)
     },
     createText() {
-      this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+      let tmp = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
         .append("text")
           .attr("class", "children")
           .attr("dom_type", 'text')
           .attr("fill", this.hexa)
           // .attr("font-weight", "bold")
           .text(this.text)
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', tmp)
     },
     createData(){
       this.data = this.$common.jsonSearchId(this.items, this.bind_data)
-      let uuid = this.$common.generateUUID()
+      // let uuid = this.$common.generateUUID()
       let content = ''
       Object.keys(this.data).forEach((key) => {
         if (key == 'id') {
@@ -659,6 +708,7 @@ export default {
       })
       let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
       g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
       // g.attr("pointer-events", "all")
         // .on("mouseenter", (event, d) => {
         //   g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(g.select('path').attr('name'))
@@ -674,6 +724,7 @@ export default {
 
       if (this.custom_mode === 'expression'){
         g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
+        this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
         return
       }
 
@@ -681,6 +732,7 @@ export default {
           .attr("width", 40)
           .attr("height", 20)
         .html('<div id='+uuid+' class="children" dom_type="data"'+content+'>')
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
 
       if(this.custom_mode === 'string'){
         this.$common.createStringVar(d3.select("#"+uuid))
@@ -709,6 +761,7 @@ export default {
     },
     updatePath(){
       if (this.elm !== ''){
+        this.$common.historyOperatePush(this.history_operate_pool, 'update', this.elm)
         this.elm.select('.children').attr("d", this.path_points)
       }else{
         this.createPath()
@@ -716,6 +769,7 @@ export default {
     },
     updatePolygon(){
       if (this.elm !== ''){
+        this.$common.historyOperatePush(this.history_operate_pool, 'update', this.elm)
         this.elm.select('.children').attr("points", this.polygon_points)
       }else{
         this.createPolygon()
@@ -723,6 +777,7 @@ export default {
     },
     updateText(){
       if (this.elm !== ''){
+        this.$common.historyOperatePush(this.history_operate_pool, 'update', this.elm)
         this.elm.select('.children').text(this.text)
       }else{
         this.createText()
@@ -779,11 +834,15 @@ export default {
       if (this.elm !== ''){
         this.copy_elm = this.elm
         this.copy_elm.select('.check_box').remove()
+        this.snackbar = true
       }
     },
     paste() {
       if (this.copy_elm !== ''){
-        this.copy_elm.clone([true])
+        let tmp = this.copy_elm.clone([true])
+        let position = {'x': tmp.attr("transform").split(' ')[4], 'y': tmp.attr("transform").split(' ')[5].replace(')', '')}
+        tmp.attr("transform", `matrix(1 0 0 1 ${position.x + Math.round(Math.random()*100)} ${position.y + Math.round(Math.random()*100)})`)
+        this.$common.historyOperatePush(this.history_operate_pool, 'create', tmp)
         this.dragElements()
       }
     },
@@ -803,14 +862,11 @@ export default {
       d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity)
     },
     async back(){
-      if(this.flagUpdateOrAdd === true){
-        await this.save()
-        setTimeout(() =>{
-          this.$emit('dialogClose')
-        },1100)
-      }else{
+      await this.save()
+      this.dialogBack = false
+      setTimeout(() =>{
         this.$emit('dialogClose')
-      }
+      },1100)
     },
     async save(){
       this.done()
@@ -823,7 +879,6 @@ export default {
         d3.select("#new").attr("docid", this.items[0].id)
         d3.select("#new").attr("server", this.items[0].server)
       }
-      // d3.select("#new").attr("transform", 'translate(0,0) scale(1)')
       await this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
       if(this.is_viewer === true){
         this.saveApiViewer()
@@ -847,6 +902,7 @@ export default {
     async log(){
       // console.log(d3.select("#ssh\\.root\\@10\\.166\\.147\\.40"))
       console.log(d3.select("#new").node())
+      // console.log(this.history_operate_pool)
     },
     expression(){
       this.dialogExpression = true
@@ -1096,9 +1152,11 @@ export default {
         let tmp = data.getElementsByTagName('g')[0]
         tmp.setAttribute("id", instance_id)
         tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")
+        tmp.setAttribute("transform", that.matrix)
         tmp.setAttribute("dom_type", 'g')
         tmp.setAttribute("drag_event", 'true')
         d3.select('#new').node().append(tmp)
+        that.$common.historyOperatePush(that.history_operate_pool, 'create', d3.select('#'+instance_id))
         that.dragElements()
       })
     },

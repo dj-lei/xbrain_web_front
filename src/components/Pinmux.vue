@@ -3,10 +3,10 @@
     v-app(id="inspire")
       template
         v-card(color="grey lighten-4", dark, flat, height="50px")
-          v-toolbar(dense)
+          v-toolbar(dense color="yellow darken-3" dark)
             v-toolbar-title Pinmux Template
             v-divider(class="mx-4", inset, vertical)
-            v-btn(color="primary", dark, @click="newItem") New Template
+            v-btn(@click="newItem") New Template
             v-spacer
             v-dialog(v-model="dialog", transition="dialog-bottom-transition", max-width="400px")
               v-card

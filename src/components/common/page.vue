@@ -1,8 +1,8 @@
 <template lang="pug">
   v-app(dark)
-    NavHeader
+    //- NavHeader
     v-navigation-drawer(
-      dark
+      color="yellow darken-3"
       app
       clipped
       )

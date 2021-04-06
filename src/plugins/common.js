@@ -363,6 +363,41 @@ export default {
       }
       return tmp
     },
+
+    historyOperatePush(pool, operate_type, ins){
+      if(operate_type === 'create'){
+        pool.push({'type': operate_type, 'ins': ins})
+      }else if(operate_type === 'update'){
+        if(!ins.select('path').empty()){
+          pool.push({'type': operate_type, 'ins': ins, 'origin_value': ins.select('.children').attr("d")})
+        }else if(!ins.select('polygon').empty()){
+          pool.push({'type': operate_type, 'ins': ins, 'origin_value': ins.select('.children').attr("points")})
+        }else if(!ins.select('text').empty()){
+          pool.push({'type': operate_type, 'ins': ins, 'origin_value': ins.select('.children').text()})
+        }
+      }else if(operate_type === 'move'){
+        pool.push({'type': operate_type, 'ins': ins['ins'], 'origin_value': ins['origin_value']})
+      }
+    },
+
+    historyOperatePop(pool){
+      if(pool.length > 0){
+        let tmp = pool.pop()
+        if(tmp['type'] === 'create'){
+          tmp['ins'].remove()
+        }else if(tmp['type'] === 'update'){
+          if(!tmp['ins'].select('path').empty()){
+            tmp['ins'].select('.children').attr("d", tmp['origin_value'])
+          }else if(!tmp['ins'].select('polygon').empty()){
+            tmp['ins'].select('.children').attr("points", tmp['origin_value'])
+          }else if(!tmp['ins'].select('text').empty()){
+            tmp['ins'].select('.children').text(tmp['origin_value'])
+          }
+        }else if(tmp['type'] === 'move'){
+          tmp['ins'].attr("transform", `matrix(1 0 0 1 ${tmp['origin_value'].x} ${tmp['origin_value'].y})`)
+        }
+      }
+    },
     //****************************create custom data element************************//
     createStringVar(node){
       let custom_elm = node.append('input')

@@ -3,7 +3,7 @@
     v-app(id="inspire")
       template
         v-card(color="grey lighten-4", dark, flat)
-          v-toolbar(dense)
+          v-toolbar(dense color="yellow darken-3" dark)
             v-toolbar-title MineSweeper Task
             v-divider(class="mx-4", inset, vertical)
             v-spacer
