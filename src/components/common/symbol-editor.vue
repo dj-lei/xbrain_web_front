@@ -103,13 +103,16 @@
                 template(v-if="key === 'mode'")
                   v-combobox(v-model="selected" :items="['normal', 'interactive']" label="select mode" @change='initCtrlElm')
                 template(v-else-if="key === 'id' && Object.keys(data).indexOf('mode') > -1")
-                  v-text-field(v-model="fill_id" label="fill id" @change="initCtrlElm")
+                  v-text-field(id="id_text" v-model="fill_id" prepend-icon="mdi-content-copy" label="fill id" @click:prepend="copyToClipboard" @change="initCtrlElm")
                 template(v-else-if="key === 'range' && Object.keys(data).indexOf('mode') > -1")
                   v-text-field(v-model="fill_range" label="fill range" @change="initCtrlElm")
                 template(v-else-if="key === 'value' && Object.keys(data).indexOf('mode') > -1")
                   v-text-field(v-model="fill_param" label="fill param" :disabled="data['element'] === 'path'? false : true"  @change="initCtrlElm")
                 template(v-else)
-                  v-text-field(:value="data[key]" :label="key" disabled dense)
+                  template(v-if="key === 'id'")
+                    v-text-field(id="id_text" prepend-icon="mdi-content-copy" :value="data[key]" :label="key" @click:prepend="copyToClipboard" dense)
+                  template(v-else)
+                    v-text-field(:value="data[key]" :label="key" disabled dense)
             template(v-if="data['element'] === 'path' && Object.keys(data).indexOf('mode') > -1 ? true : false")
               v-row
                 v-col(class="pa-2")
@@ -225,7 +228,7 @@
               p ----------E | text function
               p ----------R | data function
               p ----------X | lock/unlock
-        v-snackbar(v-model="snackbar", :timeout="1500" color="yellow darken-3") HAS COPY
+        v-snackbar(v-model="snackbar", :timeout="1500" color="yellow darken-3") {{ info_snackbar }}
           template(v-slot:action="{ attrs }")
             v-btn(text, v-bind="attrs", @click="snackbar = false") Close
 </template>
@@ -301,6 +304,7 @@ export default {
       error_messages: '',
       is_success: false,
       info_color: 'info',
+      info_snackbar: 'Element has been copied',
       variable: [],
       selected: '',
       fill_range: '',
@@ -834,14 +838,23 @@ export default {
       if (this.elm !== ''){
         this.copy_elm = this.elm
         this.copy_elm.select('.check_box').remove()
+        this.info_snackbar = 'Element has been copied'
         this.snackbar = true
       }
     },
-    paste() {
+    copyToClipboard() {
+      if (this.elm !== ''){
+        document.getElementById('id_text').select()
+        document.execCommand("Copy")
+        this.info_snackbar = 'ID has been copied'
+        this.snackbar = true
+      }
+    },
+    async paste() {
       if (this.copy_elm !== ''){
         let tmp = this.copy_elm.clone([true])
         let position = {'x': tmp.attr("transform").split(' ')[4], 'y': tmp.attr("transform").split(' ')[5].replace(')', '')}
-        tmp.attr("transform", `matrix(1 0 0 1 ${position.x + Math.round(Math.random()*100)} ${position.y + Math.round(Math.random()*100)})`)
+        await tmp.attr("transform", `matrix(1 0 0 1 ${position.x + Math.round(Math.random()*100)} ${position.y + Math.round(Math.random()*100)})`)
         this.$common.historyOperatePush(this.history_operate_pool, 'create', tmp)
         this.dragElements()
       }

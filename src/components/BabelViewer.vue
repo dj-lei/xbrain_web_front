@@ -31,6 +31,8 @@
                 v-card-text
                   v-container
                     v-row
+                      v-text-field(v-model='viewer_group', label="Group or Project name")
+                    v-row
                       v-text-field(v-model='viewer_name', label="Viewer name")
                 v-card-actions
                   v-spacer
@@ -104,7 +106,7 @@ export default {
       data: [],
       search: '',
       is_viewer: true,
-      symbols:[{ title: 'basic', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
+      symbols:[{ title: 'BASIC', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
       svg_content: '',
       svg_temp: {},
       viewer_name: '',
