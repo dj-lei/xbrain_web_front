@@ -7,6 +7,7 @@
             v-toolbar-title MineSweeper Task
             v-divider(class="mx-4", inset, vertical)
             v-spacer
+            v-btn(@click="dialogVideo = true") Instruction
           v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
             v-card
               MindEdit(ref="mindEdit"
@@ -57,15 +58,21 @@
                 template(v-slot:activator="{ on,attrs }")
                   v-icon(small, v-bind="attrs", v-on="on", @click="exportTask(item)") mdi-export
                 span export
+      v-dialog(v-model='dialogVideo', max-width="1024px")
+        v-card(class="mx-auto")
+          video-player(:options="videoOptions")
 </template>
 
 <script>
+import VideoPlayer from "./common/video.vue"
 import MindEdit from './MindEdit.vue'
 import { get, sync } from 'vuex-pathify'
+import MineSweeperTaskMP4 from '../assets/FinalMineSweeperTask.mp4'
 
 export default {
   components: {
-    MindEdit
+    MindEdit,
+    VideoPlayer
   },
   data () {
     return {
@@ -77,6 +84,7 @@ export default {
       dialog: false,
       dialogDelete: false,
       dialogCloseTask: false,
+      dialogVideo: false,
       headers: [
         // { text: 'Id', value: 'id' },
         { text: 'TaskName', align: 'start', value: 'TaskName'},
@@ -89,6 +97,17 @@ export default {
       data: [],
       template_id: '',
       tempData: '',
+      videoOptions: {
+				autoplay: true,
+				controls: true,
+				sources: [
+					{
+						src:
+							MineSweeperTaskMP4,
+						  type: "video/mp4"
+					}
+				]
+			}
     }
   },
   created () {

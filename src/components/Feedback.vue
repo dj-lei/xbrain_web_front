@@ -26,7 +26,7 @@
             v-spacer
             v-dialog(v-model="dialogRichTextEdit", transition="dialog-bottom-transition", max-width="800px")
               v-card
-                v-toolbar(dark)
+                v-toolbar(dark dense color="yellow darken-3")
                   v-btn(icon, dark, @click="dialogRichTextEdit = false")
                     v-icon mdi-close
                   v-toolbar-title COMMENTS EDIT

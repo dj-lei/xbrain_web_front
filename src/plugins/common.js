@@ -32,6 +32,15 @@ export default {
        return theRequest
     },
     getTime (time_stamp) {
+      let yy = new Date().getFullYear();
+      let mm = new Date().getMonth()+1;
+      let dd = new Date().getDate();
+      let hh = new Date().getHours()
+      let mf = new Date().getMinutes()<10 ? '0'+new Date().getMinutes() : new Date().getMinutes();
+      let ss = new Date().getSeconds()<10 ? '0'+new Date().getSeconds() : new Date().getSeconds();
+      return yy+'-'+mm+'-'+dd+' '+hh+':'+mf+':'+ss
+    },
+    getTimeHour (time_stamp) {
       // let yy = new Date().getFullYear();
       // let mm = new Date().getMonth()+1;
       // let dd = new Date().getDate();
@@ -359,7 +368,7 @@ export default {
       let tmp = []
       let cur_time = Date.parse(new Date())
       for(let i=0;i<slice_num;i++){
-        tmp.push(this.getTime(cur_time - (slice_num-i)*refresh_interval))
+        tmp.push(this.getTimeHour(cur_time - (slice_num-i)*refresh_interval))
       }
       return tmp
     },

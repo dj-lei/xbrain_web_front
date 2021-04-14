@@ -3,9 +3,10 @@
     v-app(id="inspire")
       template
         v-card(color="grey lighten-4", dark, flat, height="50px")
-          v-toolbar(dense)
+          v-toolbar(dense color="yellow darken-3")
             v-toolbar-title Hunter
             //- v-divider(class="mx-4", inset, vertical)
+            
             //- v-spacer
         v-row(class="d-flex justify-center")
           v-col(cols="12" sm="6" md="9")
@@ -13,11 +14,11 @@
           v-col(cols="12" sm="6" md="1")
             v-combobox(v-model="selected_mode" :items="['FileName', 'FileDir', 'FileContent', 'ImageDesc', 'ImageContent']" label="mode" outlined dense)
           v-col(cols="12" sm="6" md="1")
-            v-btn(color="primary", dark, @click="search") SEARCH
-        v-card(color="grey lighten-4", dark, flat)
+            v-btn(dark, @click="search") SEARCH
+        v-card(flat)
           v-row(justify="center")
             v-expansion-panels(inset)
-              v-expansion-panel(v-for="(item,i) in items" :key="i")
+              v-expansion-panel(color="yellow darken-3" v-for="(item,i) in items" :key="i")
                 v-expansion-panel-header(disable-icon-rotate) {{ item.name }}
                   template(v-slot:actions="")
                     v-icon(color="green" @click.stop="loadPdf(item.path)") mdi-export
@@ -26,8 +27,6 @@
         v-dialog(v-model='dialogDocDisplay')
           v-card
             div(v-html="html")
-                
-          
 </template>
 
 <script>

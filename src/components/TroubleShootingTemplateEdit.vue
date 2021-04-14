@@ -9,6 +9,7 @@
             template(v-if='isAuthenticated === true')
               v-btn(@click="newItem") New Template
             v-spacer
+            v-btn(@click="dialogVideo = true") Instruction
             v-dialog(v-model="dialog", fullscreen, eager, hide-overlay, transition="dialog-bottom-transition")
               v-card
                 MindEdit(ref="mindEdit"
@@ -71,16 +72,22 @@
                 template(v-slot:activator="{ on,attrs }")
                   v-icon(small, v-bind="attrs", v-on="on", @click="releaseTask(item)") mdi-antenna
                 span release
+      v-dialog(v-model='dialogVideo', max-width="1024px")
+        v-card(class="mx-auto")
+          video-player(:options="videoOptions")
 </template>
 
 <script>
 import MindEdit from './MindEdit.vue'
+import VideoPlayer from "./common/video.vue"
 import EditorJS from '@editorjs/editorjs'
 import { get, sync } from 'vuex-pathify'
+import MineSweeperEditMP4 from '../assets/FinalMineSweeperEdit.mp4'
 
 export default {
   components: {
-    MindEdit
+    MindEdit,
+    VideoPlayer
   },
   computed: {
     username: sync('username'),
@@ -94,6 +101,7 @@ export default {
       dialogSaveTemplate: false,
       dialogReleaseTask: false,
       dialogImages: false,
+      dialogVideo: false,
       errorShown: false,
       headers: [
         // { text: 'Id', value: 'id' },
@@ -114,6 +122,17 @@ export default {
       flagUpdateOrAdd: false,
       isModifyTemplate: '',
       operateId: '',
+      videoOptions: {
+				autoplay: true,
+				controls: true,
+				sources: [
+					{
+						src:
+							MineSweeperEditMP4,
+						  type: "video/mp4"
+					}
+				]
+			}
     }
   },
 

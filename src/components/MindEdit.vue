@@ -2,7 +2,7 @@
   .mind
     v-app
       v-card
-        v-toolbar(dark)
+        v-toolbar(dark dense color="yellow darken-3")
           v-btn(icon, dark, @click="$emit('dialogClose')")
             v-icon mdi-close
           template(v-if='contextMenu === false')

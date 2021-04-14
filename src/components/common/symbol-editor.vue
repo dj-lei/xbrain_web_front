@@ -544,6 +544,21 @@ export default {
     },
     dragElements(){
       let that = this
+
+      d3.selectAll(".children").each(function(d, i) {
+        if(d3.select(this).attr('dom_type') === 'data'){
+          that.$common.bindEvent(d3.select(this))
+          if(d3.select(this).attr('d') !== null){
+            d3.select(this.parentNode).call(that.viewer_drag)
+          }else{
+            d3.select(this.parentNode.parentNode).call(that.viewer_drag)
+          }
+        }
+        if(d3.select(this).attr('dom_type') === 'chart'){
+          d3.select(this.parentNode.parentNode).call(that.viewer_drag)
+        }
+      })
+
       d3.select("#new").each(function(d, i) {
         d3.selectAll(this.childNodes).each(function(d, i) {
           if(d3.select(this).attr('class') === 'environment'){
@@ -562,19 +577,6 @@ export default {
             }
           }
         })
-      })
-      d3.selectAll(".children").each(function(d, i) {
-        if(d3.select(this).attr('dom_type') === 'data'){
-          that.$common.bindEvent(d3.select(this))
-          if(that.is_viewer === true){
-            d3.select(this.parentNode).call(that.viewer_drag)
-          }
-        }
-        if(d3.select(this).attr('dom_type') === 'chart'){
-          if(that.is_viewer === true){
-            d3.select(this.parentNode.parentNode).call(that.viewer_drag)
-          }
-        }
       })
     },
     xAxis(g, x, transform){
@@ -635,8 +637,8 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
-          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          // this.items = response.data.content
+          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          this.items = response.data.content
         })
     },
     async queryInsEnv(){
