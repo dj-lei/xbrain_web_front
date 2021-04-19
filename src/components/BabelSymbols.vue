@@ -277,7 +277,7 @@ export default {
 
       await this.$http.post(this.$urls.babel_save, formData, config).then(
         (response)=>{
-          console.log(response.data)
+          this.operateId = response.data.symbol_id
       }, (error) => {
         console.log(error)
       })
@@ -305,13 +305,14 @@ export default {
       await this.$http.post(this.$urls.babel_save, formData, config).then(
         (response)=>{
           this.url_get_bind_data = api_url
+          this.$store.set('progress', false)
       }, (error) => {
         console.log(error)
       })
-      setTimeout(() =>{
-        // this.initialize()
-        this.$store.set('progress', false)
-      },1000)
+      // setTimeout(() =>{
+      //   // this.initialize()
+      //   this.$store.set('progress', false)
+      // },1000)
     },
   },
 }

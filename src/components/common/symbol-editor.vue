@@ -85,6 +85,8 @@
               v-btn(@click="unlock") LOCK
             template(v-else)
               v-btn(@click="unlock") UNLOCK
+            template(v-if="elm.attr('dom_type') === 'g' && is_viewer !== true")
+              v-text-field(id="id_text" v-model="fill_id" prepend-icon="mdi-content-copy" label="fill id" @click:prepend="copyToClipboard" @change="initCtrlElm")
           template(v-if="select_mode === 'path'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
@@ -101,7 +103,7 @@
             v-row(class="d-flex justify-center" v-for="key in Object.keys(data)" :key="key.id")
               v-col(class="pa-2")
                 template(v-if="key === 'mode'")
-                  v-combobox(v-model="selected" :items="['normal', 'interactive']" label="select mode" @change='initCtrlElm')
+                  v-combobox(v-model="selected" :items="['normal', 'api_param']" label="select mode" @change='initCtrlElm')
                 template(v-else-if="key === 'id' && Object.keys(data).indexOf('mode') > -1")
                   v-text-field(id="id_text" v-model="fill_id" prepend-icon="mdi-content-copy" label="fill id" @click:prepend="copyToClipboard" @change="initCtrlElm")
                 template(v-else-if="key === 'range' && Object.keys(data).indexOf('mode') > -1")
@@ -130,13 +132,13 @@
                         template(v-if="is_success === true")
                           v-icon(color="light-green accent-3" dark right) mdi-checkbox-marked-circle
           template(v-else-if="select_mode === 'viewer'")
-            v-btn( dark @click='interactive' depressed) INTERACTIVE
+            //- v-btn( dark @click='interactive' depressed) INTERACTIVE
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
                 v-combobox(v-model="selected_environment" :items='coverToList()' label="Environment select" dense outlined @change="syncEnvironment")
-                v-row(class="d-flex justify-center" v-for="key in comVar" :key="key.name")
-                  v-col(class="pa-2")
-                    v-text-field(v-model="key.value" :label="key.name" outlined dense @change="updateComVar")
+                //- v-row(class="d-flex justify-center" v-for="key in comVar" :key="key.name")
+                //-   v-col(class="pa-2")
+                //-     v-text-field(v-model="key.value" :label="key.name" outlined dense @change="updateComVar")
           template(v-else-if="select_mode === 'chart'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
@@ -270,11 +272,11 @@ export default {
       edit_mode:false,
       items: [],
       svgIns: [],
-      comVar: [],
+      // comVar: [],
       url_get_bind_data: '',
       url_get_ins_env: '',
       url_post_config_read_data: '',
-      url_post_interactive_data: '',
+      // url_post_interactive_data: '',
       selected_environment: '',
       environment_list: [],
       externalUrls: [],
@@ -441,12 +443,16 @@ export default {
       that.mouse_position = {'x': event.x, 'y': event.y}
       that.elm_position = {'x': d3.select(this).attr("transform").split(' ')[4], 'y': d3.select(this).attr("transform").split(' ')[5].replace(')', '')}
       that.lock = d3.select(this).attr('drag_event') === 'true' ? false : true
-      that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
-
+      if(that.run_flag === false){
+        that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
+      }
+      
       if (that.is_viewer === true && d3.select(this).attr("dom_type") === 'g'){
         that.select_mode = 'viewer'
         that.selected_environment = d3.select(this.parentNode).attr("environment_name")
-        that.comVar = JSON.parse(d3.select(this.parentNode).attr("params"))
+      }else if(d3.select(this).attr("dom_type") === 'g'){
+        that.select_mode = 'scene'
+        that.fill_id = d3.select(this).attr('id')
       }else if(d3.select(this).attr("dom_type") !== 'g'){
         if (d3.select(this).select('.children').attr("dom_type") === 'polygon') {
           that.select_mode = 'polygon'
@@ -535,7 +541,6 @@ export default {
     zoomed(event) {
       const {transform} = event
       this.transform = transform
-
       d3.select("#axis").selectAll('text').call(g => g.attr("transform", transform))
       d3.select("#new").attr("transform", transform)
 
@@ -613,6 +618,7 @@ export default {
           let tmp = data.getElementsByTagName('g')[0]
           d3.select("#new").remove()
           d3.select('#viz').node().append(tmp)
+          d3.select("#new").attr("transform", this.transform)
           this.svg = d3.select("#new")
           this.dragElements()
         })
@@ -637,8 +643,8 @@ export default {
     async queryBackendData(){
       await axios.get(this.url_get_bind_data)
         .then(response => {
-          // this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          this.items = response.data.content
+          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
+          // this.items = response.data.content
         })
     },
     async queryInsEnv(){
@@ -797,11 +803,11 @@ export default {
         data.innerHTML = this.data_name+":"+this.data_value
       }
     },
-    updateComVar(){
-      if (this.elm !== ''){
-        this.elm.select(function() { return this.parentNode }).attr('params', JSON.stringify(this.comVar))
-      }
-    },
+    // updateComVar(){
+    //   if (this.elm !== ''){
+    //     this.elm.select(function() { return this.parentNode }).attr('params', JSON.stringify(this.comVar))
+    //   }
+    // },
     updateBindId(){
       if (this.elm !== ''){
         this.elm.select('div').attr('bind_id', window.btoa(this.chart_text) )
@@ -885,15 +891,15 @@ export default {
     },
     async save(){
       this.done()
-      let params = []
-      if(this.items.length > 0){
-        this.items[0].params.forEach((key) => {
-          params.push({'name': key.name, 'value': 'content'})
-        })
-        d3.select("#new").attr("params", JSON.stringify(params))
-        d3.select("#new").attr("docid", this.items[0].id)
-        d3.select("#new").attr("server", this.items[0].server)
-      }
+      // let params = []
+      // if(this.items.length > 0){
+      //   this.items[0].params.forEach((key) => {
+      //     params.push({'name': key.name, 'value': 'content'})
+      //   })
+      //   d3.select("#new").attr("params", JSON.stringify(params))
+      //   d3.select("#new").attr("docid", this.items[0].id)
+      //   d3.select("#new").attr("server", this.items[0].server)
+      // }
       await this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
       if(this.is_viewer === true){
         this.saveApiViewer()
@@ -915,6 +921,10 @@ export default {
       this.queryInsEnv()
     },
     async log(){
+      // let that = this
+      // this.$common.getNodeChildNotCustomModular(d3.select('#a')).each(function(d, i) {
+      //   console.log(that.$common.getModularCommonVarAndKeys(d3.select(this)))
+      // })
       // console.log(d3.select("#ssh\\.root\\@10\\.166\\.147\\.40"))
       console.log(d3.select("#new").node())
       // console.log(this.history_operate_pool)
@@ -970,9 +980,9 @@ export default {
             d3.select("#new").append('g')
             .attr("id", e['id'])
             .attr("environment_name", e['name'])
-            .attr("params", this.elm.attr('params'))
-            .attr("docid", this.elm.attr('docid'))
-            .attr("server", this.elm.attr('server'))
+            // .attr("params", this.elm.attr('params'))
+            // .attr("docid", this.elm.attr('docid'))
+            // .attr("server", e['server'])
             .attr("class", "environment")
             .node().append(this.elm.node())
           }
@@ -984,7 +994,9 @@ export default {
     },
     initCtrlElm(){
       if (this.elm !== ''){
-        if(this.elm.select('path').empty()){
+        if(this.elm.attr('dom_type') === 'g'){
+          this.elm.attr('id', this.fill_id)
+        }else if(!this.elm.select('div').empty()){
           this.elm.select('div')
             .attr('id', this.fill_id)
             .attr('mode', window.btoa(this.selected))
@@ -992,11 +1004,13 @@ export default {
             this.elm.select('select').remove()
             this.$common.createSelectVar(this.elm.select('div'),this.fill_range.split(','))
           }
-        }else{
+        }else if(!this.elm.select('path').empty()){
           this.elm.select('path')
             .attr('id', this.fill_id)
             .attr('value', window.btoa(this.fill_param))
             .attr('mode', window.btoa(this.selected))
+        }else{
+
         }
       }
     },
@@ -1004,118 +1018,124 @@ export default {
       if(this.run_flag === false){
         let that = this
         this.run_flag = true
-        this.query_data_pool = []
+        // this.query_data_pool = []
+
         d3.selectAll(".environment").each(function(d, i) {
           that.history_data_pool[d3.select(this).attr('id')] = []
         })
+
         this.interval = setInterval(function() {
           d3.selectAll(".environment").each(function(d, i) {
-            let hardware = this
-            let query_struc = {
-              'username': that.username,
-              'operate': "hardware_environment_save_config",
-              'url': d3.select(hardware).attr('server'),
-              'sid': d3.select(hardware).attr("id"),
-              'docid': d3.select(hardware).attr("docid"),
-              'params':d3.select(hardware).attr('params'),
-            }
-
-            d3.select(hardware).selectAll("path").each(function(d, i) {
-              if(d3.select(this).attr('dom_type') === 'data'){
-                let data = d3.select(this).node()
-                if (data.getAttribute('expression') !== null) {
-                  that.$common.getRootVar(data.getAttribute("expression"), that.query_data_pool)
-                }else{
-                  if (data.getAttribute('mode') === null) {
-                    that.query_data_pool.push(data.getAttribute("id"))
-                  }
-                }
-              }
-            })
-            JSON.parse(query_struc['params']).forEach((key) =>{
-              query_struc["addr_map"] = key.value
-            })
-            query_struc["key"] = that.$common.dedupe(that.query_data_pool).join(',')
-            // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
+            let env = this
             let config = {
               headers: {
               'Content-Type': 'multipart/form-data'
               }
             }
-            let formData = new FormData()
-            for ( let key in query_struc) {
-                formData.append(key, query_struc[key])
-            }
-            axios.post(query_struc['url'], formData, config)
-            .then(
-              (response)=>{
-                let he = response.data
-                // console.log(he)
-                let data_slice = {}
-                d3.select(hardware).selectAll("path").each(function(d, i) {
-                  if(d3.select(this).attr('dom_type') === 'data'){
-                    let data = d3.select(this).node()
-                    if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
-                      data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
-                    }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") === -1) {
-                      let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
-                      data.setAttribute("value", window.btoa(temp))
-                    }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") !== -1 ) {
-                      let expression = window.atob(data.getAttribute('expression'))
-                      let vars = expression.match(/(\$\{(.*?)\})/g)
-                      if (vars !== null) {
-                        vars.forEach((v) => {
-                          expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he, hardware))
-                        })
-                        try{
-                          let result = that.$common.calExpressDepend(window.btoa(expression), he, hardware)
-                          if(typeof(result) === 'undefined'){
-                            data.setAttribute("value", window.btoa(expression))
-                          }else{
-                            data.setAttribute("value", window.btoa(result))
-                          }
-                        }catch(err){
-                          data.setAttribute("value", window.btoa(expression))
-                        }
-                      }else{
+            that.$common.getNodeChildNotCustomModular(d3.select(env)).each(function(d, i) {
+              let params = that.$common.getModularCommonVarAndKeys(d3.select(this))
+              let formData = new FormData()
+              params['coms'].forEach((com) =>{
+                formData.append(com['id'], com['value'])
+              })
+              formData.append('username', that.username)
+              formData.append('operate', "hardware_environment_save_config")
+              formData.append('sid', d3.select(env).attr('id'))
+              formData.append('key', that.$common.dedupe(params['ids']).join(','))
+
+              axios.post(formData.get('api'), formData, config)
+              .then(
+                (response)=>{
+                  let he = response.data
+                  // console.log(he)
+                  let data_slice = {}
+                  d3.select(this).selectAll("path").each(function(d, i) {
+                    if(d3.select(this).attr('dom_type') === 'data'){
+                      let data = d3.select(this).node()
+                      if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
+                        data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
+                      }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") === -1) {
                         let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
                         data.setAttribute("value", window.btoa(temp))
+                      }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") !== -1 ) {
+                        let expression = window.atob(data.getAttribute('expression'))
+                        let vars = expression.match(/(\$\{(.*?)\})/g)
+                        if (vars !== null) {
+                          vars.forEach((v) => {
+                            expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he, hardware))
+                          })
+                          try{
+                            let result = that.$common.calExpressDepend(window.btoa(expression), he, env)
+                            if(typeof(result) === 'undefined'){
+                              data.setAttribute("value", window.btoa(expression))
+                            }else{
+                              data.setAttribute("value", window.btoa(result))
+                            }
+                          }catch(err){
+                            data.setAttribute("value", window.btoa(expression))
+                          }
+                        }else{
+                          let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, env)
+                          data.setAttribute("value", window.btoa(temp))
+                        }
                       }
+                      data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
                     }
-                    data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
-                  }
-                })
-                that.history_data_pool[d3.select(hardware).attr('id')].push(data_slice)
-                d3.select(hardware).selectAll('.tip').each(function(d, i) {
-                  let path = d3.select(this.parentNode).select('path')
-                  d3.select(this).text(window.atob(path.attr('value')))
-                })
-                d3.select(hardware).selectAll('.children').each(function(d, i) {
-                  if(d3.select(this).attr('dom_type') === 'chart'){
-                    let series = []
-                    let names = []
-                    if(d3.select(this).attr('bind_id') !== null){
-                      window.atob(d3.select(this).attr('bind_id')).split(',').forEach((id) => {
-                        let tmp = []
-                        names.push(id)
-                        that.history_data_pool[d3.select(hardware).attr('id')].forEach((slice) => {
-                          tmp.push(slice[id])
-                        })
-                        tmp = that.$common.sliceYAxisQueueHandle(tmp, 30)
-                        series.push({'name':id, 'type':'line', 'showSymbol':false, data:tmp})
-                      })
-                      let ins = echarts.getInstanceByDom(document.getElementById(d3.select(this).attr('id')))
-                      if (ins == null){
-                        echarts.init(document.getElementById(d3.select(this).attr('id'))).setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)))
-                      }else{
-                        ins.setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
-                      }
-                    }
-                  }
-                })
-            }, (error) => {
-              console.log(error)
+                  })
+                  that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,data_slice)
+                  
+              }, (error) => {
+                console.log(error)
+              })
             })
+
+            setTimeout(() =>{
+              that.$common.getNodeChildCustomModular(d3.select(env)).each(function(d, i) {
+                let data_slice = {}
+                d3.select(this).selectAll("path").each(function(d, i) {
+                  if(d3.select(this).attr('dom_type') === 'data'){
+                    let data = d3.select(this).node()
+                    if(data.getAttribute('expression') !== null) {
+                      let temp = that.$common.calExpressDependVersion2(data.getAttribute('expression'), d3.select(env))
+                      data.setAttribute("value", window.btoa(temp))
+                      data_slice[data.getAttribute('id')] = temp
+                    }
+                  }
+                })
+                that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,data_slice)
+              })
+              // console.log(that.history_data_pool)
+              d3.select(env).selectAll('.tip').each(function(d, i) {
+                let path = d3.select(this.parentNode).select('path')
+                d3.select(this).text(window.atob(path.attr('value')))
+              })
+
+              d3.select(this).selectAll('.children').each(function(d, i) {
+                if(d3.select(this).attr('dom_type') === 'chart'){
+                  let series = []
+                  let names = []
+                  if(d3.select(this).attr('bind_id') !== null){
+                    window.atob(d3.select(this).attr('bind_id')).split(',').forEach((id) => {
+                      let tmp = []
+                      let ids = id.split('.')
+                      names.push(id)
+                      that.history_data_pool[d3.select(env).attr('id')][ids.slice(0, ids.length-1).join('.')].forEach((slice) => {
+                        tmp.push(slice[ids.slice(-1)[0]])
+                      })
+                      tmp = that.$common.sliceYAxisQueueHandle(tmp, 30)
+                      series.push({'name':id, 'type':'line', 'showSymbol':false, data:tmp})
+                    })
+                    let ins = echarts.getInstanceByDom(d3.select(this).node())
+                    if (ins == null){
+                      echarts.init(d3.select(this).node()).setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)))
+                    }else{
+                      ins.setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
+                    }
+                  }
+                }
+              })
+            }, 100)
+            // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
           })
         },this.refresh_interval)
       }else{
@@ -1123,39 +1143,162 @@ export default {
         this.run_flag = false
       }
     },
-    async interactive(){
-      let res = []
+    // async runOrStop(){
+    //   if(this.run_flag === false){
+    //     let that = this
+    //     this.run_flag = true
+    //     this.query_data_pool = []
+    //     d3.selectAll(".environment").each(function(d, i) {
+    //       that.history_data_pool[d3.select(this).attr('id')] = []
+    //     })
+    //     this.interval = setInterval(function() {
+    //       d3.selectAll(".environment").each(function(d, i) {
+    //         let hardware = this
+    //         let query_struc = {
+    //           'username': that.username,
+    //           'operate': "hardware_environment_save_config",
+    //           'url': d3.select(hardware).attr('server'),
+    //           'sid': d3.select(hardware).attr("id"),
+    //           'docid': d3.select(hardware).attr("docid"),
+    //           'params':d3.select(hardware).attr('params'),
+    //         }
 
-      let formData = new FormData()
-      let parent = this.elm.select(function() { return this.parentNode })
-      formData.append("username", this.username)
-      formData.append("sid", parent.attr("id"))
-      formData.append("docid", parent.attr("docid"))
+    //         d3.select(hardware).selectAll("path").each(function(d, i) {
+    //           if(d3.select(this).attr('dom_type') === 'data'){
+    //             let data = d3.select(this).node()
+    //             if (data.getAttribute('expression') !== null) {
+    //               that.$common.getRootVar(data.getAttribute("expression"), that.query_data_pool)
+    //             }else{
+    //               if (data.getAttribute('mode') === null) {
+    //                 that.query_data_pool.push(data.getAttribute("id"))
+    //               }
+    //             }
+    //           }
+    //         })
+    //         JSON.parse(query_struc['params']).forEach((key) =>{
+    //           query_struc["addr_map"] = key.value
+    //         })
+    //         query_struc["key"] = that.$common.dedupe(that.query_data_pool).join(',')
+    //         // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
+    //         let config = {
+    //           headers: {
+    //           'Content-Type': 'multipart/form-data'
+    //           }
+    //         }
+    //         let formData = new FormData()
+    //         for ( let key in query_struc) {
+    //             formData.append(key, query_struc[key])
+    //         }
+    //         axios.post(query_struc['url'], formData, config)
+    //         .then(
+    //           (response)=>{
+    //             let he = response.data
+    //             // console.log(he)
+    //             let data_slice = {}
+    //             d3.select(hardware).selectAll("path").each(function(d, i) {
+    //               if(d3.select(this).attr('dom_type') === 'data'){
+    //                 let data = d3.select(this).node()
+    //                 if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
+    //                   data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
+    //                 }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") === -1) {
+    //                   let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
+    //                   data.setAttribute("value", window.btoa(temp))
+    //                 }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") !== -1 ) {
+    //                   let expression = window.atob(data.getAttribute('expression'))
+    //                   let vars = expression.match(/(\$\{(.*?)\})/g)
+    //                   if (vars !== null) {
+    //                     vars.forEach((v) => {
+    //                       expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he, hardware))
+    //                     })
+    //                     try{
+    //                       let result = that.$common.calExpressDepend(window.btoa(expression), he, hardware)
+    //                       if(typeof(result) === 'undefined'){
+    //                         data.setAttribute("value", window.btoa(expression))
+    //                       }else{
+    //                         data.setAttribute("value", window.btoa(result))
+    //                       }
+    //                     }catch(err){
+    //                       data.setAttribute("value", window.btoa(expression))
+    //                     }
+    //                   }else{
+    //                     let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
+    //                     data.setAttribute("value", window.btoa(temp))
+    //                   }
+    //                 }
+    //                 data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
+    //               }
+    //             })
+    //             that.history_data_pool[d3.select(hardware).attr('id')].push(data_slice)
+    //             d3.select(hardware).selectAll('.tip').each(function(d, i) {
+    //               let path = d3.select(this.parentNode).select('path')
+    //               d3.select(this).text(window.atob(path.attr('value')))
+    //             })
+    //             d3.select(hardware).selectAll('.children').each(function(d, i) {
+    //               if(d3.select(this).attr('dom_type') === 'chart'){
+    //                 let series = []
+    //                 let names = []
+    //                 if(d3.select(this).attr('bind_id') !== null){
+    //                   window.atob(d3.select(this).attr('bind_id')).split(',').forEach((id) => {
+    //                     let tmp = []
+    //                     names.push(id)
+    //                     that.history_data_pool[d3.select(hardware).attr('id')].forEach((slice) => {
+    //                       tmp.push(slice[id])
+    //                     })
+    //                     tmp = that.$common.sliceYAxisQueueHandle(tmp, 30)
+    //                     series.push({'name':id, 'type':'line', 'showSymbol':false, data:tmp})
+    //                   })
+    //                   let ins = echarts.getInstanceByDom(document.getElementById(d3.select(this).attr('id')))
+    //                   if (ins == null){
+    //                     echarts.init(document.getElementById(d3.select(this).attr('id'))).setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)))
+    //                   }else{
+    //                     ins.setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
+    //                   }
+    //                 }
+    //               }
+    //             })
+    //         }, (error) => {
+    //           console.log(error)
+    //         })
+    //       })
+    //     },this.refresh_interval)
+    //   }else{
+    //     clearInterval(this.interval)
+    //     this.run_flag = false
+    //   }
+    // },
+    // async interactive(){
+    //   let res = []
 
-      parent.selectAll(".children").each(function(d, i) {
-        if(d3.select(this).attr('dom_type') === 'data'){
-          let tmp = {}
-          let data = d3.select(this).node()
-          if (window.atob(data.getAttribute("mode")) === 'interactive'){
-            tmp['id'] = data.getAttribute("id")
-            tmp['value'] = window.atob(data.getAttribute("value"))
-            tmp['expression'] = data.getAttribute("expression") !== null ? window.atob(data.getAttribute("expression")) : ""
-            res.push(tmp)
-          }
-        }
-      })
-      formData.append("key", JSON.stringify(res))
+    //   let formData = new FormData()
+    //   let parent = this.elm.select(function() { return this.parentNode })
+    //   formData.append("username", this.username)
+    //   formData.append("sid", parent.attr("id"))
+    //   formData.append("docid", parent.attr("docid"))
 
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
-        }
-      }
-      await axios.post(parent.attr("server"), formData, config).then(
-        (response)=>{
-        console.log(response.data.content)
-      })
-    },
+    //   parent.selectAll(".children").each(function(d, i) {
+    //     if(d3.select(this).attr('dom_type') === 'data'){
+    //       let tmp = {}
+    //       let data = d3.select(this).node()
+    //       if (window.atob(data.getAttribute("mode")) === 'interactive'){
+    //         tmp['id'] = data.getAttribute("id")
+    //         tmp['value'] = window.atob(data.getAttribute("value"))
+    //         tmp['expression'] = data.getAttribute("expression") !== null ? window.atob(data.getAttribute("expression")) : ""
+    //         res.push(tmp)
+    //       }
+    //     }
+    //   })
+    //   formData.append("key", JSON.stringify(res))
+
+    //   let config = {
+    //     headers: {
+    //     'Content-Type': 'multipart/form-data'
+    //     }
+    //   }
+    //   await axios.post(parent.attr("server"), formData, config).then(
+    //     (response)=>{
+    //     console.log(response.data.content)
+    //   })
+    // },
     importSvg(){
       document.getElementById('fileInput').click()
     },
@@ -1163,7 +1306,7 @@ export default {
       let that = this
       d3.xml(svg)
       .then(data => {
-        let instance_id = this.$common.generateUUID()
+        let instance_id = this.$common.generateUUID()+'operate_element'
         let tmp = data.getElementsByTagName('g')[0]
         tmp.setAttribute("id", instance_id)
         tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")

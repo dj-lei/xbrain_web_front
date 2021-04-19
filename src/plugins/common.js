@@ -241,6 +241,24 @@ export default {
       return math.evaluate(expression)
     },
 
+    calExpressDependVersion2(expression, node){
+      expression = window.atob(expression)
+      let vars = expression.match(/([a-zA-Z$][\w.${}]+)/g)
+      vars.forEach((v) => {
+        expression = expression.replace(v, window.atob(this.getPathElement(v, node).attr('value')))
+      })
+
+      return math.evaluate(expression)
+    },
+
+    getPathElement(path, node){
+      let tmp = node
+      for(let i=0; i<path.split('.').length; i++){
+        tmp = tmp.select('#'+path.split('.')[i])
+      }
+      return tmp
+    },
+
     getEditorJSConfig(holder, data, readOnly=false) {
       return {
         holder: holder,
@@ -417,6 +435,7 @@ export default {
       node.attr("value", window.btoa("0"))
       custom_elm.on("change", function(d) {
         node.attr("value", window.btoa(d3.select(this).property("value")))
+        node.select('input').attr('value', d3.select(this).property("value"))
       })
     },
 
@@ -445,6 +464,7 @@ export default {
       }else if(!node.select('input').empty()){
         node.select('input').on("change", function(d) {
           node.attr("value", window.btoa(d3.select(this).property("value")))
+          node.select('input').attr('value', d3.select(this).property("value"))
         })
       }else{
         
@@ -457,5 +477,85 @@ export default {
           d3.select(this).remove()
         }
       })
+    },
+
+    //****************************svg node operate************************//
+    getNodeParent(node){
+      return node.select(function() { return this.parentNode })
+    },
+    getNodeChildren(node){
+      return node.selectAll(function() { return this.childNodes })
+    },
+    getModularPath(modular){
+      let res = []
+      res.push(modular.attr('id'))
+      let parent = modular
+      for(let i=0; i < 20; i++){
+        let tmp = this.getNodeParent(parent)
+        if(tmp.attr('server') === null && tmp.attr('id').indexOf('operate_element') === -1 && tmp.attr('id') !== 'new'){
+          res.push(tmp.attr('id'))
+          parent = tmp
+        }else{
+          break
+        }
+      }
+      return res.reverse().join('.')
+    },
+    pushModularDataToHistoryPool(env, modular, pool, data_slice){
+      let path = this.getModularPath(modular)
+      if(Object.keys(pool[env.attr('id')]).indexOf(path) > -1){
+        pool[env.attr('id')][path].push(data_slice)
+      }else{
+        pool[env.attr('id')][path] = []
+        pool[env.attr('id')][path].push(data_slice)
+      }
+    },
+    getNodeChildNotCustomModular(node){
+      return node.selectAll("g").filter(function() {
+        return d3.select(this).attr("id") !== null && d3.select(this).selectAll('g').filter(function() {return d3.select(this).attr("id") !== null && d3.select(this).selectAll('.children').filter(function() {return window.atob(d3.select(this).attr("mode")) === 'api_param'}).size() > 0}).size() === 0 
+                                                  && d3.select(this).selectAll('.children').filter(function() {return window.atob(d3.select(this).attr("mode")) === 'api_param'}).size() > 0
+      })
+    },
+    getNodeChildCustomModular(node){
+      return node.selectAll("g").filter(function() {
+        return d3.select(this).attr("id") !== null && d3.select(this).attr("id").indexOf('operate_element') === -1
+                                                  && d3.select(this).selectAll('.children').filter(function() {return window.atob(d3.select(this).attr("mode")) === 'api_param'}).size() === 0 
+      })
+    },
+    getModularCommonVarAndKeys(modular){
+      let ids = []
+      let coms = []
+
+      modular.selectAll('path').each(function(d, i) {
+        if(d3.select(this).attr('dom_type') === 'data'){
+          ids.push(d3.select(this).attr('id'))
+        }
+      })
+
+      modular.selectAll('.children').each(function(d, i) {
+        if(d3.select(this).attr('mode') !== null){
+          if(window.atob(d3.select(this).attr('mode')) === 'api_param'){
+            coms.push({'id':d3.select(this).attr('id'),'value':window.atob(d3.select(this).attr('value'))})
+          }
+        }
+      })
+
+      let parent = modular
+      for(let i=0; i < 20; i++){
+        let tmp = this.getNodeParent(parent)
+        if(tmp.attr('id') !== 'new'){
+          this.getNodeChildren(tmp).each(function(d, i) {
+            if(d3.select(this).attr('id') === null){  
+              if(window.atob(d3.select(this).select('.children').attr('mode')) === 'api_param'){
+                coms.push({'id':d3.select(this).select('.children').attr('id'),'value':window.atob(d3.select(this).select('.children').attr('value'))})
+              }
+            }
+          })
+          parent = tmp
+        }else{
+          break
+        }
+      }
+      return {'coms':coms, 'ids':ids}
     }
   }
