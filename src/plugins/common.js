@@ -241,13 +241,16 @@ export default {
       return math.evaluate(expression)
     },
 
-    calExpressDependVersion2(expression, node){
+    calExpressDependVersion2(expression, env, pool){
       expression = window.atob(expression)
       let vars = expression.match(/([a-zA-Z$][\w.${}]+)/g)
       vars.forEach((v) => {
-        expression = expression.replace(v, window.atob(this.getPathElement(v, node).attr('value')))
+        Object.keys(pool[d3.select(env).attr('id')]).forEach((key) => {
+          if(v.indexOf(key) > -1){
+            expression = expression.replace(v, pool[d3.select(env).attr('id')][key].slice(-1)[0][v.split(key).slice(1).join('.').slice(1)])
+          }
+        })
       })
-
       return math.evaluate(expression)
     },
 
@@ -522,7 +525,7 @@ export default {
                                                   && d3.select(this).selectAll('.children').filter(function() {return window.atob(d3.select(this).attr("mode")) === 'api_param'}).size() === 0 
       })
     },
-    getModularCommonVarAndKeys(modular){
+    getModularCommonVarAndKeys(modular, env){
       let ids = []
       let coms = []
 
@@ -537,6 +540,18 @@ export default {
           if(window.atob(d3.select(this).attr('mode')) === 'api_param'){
             coms.push({'id':d3.select(this).attr('id'),'value':window.atob(d3.select(this).attr('value'))})
           }
+        }
+      })
+
+      env.selectAll('.children').each(function(d, i) {
+        if(d3.select(this).attr('expression') !== null){
+          let expression = window.atob(d3.select(this).attr('expression'))
+          let vars = expression.match(/([a-zA-Z$][\w.${}]+)/g)
+          vars.forEach((v) => {
+            if(v.indexOf(modular.attr('id')) > -1){
+              ids.push(v.split(modular.attr('id')).slice(1).join('.').slice(1))
+            }          
+          })
         }
       })
 

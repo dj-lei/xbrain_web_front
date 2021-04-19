@@ -922,9 +922,6 @@ export default {
     },
     async log(){
       // let that = this
-      // this.$common.getNodeChildNotCustomModular(d3.select('#a')).each(function(d, i) {
-      //   console.log(that.$common.getModularCommonVarAndKeys(d3.select(this)))
-      // })
       // console.log(d3.select("#ssh\\.root\\@10\\.166\\.147\\.40"))
       console.log(d3.select("#new").node())
       // console.log(this.history_operate_pool)
@@ -1033,7 +1030,7 @@ export default {
               }
             }
             that.$common.getNodeChildNotCustomModular(d3.select(env)).each(function(d, i) {
-              let params = that.$common.getModularCommonVarAndKeys(d3.select(this))
+              let params = that.$common.getModularCommonVarAndKeys(d3.select(this), d3.select(env))
               let formData = new FormData()
               params['coms'].forEach((com) =>{
                 formData.append(com['id'], com['value'])
@@ -1042,13 +1039,12 @@ export default {
               formData.append('operate', "hardware_environment_save_config")
               formData.append('sid', d3.select(env).attr('id'))
               formData.append('key', that.$common.dedupe(params['ids']).join(','))
-
               axios.post(formData.get('api'), formData, config)
               .then(
                 (response)=>{
                   let he = response.data
                   // console.log(he)
-                  let data_slice = {}
+                  // let data_slice = {}
                   d3.select(this).selectAll("path").each(function(d, i) {
                     if(d3.select(this).attr('dom_type') === 'data'){
                       let data = d3.select(this).node()
@@ -1079,10 +1075,10 @@ export default {
                           data.setAttribute("value", window.btoa(temp))
                         }
                       }
-                      data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
+                      // data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
                     }
                   })
-                  that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,data_slice)
+                  that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,he)
                   
               }, (error) => {
                 console.log(error)
@@ -1092,11 +1088,12 @@ export default {
             setTimeout(() =>{
               that.$common.getNodeChildCustomModular(d3.select(env)).each(function(d, i) {
                 let data_slice = {}
-                d3.select(this).selectAll("path").each(function(d, i) {
+                let modular = d3.select(this)
+                modular.selectAll("path").each(function(d, i) {
                   if(d3.select(this).attr('dom_type') === 'data'){
                     let data = d3.select(this).node()
                     if(data.getAttribute('expression') !== null) {
-                      let temp = that.$common.calExpressDependVersion2(data.getAttribute('expression'), d3.select(env))
+                      let temp = that.$common.calExpressDependVersion2(data.getAttribute('expression'), env, that.history_data_pool)
                       data.setAttribute("value", window.btoa(temp))
                       data_slice[data.getAttribute('id')] = temp
                     }
