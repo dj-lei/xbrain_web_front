@@ -446,7 +446,7 @@ export default {
       if(that.run_flag === false){
         that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
       }
-      
+
       if (that.is_viewer === true && d3.select(this).attr("dom_type") === 'g'){
         that.select_mode = 'viewer'
         that.selected_environment = d3.select(this.parentNode).attr("environment_name")
@@ -900,9 +900,13 @@ export default {
       //   d3.select("#new").attr("docid", this.items[0].id)
       //   d3.select("#new").attr("server", this.items[0].server)
       // }
-      await this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
       if(this.is_viewer === true){
-        this.saveApiViewer()
+        await this.saveApiViewer()
+        setTimeout(() =>{
+          this.$emit('saveToServer', d3.select("#new"))
+        },100)
+      }else{
+        this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
       }
     },
     async saveApiBindData(){
@@ -1079,7 +1083,7 @@ export default {
                     }
                   })
                   that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,he)
-                  
+
               }, (error) => {
                 console.log(error)
               })
