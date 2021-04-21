@@ -446,7 +446,7 @@ export default {
       if(that.run_flag === false){
         that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
       }
-
+      
       if (that.is_viewer === true && d3.select(this).attr("dom_type") === 'g'){
         that.select_mode = 'viewer'
         that.selected_environment = d3.select(this.parentNode).attr("environment_name")
@@ -649,6 +649,7 @@ export default {
     },
     async queryInsEnv(){
       await axios.get(this.url_get_ins_env)
+      
         .then(response => {
           this.environment_list = response.data.content
         })
@@ -902,9 +903,9 @@ export default {
       // }
       if(this.is_viewer === true){
         await this.saveApiViewer()
-        setTimeout(() =>{
+        setTimeout(() => {
           this.$emit('saveToServer', d3.select("#new"))
-        },100)
+        }, 100)
       }else{
         this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
       }
@@ -1033,6 +1034,7 @@ export default {
               'Content-Type': 'multipart/form-data'
               }
             }
+            // console.log(that.$common.getNodeChildNotCustomModular(d3.select(env)))
             that.$common.getNodeChildNotCustomModular(d3.select(env)).each(function(d, i) {
               let params = that.$common.getModularCommonVarAndKeys(d3.select(this), d3.select(env))
               let formData = new FormData()
@@ -1083,13 +1085,14 @@ export default {
                     }
                   })
                   that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,he)
-
+                  
               }, (error) => {
                 console.log(error)
               })
             })
 
             setTimeout(() =>{
+              // console.log(that.$common.getNodeChildCustomModular(d3.select(env)))
               that.$common.getNodeChildCustomModular(d3.select(env)).each(function(d, i) {
                 let data_slice = {}
                 let modular = d3.select(this)
@@ -1308,7 +1311,7 @@ export default {
       d3.xml(svg)
       .then(data => {
         let instance_id = this.$common.generateUUID()+'operate_element'
-        let tmp = data.getElementsByTagName('g')[0]
+        let tmp = data.documentElement
         tmp.setAttribute("id", instance_id)
         tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")
         tmp.setAttribute("transform", that.matrix)

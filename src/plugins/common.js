@@ -495,7 +495,7 @@ export default {
       let parent = modular
       for(let i=0; i < 20; i++){
         let tmp = this.getNodeParent(parent)
-        if(tmp.attr('server') === null && tmp.attr('id').indexOf('operate_element') === -1 && tmp.attr('id') !== 'new'){
+        if(tmp.attr('id').indexOf('operate_element') === -1 && tmp.attr('id') !== 'new'){
           res.push(tmp.attr('id'))
           parent = tmp
         }else{
@@ -521,7 +521,7 @@ export default {
     },
     getNodeChildCustomModular(node){
       return node.selectAll("g").filter(function() {
-        return d3.select(this).attr("id") !== null && d3.select(this).attr("id").indexOf('operate_element') === -1
+        return d3.select(this).attr("id") !== null && d3.select(this).attr("id").indexOf('operate_element') === -1 && d3.select(this).selectAll('.children').filter(function() {return window.atob(d3.select(this).attr("mode")) !== null}).size() > 0 
                                                   && d3.select(this).selectAll('.children').filter(function() {return window.atob(d3.select(this).attr("mode")) === 'api_param'}).size() === 0 
       })
     },
