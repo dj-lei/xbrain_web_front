@@ -38,11 +38,34 @@
                   v-btn(color="blue darken-1" text @click="applyConfirm") OK
                   v-spacer
             v-data-table(:headers="headers", :items="data", class="elevation-1")
+              template(v-slot:item.Level="{ item }")
+                v-rating(v-model="item.Level" dense hover length="5" size="12")
+              template(v-slot:item.Executor="{ item }")
+                v-edit-dialog(:return-value.sync="item.Executor") {{ item.Executor }}
+                  template(v-slot:input="")
+                    v-text-field(v-model="item.Executor" label="Edit" single-line)
+              template(v-slot:item.StartEndTime="{ item }")
+                v-edit-dialog(:return-value.sync="item.StartEndTime") {{ item.StartEndTime.join('~') }}
+                  template(v-slot:input="")
+                    v-date-picker(v-model="item.StartEndTime" range no-title scrollable)
               template(v-slot:item.Status="{ item }")
-                v-slider.caption(v-model="item.Status" :tick-labels="ticksLabels" :max="3" step="1" tick-size="4")
+                v-edit-dialog(:return-value.sync="item.Status") {{ item.Status }}
+                  template(v-slot:input="")
+                    v-combobox(v-model='item.Status' :items="ticksLabels" label="Select Status")
+                //- v-slider.caption(v-model="item.Status" :tick-labels="ticksLabels" :max="3" step="1" tick-size="4")
                 //- v-chip(:color="getColor(item.Status)", dark) {{ item.Status }}
               template(v-slot:item.Schedule="{ item }")
-                v-slider(v-model="item.Schedule" :thumb-size="24" thumb-label="always")
+                v-slider(v-model="item.Schedule" :thumb-size="24" step="10" thumb-label="always")
+              template(v-slot:item.actions="{ item }")
+                v-tooltip(bottom)
+                  template(v-slot:activator="{ on,attrs }")
+                    v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editRemark(item)") mdi-pencil
+                  span edit
+            v-dialog(v-model="dialogRichTextEdit", transition="dialog-bottom-transition", max-width="800px")
+              v-card(color='grey lighten-3')
+                v-container
+                  v-card
+                    div(id='editor')
         template(v-if='dialogCheckTabs === true')
           v-dialog(v-model='dialogCheckTabs', dark, max-width="1400px")
             CT(
@@ -68,6 +91,7 @@
 
 <script>
 import MindElixir from "mind-elixir"
+import EditorJS from '@editorjs/editorjs'
 import { get, sync } from 'vuex-pathify'
 import Images from './common/images'
 import CT from './TroubleShootingCheckTabs'
@@ -112,6 +136,7 @@ export default {
       dialogCheckTabs: false,
       dialogShareUrl: false,
       dialogSaving: false,
+      dialogRichTextEdit: false,
       isRoot: true,
       nodeId: '',
       nodeTopic: '',
@@ -124,13 +149,18 @@ export default {
       selected: [],
       data: [],
       mind: '',
+      editorId: '',
+      editorData: '',
       headers: [
         // { text: 'Id', value: 'id' },
         { text: 'TaskName', align: 'start', value: 'Task'},
+        { text: 'Level', value: 'Level' },
+        { text: 'Executor', value: 'Executor' },
+        { text: 'StartEndTime', value: 'StartEndTime' },
         { text: 'Status', value: 'Status' },
+        // { text: 'StatusColor', value: 'StatusColor' },
         { text: 'Schedule', value: 'Schedule'},
-        // { text: 'Executor', value: 'Executor' },
-        // { text: 'Shooting/Close', value: 'actions', sortable: false },
+        { text: 'Remark', value: 'actions', sortable: false},
       ],
       ticksLabels: ['GoOn','Done','Uncert','Shoot']
     }
@@ -182,6 +212,18 @@ export default {
       if (val === false){
         this.closeDialogCheckTabs()
       }
+    },
+    dialogRichTextEdit(val){
+      if (val === false){
+        this.editorData.save()
+          .then((savedData) => {
+            this.data.forEach((item, index) => {
+              if(this.editorId === item.id){
+                this.data[index]['Remark'] = savedData
+              }
+            })
+          })
+      }
     }
   },
   methods: {
@@ -205,7 +247,6 @@ export default {
     details () {
       this.isRoot = true
       this.nodeId = 'root'
-      // this.getChecklistImages()
       this.getChecklistLogs().then(this.dialogCheckTabs = true)
     },
     shareUrl () {
@@ -232,6 +273,17 @@ export default {
           this.mind.nodeData = response.data.content.nodeData
           this.mind.init()
         })
+    },
+    editRemark(item){
+      this.editorId = item.id
+      this.dialogRichTextEdit = true
+      this.$nextTick(function(){
+        if (this.editorData === ''){
+          this.editorData = new EditorJS(this.$common.getEditorJSConfig('editor', item.Remark, false))
+        }else{
+          this.editorData.blocks.render(item.Remark)
+        }
+      })
     },
     async getChecklistComments () {
       let comments = {}
@@ -460,6 +512,9 @@ export default {
       else if (status === 'active') return 'orange'
       else return 'red'
     },
+    log(item){
+      console.log(item)
+    }
   },
 }
 </script>

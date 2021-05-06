@@ -13,7 +13,7 @@ export const urls = {
     feedback_get: "feedback/get",
     babel_save: "babel/save",
     babel_get: "babel/get",
-	user_management_get: "user_management/get",
+	  user_management_get: "user_management/get",
     user_management_save: "user_management/save",
     page_management_get: "page_management/get",
     page_management_save: "page_management/save",
