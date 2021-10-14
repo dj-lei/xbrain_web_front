@@ -137,8 +137,8 @@
 </template>
 
 <script>
-import {JSEncrypt} from 'jsencrypt'
-import CryptoJS from 'crypto-js'
+// import {JSEncrypt} from 'jsencrypt'
+// import CryptoJS from 'crypto-js'
 
 export default {
   data () {
@@ -225,7 +225,7 @@ export default {
             this.$store.set('groups', response.data.groups)
             setTimeout(() =>{
               this.dialog = false
-              this.snackbar = true
+              // this.snackbar = true
               this.$router.push('/')
               this.$store.set('username', this.username)
               this.$store.set('isAuthenticated', true)
@@ -265,7 +265,7 @@ export default {
             this.info = 'Hi ' + this.username + ',welcome!'
             setTimeout(() =>{
               this.dialog = false
-              this.snackbar = true
+              // this.snackbar = true
               this.$store.set('username', this.username)
               this.$store.set('isAuthenticated', true)
             },1000)

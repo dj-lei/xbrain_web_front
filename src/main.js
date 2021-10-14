@@ -15,6 +15,7 @@ import TroubleShootingTask from './components/TroubleShootingTask'
 import Pinmux from './components/Pinmux'
 import Hunter from './components/Hunter'
 import Feedback from './components/Feedback'
+import BabelData from './components/BabelData'
 import BabelSymbols from './components/BabelSymbols'
 import BabelViewer from './components/BabelViewer'
 import UserManagement from './components/UserManagement'
@@ -40,6 +41,7 @@ const routes = [
   { path: '/trouble_shooting_template_edit', component: TroubleShootingTemplateEdit },
   { path: '/trouble_shooting_task', component: TroubleShootingTask },
   { path: '/feedback', component: Feedback },
+  { path: '/data', component: BabelData },
   { path: '/symbols', component: BabelSymbols },
   { path: '/viewer', component: BabelViewer },
   { path: '/user_management', component: UserManagement},

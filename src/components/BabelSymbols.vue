@@ -6,7 +6,8 @@
           v-toolbar(dense color="yellow darken-3" dark)
             v-toolbar-title Symbols
             v-divider(class="mx-4", inset, vertical)
-            v-btn( @click="newItem") New Symbol
+            template(v-if="username === 'admin'")
+              v-btn( @click="newItem") New Symbol
             v-spacer
             template(v-if="dialog")
               v-dialog(v-model="dialog", fullscreen, transition="dialog-bottom-transition")
@@ -20,7 +21,6 @@
                     v-on:saveToServer="save"
                     v-on:newItem="newItem"
                     v-on:editItem="editItem"
-                    v-on:saveApiBindData="saveApiBindData"
                   )
             v-dialog(v-model="dialogSaveTemplate", max-width="500px")
               v-card(color="yellow darken-3" dark)
@@ -41,9 +41,23 @@
                 v-card-title(class="headline") Are you sure you want to delete this symbol?
                 v-card-actions
                   v-spacer
-                  v-btn(text @click="closeDelete") Cancel
+                  v-btn(text @click="dialogDelete = false") Cancel
                   v-btn(text @click="deleteItemConfirm") OK
                   v-spacer
+            v-dialog(v-model="dialogRelease" max-width="550px")
+              v-card(color="yellow darken-3" dark)
+                v-card-title
+                  span(class="headline") Realse
+                v-card-text
+                  v-container
+                    v-row
+                      v-text-field(v-model='viewer_name', label="Viewer name")
+                    v-row
+                      v-text-field(v-model='viewer_group_name', label="Group name")
+                    v-row
+                      v-spacer
+                      v-btn(class="mt-3" @click="ReleaseItemConfirm") APPLY
+                      v-spacer
             v-dialog(v-model="dialogConfig" max-width="500px")
               v-card(color="yellow darken-3" dark)
                 v-card-title
@@ -63,18 +77,23 @@
           v-text-field(v-model="search" label="Search" single-line hide-details)
         v-data-table(:search="search" :headers="headers", :items="data", sort-by="SymbolName" class="elevation-1")
           template(v-slot:item.actions="{ item }")
-            v-tooltip(bottom)
-              template(v-slot:activator="{ on,attrs }")
-                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
-              span edit
-            v-tooltip(bottom)
-              template(v-slot:activator="{ on,attrs }")
-                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
-              span delete
-            v-tooltip(bottom)
-              template(v-slot:activator="{ on,attrs }")
-                v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="configItem(item)") mdi-memory
-              span config
+            template(v-if="username === 'admin'")
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="editItem(item)") mdi-pencil
+                span edit
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="deleteItem(item)") mdi-delete
+                span delete
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, class="mr-2", v-bind="attrs", v-on="on", @click="configItem(item)") mdi-memory
+                span config
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(small, v-bind="attrs", v-on="on", @click="releaseItem(item)") mdi-antenna
+                span release
 </template>
 
 <script>
@@ -93,6 +112,7 @@ export default {
       dialog: false,
       dialogDelete: false,
       dialogConfig: false,
+      dialogRelease: false,
       dialogSaveTemplate: false,
       headers: [
         // { text: 'Id', value: 'id' },
@@ -104,15 +124,18 @@ export default {
       ],
       data: [],
       search: '',
-      symbols:[{ title: 'BASIC', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}],
+      // symbols:[{ title: 'BASIC', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'}]}],
+      symbols: [],
       svg_content: '',
       svg_temp: {},
       symbol_name: '',
       symbol_type: 'circuit',
       symbol_types: [],
+      viewer_name: '',
+      viewer_group_name: '',
       flagUpdateOrAdd: false,
       operateId: '',
-      url_get_bind_data: '',
+      node_data: {},
     }
   },
 
@@ -129,13 +152,16 @@ export default {
         })
         .then(response => {
           this.data = response.data.content
-          this.symbols = [{ title: 'BASIC', symbols:[{'id':'0', 'symbol':'path'},{'id':'1', 'symbol':'polygon'},{'id':'2', 'symbol':'text'},{'id':'3', 'symbol':'data'}]}]
-          this.symbols = this.symbols.concat(response.data.symbols)
+          this.symbols = response.data.symbols
+          // this.symbols = this.symbols.concat(response.data.symbols)
           this.symbol_types = []
           response.data.symbols.forEach((symbol) => {
             this.symbol_types.push(symbol.title)
           })
         })
+    },
+    dialogOpen () {
+      this.dialog = true
     },
     dialogClose () {
       this.dialog = false
@@ -157,9 +183,12 @@ export default {
           this.svg_content = response.data.content.content
           this.dialog = true
           this.$nextTick(function(){
-            this.$refs.symbolEditor.updateSymbolsUrl(response.data.content.api_bind_data)
+            this.$store.set('progress', true)
+            this.$refs.symbolEditor.updateNodeData(JSON.parse(response.data.content.node_data))
             this.$refs.symbolEditor.updateItem(this.svg_content)
-            this.$refs.symbolEditor.queryBackendData()
+            setTimeout(() =>{
+              this.$refs.symbolEditor.updateSymbols()
+            }, 400)
           })
         })
     },
@@ -221,18 +250,45 @@ export default {
       },1000)
     },
 
+    releaseItem(item){
+      this.dialogRelease = true
+      this.operateId = item.id
+    },
+
+    async ReleaseItemConfirm(){
+      this.$store.set('progress', true)
+
+      let formData = new FormData()
+      formData.append("symbol_id", this.operateId)
+      formData.append("viewer_name", this.viewer_name)
+      formData.append("group", this.viewer_group_name)
+      formData.append("operate", 'symbol_release')
+      let config = {
+        headers: {
+        'Content-Type': 'multipart/form-data'
+        }
+      }
+
+      await this.$http.post(this.$urls.babel_save, formData, config).then(
+        (response)=>{
+          console.log(response.data)
+      }, (error) => {
+        console.log(error)
+      })
+      setTimeout(() =>{
+        this.dialogRelease = false
+        this.$store.set('progress', false)
+      },1000)
+    },
+
     close () {
       this.flagUpdateOrAdd = false
       this.dialogSaveTemplate = false
     },
 
-    closeDelete () {
-      this.dialogDelete = false
-    },
-
-    save (svg, url) {
+    save (svg, node_data) {
       this.svg_temp = svg
-      this.url_get_bind_data = url
+      this.node_data = node_data
       if (this.flagUpdateOrAdd === false) {
         this.dialogSaveTemplate = true
       }else{
@@ -261,7 +317,7 @@ export default {
       formData.append("data", url)
       formData.append("category", this.symbol_type)
       formData.append("symbol_name", this.symbol_name)
-      formData.append("api_url", this.url_get_bind_data)
+      formData.append("node_data", JSON.stringify(this.node_data))
       let config = {
         headers: {
         'Content-Type': 'multipart/form-data'
@@ -287,32 +343,6 @@ export default {
         this.initialize()
         this.$store.set('progress', false)
       },1000)
-    },
-
-    async saveApiBindData(api_url){
-      this.$store.set('progress', true)
-      let formData = new FormData()
-      formData.append("operate", 'save_api_bind_data')
-      formData.append("symbol_id", this.operateId)
-      formData.append("api_url", api_url)
-
-      let config = {
-        headers: {
-        'Content-Type': 'multipart/form-data'
-        }
-      }
-
-      await this.$http.post(this.$urls.babel_save, formData, config).then(
-        (response)=>{
-          this.url_get_bind_data = api_url
-          this.$store.set('progress', false)
-      }, (error) => {
-        console.log(error)
-      })
-      // setTimeout(() =>{
-      //   // this.initialize()
-      //   this.$store.set('progress', false)
-      // },1000)
     },
   },
 }

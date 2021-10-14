@@ -2,6 +2,8 @@
   div(id="app")
     v-app(id="inspire")
       template
+        div
+          //- iframe(src="http://localhost:8080/#/symbols" style="height:800px;width:1300px")
         v-card(color="grey lighten-4", dark, flat, height="50px")
           v-toolbar(dense color="yellow darken-3" dark)
             v-toolbar-title Pinmux Template

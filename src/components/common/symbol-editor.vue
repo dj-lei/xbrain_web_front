@@ -6,11 +6,12 @@
           v-list-item
             v-tooltip(bottom)
               template(v-slot:activator="{ on,attrs }")
-                v-icon(class="ml-4", v-bind="attrs", v-on="on", @click="dialogBack = true") mdi-keyboard-backspace
+                v-icon(class="ml-4", v-bind="attrs", v-on="on", @click="backHandle") mdi-keyboard-backspace
               span BACK
-          v-list-item
-            p V/D
-            v-switch(v-model="edit_mode" dense)
+          template(v-if='is_viewer === false')
+            v-list-item
+              p V/D
+              v-switch(v-model="edit_mode" dense)
           template(v-if="edit_mode === true")
             v-list-item
               v-tooltip(bottom)
@@ -22,21 +23,31 @@
                 template(v-slot:activator="{ on,attrs }")
                   v-icon(color="light-green darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="save") mdi-content-save
                 span SAVE
+            //- v-list-item
+            //-   v-tooltip(bottom)
+            //-     template(v-slot:activator="{ on,attrs }")
+            //-       v-icon(color="light-blue lighten-1", class="ml-4", v-bind="attrs", v-on="on", @click="log") mdi-file-document-box
+            //-     span LOG
             v-list-item
               v-tooltip(bottom)
                 template(v-slot:activator="{ on,attrs }")
-                  v-icon(color="light-blue lighten-1", class="ml-4", v-bind="attrs", v-on="on", @click="log") mdi-file-document-box
-                span LOG
-            v-list-item
-              v-tooltip(bottom)
-                template(v-slot:activator="{ on,attrs }")
-                  v-icon(color="brown darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="dialogConfig = true") mdi-memory
-                span CONFIG
-            v-list-item
-              v-tooltip(bottom)
-                template(v-slot:activator="{ on,attrs }")
-                  v-icon(color="red darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="dialogHotKey = true") mdi-chili-mild
-                span HOTKEY
+                  v-icon(color="yellow darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="createMark") mdi-plus-box
+                span INSERT_MARK
+            //- v-list-item
+            //-   v-tooltip(bottom)
+            //-     template(v-slot:activator="{ on,attrs }")
+            //-       v-icon(color="green darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="createEchart") mdi-trending-up
+            //-     span INSERT_ECHART
+            //- v-list-item
+            //-   v-tooltip(bottom)
+            //-     template(v-slot:activator="{ on,attrs }")
+            //-       v-icon(color="green darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="createTestEchart") mdi-trending-up
+            //-     span INSERT_TEST_ECHART
+            //- v-list-item
+            //-   v-tooltip(bottom)
+            //-     template(v-slot:activator="{ on,attrs }")
+            //-       v-icon(color="green darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="createTestButton") mdi-wechat
+            //-     span INSERT_BUTTON
             template(v-if="is_viewer === false")
               v-list-item
                 v-tooltip(bottom)
@@ -44,19 +55,11 @@
                     v-icon(color="cyan lighten-1", class="ml-4", v-bind="attrs", v-on="on", @click="importSvg") mdi-file-import
                   span IMPORT
                 v-file-input(id="fileInput" v-model="svgIns" @change="fileInsertSvg" style="display:none" multiple)
-          template(v-if='is_viewer === true')
-            template(v-if='run_flag === false')
-              v-list-item
-                v-tooltip(bottom)
-                  template(v-slot:activator="{ on,attrs }")
-                    v-icon(color="success", class="ml-4", v-bind="attrs", v-on="on", @click="runOrStop") mdi-play
-                  span PLAY
-            template(v-else)
-              v-list-item
-                v-tooltip(bottom)
-                  template(v-slot:activator="{ on,attrs }")
-                    v-icon(color="error", class="ml-4", v-bind="attrs", v-on="on", @click="runOrStop") mdi-play-pause
-                  span PAUSE
+            v-list-item
+              v-tooltip(bottom)
+                template(v-slot:activator="{ on,attrs }")
+                  v-icon(color="red darken-1", class="ml-4", v-bind="attrs", v-on="on", @click="dialogHotKey = true") mdi-chili-mild
+                span HOTKEY
     v-card(class="pa-2" v-show="edit_mode" color="yellow darken-3" dark)
       v-sheet(width="115")
         v-list(dense class="grow" color="yellow darken-3")
@@ -65,11 +68,11 @@
               template(v-slot:activator="")
                 v-list-item-title {{ tool.title }}
               v-list-item-group(color="success")
-                v-list-item(v-for="(item, i) in tool.symbols" :disabled='item.symbol === "data" && is_viewer === true' dense :key="item.id" @click="selectedItem(item)")
+                v-list-item(v-for="(item, i) in tool.symbols" dense :key="item.id" @click="selectedItem(item)")
                   v-list-item-title(v-text="item.symbol")
-                  template(v-if='tool.title !== "BASIC" && is_viewer === false')
-                    v-list-item-icon
-                      v-icon(@click.stop="editItem(item)") mdi-pencil
+                  //- template(v-if='tool.title !== "BASIC" && is_viewer === false')
+                  v-list-item-icon
+                    v-icon(@click.stop="editItem(item)") mdi-pencil
     v-card(class="pa-2")
       v-sheet(color="grey lighten-4" :height="canvas_height" :width="canvas_width"  @dblclick="done")
         div(id="painting")
@@ -81,12 +84,17 @@
             v-toolbar-title {{ select_mode }}
           v-spacer(class="mt-3")
           template(v-if="elm !== ''")
-            template(v-if="lock === false")
-              v-btn(@click="unlock") LOCK
-            template(v-else)
-              v-btn(@click="unlock") UNLOCK
-            template(v-if="elm.attr('dom_type') === 'g' && is_viewer !== true")
-              v-text-field(id="id_text" v-model="fill_id" prepend-icon="mdi-content-copy" label="fill id" @click:prepend="copyToClipboard" @change="initCtrlElm")
+            v-row
+              template(v-if="lock === false")
+                v-btn(@click="unlock") LOCK
+              template(v-else)
+                v-btn(@click="unlock") UNLOCK
+            v-spacer(class="mt-3")
+            template(v-if="elm.attr('class') === 'data'")
+              v-row
+                v-btn(@click="bind") BIND
+              //- template(v-if="elm.attr('dom_type') === 'g' && is_viewer !== true")
+              //-   v-text-field(id="id_text" v-model="fill_id" prepend-icon="mdi-content-copy" label="fill id" @click:prepend="copyToClipboard" @change="initCtrlElm")
           template(v-if="select_mode === 'path'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
@@ -100,116 +108,122 @@
               v-col(class="pa-2")
                 v-text-field(v-model="text" label="text" dense outlined @keyup.enter="updateText")
           template(v-else-if="select_mode === 'data'")
-            v-row(class="d-flex justify-center" v-for="key in Object.keys(data)" :key="key.id")
-              v-col(class="pa-2")
-                template(v-if="key === 'mode'")
-                  v-combobox(v-model="selected" :items="['normal', 'api_param']" label="select mode" @change='initCtrlElm')
-                template(v-else-if="key === 'id' && Object.keys(data).indexOf('mode') > -1")
-                  v-text-field(id="id_text" v-model="fill_id" prepend-icon="mdi-content-copy" label="fill id" @click:prepend="copyToClipboard" @change="initCtrlElm")
-                template(v-else-if="key === 'range' && Object.keys(data).indexOf('mode') > -1")
-                  v-text-field(v-model="fill_range" label="fill range" @change="initCtrlElm")
-                template(v-else-if="key === 'value' && Object.keys(data).indexOf('mode') > -1")
-                  v-text-field(v-model="fill_param" label="fill param" :disabled="data['element'] === 'path'? false : true"  @change="initCtrlElm")
-                template(v-else)
-                  template(v-if="key === 'id'")
-                    v-text-field(id="id_text" prepend-icon="mdi-content-copy" :value="data[key]" :label="key" @click:prepend="copyToClipboard" dense)
-                  template(v-else)
-                    v-text-field(:value="data[key]" :label="key" disabled dense)
-            template(v-if="data['element'] === 'path' && Object.keys(data).indexOf('mode') > -1 ? true : false")
-              v-row
-                v-col(class="pa-2")
-                  v-btn(dark, @click="expression") EXPRESSION
-            v-dialog(v-model="dialogExpression", max-width="1000px")
-              v-card(color="yellow darken-3" dark)
-                v-container(fluid)
-                  v-row(class="d-flex justify-center")
-                    v-col(class="pa-2")
-                      v-treeview(:active.sync="variable" open-on-click dense hoverable activatable :items="items")
-                    v-divider(vertical)
-                    v-col(class="pa-2")
-                      v-textarea(v-model="express" @key.enter="autocomplete" label="Fill in the expression" auto-grow outlined :error="error_flag" :error-messages="error_messages")
-                      v-btn(@click='checkExpression' depressed) CHECK
-                        template(v-if="is_success === true")
-                          v-icon(color="light-green accent-3" dark right) mdi-checkbox-marked-circle
+            v-row(class="d-flex justify-center")
           template(v-else-if="select_mode === 'viewer'")
-            //- v-btn( dark @click='interactive' depressed) INTERACTIVE
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
-                v-combobox(v-model="selected_environment" :items='coverToList()' label="Environment select" dense outlined @change="syncEnvironment")
-                //- v-row(class="d-flex justify-center" v-for="key in comVar" :key="key.name")
-                //-   v-col(class="pa-2")
-                //-     v-text-field(v-model="key.value" :label="key.name" outlined dense @change="updateComVar")
           template(v-else-if="select_mode === 'chart'")
             v-row(class="d-flex justify-center")
               v-col(class="pa-2")
-                v-text-field(v-model="chart_text" label="Bind ID" outlined dense @change="updateBindId")
-          template(v-else-if="select_mode === 'scene' && is_viewer === true")
-            v-card(color="yellow darken-3" dark)
-              v-container(fluid)
-                v-card-title External Link
-                v-list(dense class="grow" color="yellow darken-3")
-                  template(v-for="url in externalUrls")
-                    v-list-item(target="_blank" :href="url.addr")
-                      v-list-item-title(v-text="url.name")
-                    v-divider
+                v-text-field(v-model="echart_api_url" label="Api Url" outlined dense)
+                v-btn(@click="updateEchartApiUrl") TEST
           template(v-if="select_mode !== 'data' && select_mode !== 'scene' && select_mode !== 'chart'")
             v-row
               v-color-picker(dark v-model="hexa" hide-inputs class="ma-2" @update:color="updateColor")
-        v-dialog(v-model='dialogDataBind', dark, max-width="800px")
-          v-card(color="yellow darken-3" dark)
-            v-container
-              v-row
-                v-btn(@click="createCustomData") CUSTOM
-                v-divider(class="mx-4" inset vertical)
-                v-combobox(v-model="custom_mode" :items="['string', 'list', 'expression', 'chart']" outlined dense)
+        v-dialog(v-model='dialogDataBind' max-width="1200px" dark)
+          v-card
+            v-tabs(background-color="yellow darken-3" left)
+              template(v-if="is_viewer === false")
+                v-tab Summary
+                v-tab Data Source Bind
                 v-spacer
-              v-spacer(class="mt-3")
-              v-divider
-              v-card(color="yellow darken-3" dark)
-                v-treeview(:active.sync="bind_data" open-on-click rounded activatable :items="items")
-        v-dialog(v-model='dialogConfig',  max-width="800px")
-          v-card(color="yellow darken-3" dark)
-            v-container
-              template(v-if="is_viewer === true")
-                v-row
-                  v-text-field(class="ma-1" v-model="url_get_ins_env" label="Api get instance environment" dense outlined)
-                v-card
-                  v-data-table(:headers="externalUrlHeaders" :items="externalUrls" class="elevation-1" hide-default-footer)
-                    template(v-slot:top="")
-                      v-toolbar(flat color="yellow darken-3" dark)
-                        v-toolbar-title EXTERNAL LINK
-                        v-divider(class="mx-4" inset vertical)
-                        v-spacer
-                        v-dialog(v-model="dialogExternalUrl" max-width="500px")
-                          template(v-slot:activator="{ on, attrs }")
-                            v-btn(class="mb-2" v-bind="attrs" v-on="on") New Item
-                          v-card(color="yellow darken-3" dark)
-                            v-card-text
-                              v-container
-                                v-row
-                                  v-col(cols="12" sm="6" md="6")
-                                    v-text-field(v-model="editedItem.name" label="external link name" outlined dense)
-                                  v-col(cols="12" sm="6" md="6")
-                                    v-text-field(v-model="editedItem.addr" label="external link addr" outlined dense)
-                            v-card-actions
-                              v-spacer
-                              v-btn(text @click="dialogExternalUrl = false") CANCEL
-                              v-btn(text @click="externalUrls.push(editedItem);editedItem = {};dialogExternalUrl = false") OK
-                    template(v-slot:item.actions="{ item,index }")
-                      v-icon(small @click="externalUrls.splice(externalUrls.indexOf(item), 1)") mdi-delete
+                v-btn(class="mt-1" @click="applyData" dark) APPLY
+                v-tab-item
+                  v-container
+                    v-card
+                      div(id='editor')
+                v-tab-item
+                  v-container(fluid)
+                    v-row
+                      v-col(cols="12" md="4")
+                        //- v-row
+                        //-   v-text-field(v-model='matched_keywords' solo rounded flat clearable dense outlined label="Enter keywords")
+                        //-   v-btn(@click="aiAutomaticMatch") MATCH
+                        v-row
+                          v-combobox(v-model="external_data_selected_source['name']" :items="external_data_selected_source_list" outlined dense @change="changeExternalData")
+                    v-row
+                      v-col
+                        v-treeview(v-model="external_data_selected" open-on-click dense rounded selectable selection-type="independent" selected-color="green" return-object :items="external_data_selected_items")
+                      v-divider(vertical)
+                      v-col(class="pa-6" cols="6")
+                        v-list(three-line)
+                          template(v-for="item in external_data_selected")
+                            template(v-if="item['value'].slice(0, 4) === 'http' ")
+                              v-list-item(:key="item.id" target="_blank" :href="item.value")
+                                v-list-item-avatar
+                                  v-icon(class="blue" dark) mdi-clipboard-text
+                                v-list-item-content
+                                  v-list-item-title {{ item.name }}
+                                  v-list-item-subtitle PENDING...
+                                  v-list-item-subtitle PENDING...
+                              v-divider
+                            template(v-else-if="item['value'] !== ''")
+                              v-list-item(:key="item.id" @click="showExternalDataInfo(item)")
+                                v-list-item-avatar
+                                  v-icon(class="red" dark) mdi-code-brackets
+                                v-list-item-content
+                                  v-list-item-title {{ item.name }}
+                                  v-list-item-subtitle PENDING...
+                                  v-list-item-subtitle PENDING...
+                              v-divider
               template(v-else)
-                v-row
-                  v-text-field(v-model="url_get_bind_data" label="Api get bind data" dense outlined)
-              v-row
-                v-spacer
-                template(v-if="is_viewer === true")
-                  v-btn(class="mt-3" @click="saveApiViewer") APPLY
-                template(v-else)
-                  v-btn(class="mt-3" @click="saveApiBindData") APPLY
-                v-spacer
-        v-dialog(v-model="dialogBack" max-width="410px")
+                v-tab Show
+                v-tab-item
+                  v-container(fluid)
+                    template(v-for="(data_source, index) in external_data_show")
+                      template(v-if="index !== 'summary'")
+                        v-subheader {{ index }}
+                        v-divider
+                        v-list(three-line)
+                          template(v-for="item in data_source")
+                            template(v-if="item['value'].slice(0, 4) === 'http' ")
+                              v-list-item(:key="item.id" target="_blank" :href="item.value")
+                                v-list-item-avatar
+                                  v-icon(class="blue" dark) mdi-clipboard-text
+                                v-list-item-content
+                                  v-list-item-title {{ item.name }}
+                                  v-list-item-subtitle PENDING...
+                                  v-list-item-subtitle PENDING...
+                              v-divider
+                            template(v-else-if="item['value'] !== ''")
+                              v-list-item(:key="item.id" @click="showExternalDataInfo(item)")
+                                v-list-item-avatar
+                                  v-icon(class="red" dark) mdi-code-brackets
+                                v-list-item-content
+                                  v-list-item-title {{ item.name }}
+                                  v-list-item-subtitle PENDING...
+                                  v-list-item-subtitle PENDING...
+                              v-divider
+                        //- template(v-if="data_source[0]['value'].slice(0, 4) == 'http' ")
+                        //-   v-list(three-line)
+                        //-     template(v-for="(item, index) in data_source")
+                        //-       v-list-item(:key="item.id" target="_blank" :href="item.value")
+                        //-         v-list-item-avatar
+                        //-           v-icon(class="blue" dark) mdi-clipboard-text
+                        //-         v-list-item-content
+                        //-           v-list-item-title {{ item.name }}
+                        //-           v-list-item-subtitle PENDING...
+                        //-           v-list-item-subtitle PENDING...
+                        //-       v-divider
+                        //- template(v-else)
+                        //-   v-list(three-line)
+                        //-     template(v-for="(item, index) in data_source")
+                        //-       v-list-item(:key="item.id" @click="showExternalDataInfo(item)")
+                        //-         v-list-item-avatar
+                        //-           v-icon(class="red" dark) mdi-code-brackets
+                        //-         v-list-item-content
+                        //-           v-list-item-title {{ item.name }}
+                        //-           v-list-item-subtitle PENDING...
+                        //-           v-list-item-subtitle PENDING...
+                        //-       v-divider
+        v-dialog(v-model="dialogEditorjs" max-width="800px")
+          v-card(color='grey lighten-3')
+            v-container
+              v-card
+                div(id='show')
+        v-dialog(v-model="dialogBack" max-width="650px")
           v-card(color="yellow darken-3" dark)
-            v-card-title(class="headline") Do you want to save this symbol?
+            v-card-title(class="headline") Symbol has changed, do you want to save this symbol?
             v-card-actions
               v-spacer
               v-btn(text @click="$emit('dialogClose')") CANCEL
@@ -223,13 +237,11 @@
             v-container
               p CTRL+C | copy element
               p CTRL+V | paste element
+              P CTRL+D | delete element
               p CTRL+S | save instance
               p CTRL+Z | undo operation
-              p ----------Q | path function
-              p ---------W | polygon function
-              p ----------E | text function
-              p ----------R | data function
-              p ----------X | lock/unlock
+              p CTRL+X | lock/unlock
+              p CTRL+Q | insert mark
         v-snackbar(v-model="snackbar", :timeout="1500" color="yellow darken-3") {{ info_snackbar }}
           template(v-slot:action="{ attrs }")
             v-btn(text, v-bind="attrs", @click="snackbar = false") Close
@@ -239,8 +251,9 @@
 import * as d3 from 'd3'
 import axios from 'axios'
 import * as echarts from 'echarts'
-import pako from 'pako'
-import * as math from 'mathjs'
+// import pako from 'pako'
+// import * as math from 'mathjs'
+import EditorJS from '@editorjs/editorjs'
 
 export default {
   props: {
@@ -272,42 +285,20 @@ export default {
       edit_mode:false,
       items: [],
       svgIns: [],
-      // comVar: [],
-      url_get_bind_data: '',
-      url_get_ins_env: '',
-      url_post_config_read_data: '',
-      // url_post_interactive_data: '',
-      selected_environment: '',
-      environment_list: [],
-      externalUrls: [],
-      editedItem: {
-        name: '',
-        addr: '',
-      },
-      externalUrlHeaders: [
-        { text: 'Link Name', value: 'name' },
-        { text: 'Link Addr', value: 'addr' },
-        { text: 'Actions', value: 'actions', sortable: false },
-      ],
-      // url_get_bind_data: process.env.NODE_ENV === 'development' ? 'http://localhost:8000/ru/babel/get?operate=get_test_data' : 'http://10.166.152.49/ru/babel/get?operate=get_test_data',
       snackbar: false,
       lock: false,
       run_flag: false,
       interval: '',
       dialogHotKey: false,
       dialogDataBind: false,
-      dialogExpression: false,
-      dialogConfig: false,
-      dialogExternalUrl: false,
       dialogBack: false,
-      express: '',
+      dialogEditorjs: false,
       move_flag: false,
       error_flag: false,
       error_messages: '',
       is_success: false,
       info_color: 'info',
       info_snackbar: 'Element has been copied',
-      variable: [],
       selected: '',
       fill_range: '',
       fill_param: '',
@@ -315,13 +306,14 @@ export default {
       hexa: '#000000',
       canvas_width: document.body.offsetWidth -580,
       canvas_height: document.body.offsetHeight - 40,
+      scale_min: 0.1,
+      scale_max: 2,
       margin: {
         top: 20,
         right: 40,
         bottom: 30,
         left: 40
       },
-      that: '',
       svg: '',
       zoom: '',
       gx:[],
@@ -333,24 +325,35 @@ export default {
       elm: '',
       copy_elm: '',
       label: '',
-      bind_data: [],
       data: {},
-      original_attributes: ['style','xmlns'],
       select_mode: 'scene',
-      custom_mode: 'string',
       path_points: '',
       polygon_points: '',
       text: '',
+      font_size: 20,
       transform: 'translate(0,0) scale(1)',
       matrix: 'matrix(1 0 0 1 0 0)',
       drag:'',
       viewer_drag:'',
-      chart_text:'',
       refresh_interval: 1000,
-      query_data_pool:[],
-      history_data_pool:{},
+      history_data_pool:[],
       history_operate_pool:[],
-      env_pool:[],
+      external_data_list:[],
+      external_data_name: '',
+      external_data_selected_source: '',
+      external_data_selected_source_list: [],
+      external_data_selected_items: [],
+      external_data_selected:[],
+      external_data_selected_tmp:[],
+      external_data_show:[],
+      node_data: {},
+      editor_data: '',
+      show_data: '',
+      matched_keywords: '',
+      layers_num: 1,
+      layers_threshold: 0,
+      pre_threshold: 0,
+      echart_api_url:'',
     }
   },
   watch:{
@@ -362,29 +365,12 @@ export default {
       }
       this.resetCoordinates()
     },
-    bind_data() {
-      this.createData()
-      this.dialogDataBind = false
+    transform(val){
+      let that = this
+      d3.selectAll(".layer_mask_text").each(function(d, i) {
+        d3.select(this).style("font-size",  that.font_size / val.k + "px")
+      })   
     },
-    variable(val) {
-      this.express = this.express + val[0]
-    },
-    express(val) {
-      this.info_color = 'info'
-      this.is_success = false
-    },
-    run_flag(val){
-      if(val === true){
-        let that = this
-        d3.selectAll('path').each(function(d, i) {
-          if(d3.select(this).attr('dom_type') === 'data'){
-            d3.select(this.parentNode).append('text').attr("class", "tip").attr('x',0).attr('y',-10).style('fill', that.hexa).text('pending')
-          }
-        })
-      }else{
-        // d3.selectAll('.tip').remove()
-      }
-    }
   },
   mounted () {
     let that = this
@@ -393,8 +379,6 @@ export default {
       // window.event.preventDefault()
       that.error_flag = false
       that.error_messages = ''
-      if (e.path[0].getAttribute('type') === 'text') return
-      if (e.path[0].toString().indexOf('TextArea') > -1) return
       if (e.ctrlKey){
         if(key == 67){
           that.copy()
@@ -404,27 +388,19 @@ export default {
           that.save()
         }else if(key == 90){
           that.$common.historyOperatePop(that.history_operate_pool)
+        }else if (key== 68) { 
+          that.delete()
+        }else if(key == 81){
+          that.createMark()
+        }else if(key == 88){
+          that.unlock()
+        }
+        if ([86].indexOf(key) > -1){
+
+        }else{
+          return false
         }
       }
-      if (key== 46 || key== 8) { //Del or Backspace
-        that.delete()
-      }else if(key == 81){
-        that.path_points = ''
-        that.select_mode = 'path'
-      }else if(key == 87){
-        that.polygon_points = ''
-        that.select_mode = 'polygon'
-      }else if(key == 69){
-        that.text = ''
-        that.select_mode = 'text'
-      }else if(key == 82){
-        that.dialogDataBind = true
-      }else if(key == 88){
-        that.unlock()
-      }else if(key == 123){
-        let vConsole = new VConsole()
-      }
-      return false
     }
     if(this.is_viewer !== true){
       this.edit_mode = true
@@ -447,9 +423,8 @@ export default {
         that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height)
       }
       
-      if (that.is_viewer === true && d3.select(this).attr("dom_type") === 'g'){
-        that.select_mode = 'viewer'
-        that.selected_environment = d3.select(this.parentNode).attr("environment_name")
+      if (that.is_viewer === true){
+        that.bind()
       }else if(d3.select(this).attr("dom_type") === 'g'){
         that.select_mode = 'scene'
         that.fill_id = d3.select(this).attr('id')
@@ -467,38 +442,9 @@ export default {
           that.select_mode = 'path'
           that.path_points = d3.select(this).select('.children').attr("d")
         }else if(d3.select(this).select('.children').attr("dom_type") === 'data'){
-          let data = {}
-          that.data = {}
-          if (d3.select(this).node().getElementsByTagName('path').length > 0){
-            data = d3.select(this).node().getElementsByTagName('path')[0]
-            that.data['element'] = 'path'
-          }else{
-            data = d3.select(this).node().getElementsByTagName('div')[0]
-            that.data['element'] = 'div'
-          }
-          for(let i=0;i < data.attributes.length;i++){
-            if(['class', 'dom_type', 'd', 'fill', 'stroke', 'stroke-width'].indexOf(data.attributes[i].name)>-1){
-              continue
-            }
-            if(that.original_attributes.toString().indexOf(data.attributes[i].name) == -1){
-              if('id' == data.attributes[i].name){
-                that.fill_id = data.getAttribute(data.attributes[i].name)
-              }else if('range' == data.attributes[i].name){
-                that.fill_range = window.atob(data.getAttribute(data.attributes[i].name))
-              }else if('value' == data.attributes[i].name){
-                that.fill_param = window.atob(data.getAttribute(data.attributes[i].name))
-              }else if('mode' == data.attributes[i].name){
-                that.selected = window.atob(data.getAttribute(data.attributes[i].name))
-              }else if('expression' == data.attributes[i].name){
-                that.express = window.atob(data.getAttribute(data.attributes[i].name))
-              }
-              that.data[data.attributes[i].name] = 'id' !== data.attributes[i].name ? window.atob(data.getAttribute(data.attributes[i].name)) : data.getAttribute(data.attributes[i].name)
-            }
-          }
           that.select_mode = 'data'
         }else if(d3.select(this).select('.children').attr("dom_type") === 'chart'){
           that.select_mode = 'chart'
-          that.chart_text = window.atob(d3.select(this).select('.children').attr('bind_id'))
         }
       }
     }
@@ -535,7 +481,7 @@ export default {
 
       this.gx = d3.select("#axis").append("g").call(this.xAxis, this.x, {'x':0, 'y':0})
       this.gy = d3.select("#axis").append("g").call(this.yAxis, this.x, {'x':0, 'y':0})
-      this.zoom = d3.zoom().scaleExtent([0.4, 8]).on("zoom", this.zoomed)
+      this.zoom = d3.zoom().scaleExtent([this.scale_min, this.scale_max]).on("zoom", this.zoomed)
       d3.select("#viz").call(this.zoom).on("dblclick.zoom", null)
     },
     zoomed(event) {
@@ -543,18 +489,92 @@ export default {
       this.transform = transform
       d3.select("#axis").selectAll('text').call(g => g.attr("transform", transform))
       d3.select("#new").attr("transform", transform)
-
+      this.zoomInOutEvent(this.transform.k)
       this.gx.call(this.xAxis, transform.rescaleX(this.x), transform)
       this.gy.call(this.yAxis, transform.rescaleY(this.y), transform)
     },
+    zoomInOutEvent(cur_transform_k){
+      let ids = []
+      let that = this
+      let cur_layer = parseInt(cur_transform_k / this.layers_threshold) + 1 
+      let tmp = cur_layer > this.layers_num ? this.layers_num : cur_layer
+      if (tmp > this.pre_threshold) {
+        d3.selectAll(".symbol").each(function(d, i) {
+          if(that.$common.getElmPath(d3.select(this)) < tmp){
+            d3.selectAll(this.childNodes).each(function(d, i) {
+              if ((d3.select(this).attr('class') == 'layer_mask_rect') || (d3.select(this).attr('class') == 'layer_mask_text')){
+                ids.push(d3.select(this).attr("id"))
+              }
+            })
+          }
+        })
+        ids.forEach((key) => {    
+          d3.select("#"+key).remove()
+        })
+      }else if (tmp < this.pre_threshold) {
+        d3.selectAll(".symbol").each(function(d, i) {
+          if(that.$common.getElmPath(d3.select(this)) == tmp){
+            that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height, true, d3.select(this).attr('name'))
+          }
+        })
+      }
+      this.pre_threshold = tmp
+    },
+    initLayerMask(cur_transform_k){
+      let that = this
+      let cur_layer = parseInt(cur_transform_k / this.layers_threshold) + 1 
+      let tmp = cur_layer > this.layers_num ? this.layers_num : cur_layer
+      d3.selectAll(".symbol").each(function(d, i) {
+        let layer = that.$common.getElmPath(d3.select(this))
+        if((layer >= tmp) && (layer < that.layers_num)){
+          that.createCheckBox(d3.select(this), this.getBBox().x, this.getBBox().y, this.getBBox().width, this.getBBox().height, true, d3.select(this).attr('name'))
+        }
+      })
+    },
+    initSymbols(){
+      let that = this
+      let atoms = []
+      for (let index = this.layers_num - 1;  1 <= index; index--) {
+        d3.selectAll('.symbol').each(function(d, i) { 
+          if (index === that.$common.getElmPath(d3.select(this))){
+            atoms.push(d3.select(this).attr('id'))
+          }
+        })
+      }
+      if(atoms.length > 0){
+        this.addSymbolSvg({'id': atoms.pop()}, "replace", atoms)
+      }else{
+        this.initEndProcess()
+      }
+    },
+    initEndProcess(){
+      setTimeout(() =>{
+        this.initLayerMask(this.transform.k)
+        this.dragElements()
+        d3.select('.init_mask').remove()
+        this.$store.set('progress', false)
+      }, 400)
+    },
+    center(){
+      let x = d3.select("#new").node().getBBox().x
+      let y = d3.select("#new").node().getBBox().y
+      let width = d3.select("#new").node().getBBox().width
+      let height = d3.select("#new").node().getBBox().height
+      let scale = 1 / (width / this.canvas_width  + 1)
+      let transform_x = 0 - parseInt(((x * scale + width * scale ) - this.canvas_width + x * scale) / 2)
+      let transform_y = 0 - parseInt(((y * scale + height * scale ) - this.canvas_height + y * scale) / 2)
+      // return `translate(${transform_x},${transform_y}) scale(${scale})`
+      return {'x': transform_x, 'y': transform_y, 'k': scale}
+    },
+
     dragElements(){
       let that = this
-
       d3.selectAll(".children").each(function(d, i) {
         if(d3.select(this).attr('dom_type') === 'data'){
-          that.$common.bindEvent(d3.select(this))
+          // that.$common.bindEvent(d3.select(this))
           if(d3.select(this).attr('d') !== null){
             d3.select(this.parentNode).call(that.viewer_drag)
+            // that.$common.bindPointEvent(d3.select(this.parentNode), d3.select(this.parentNode).attr('keywords'))
           }else{
             d3.select(this.parentNode.parentNode).call(that.viewer_drag)
           }
@@ -563,26 +583,17 @@ export default {
           d3.select(this.parentNode.parentNode).call(that.viewer_drag)
         }
       })
-
-      d3.select("#new").each(function(d, i) {
-        d3.selectAll(this.childNodes).each(function(d, i) {
-          if(d3.select(this).attr('class') === 'environment'){
-            d3.selectAll(this.childNodes).each(function(d, i) {
-              if (d3.select(this).attr('drag_event') === 'true'){
-                d3.select(this).call(that.drag)
-              }else{
-                d3.select(this).call(that.viewer_drag)
-              }
-            })
-          }else{
+      if (this.is_viewer === false ){
+        d3.select("#new").each(function(d, i) {
+          d3.selectAll(this.childNodes).each(function(d, i) {
             if (d3.select(this).attr('drag_event') === 'true'){
               d3.select(this).call(that.drag)
             }else{
               d3.select(this).call(that.viewer_drag)
             }
-          }
+          })
         })
-      })
+      }
     },
     xAxis(g, x, transform){
       g.attr("transform", `translate(${-transform.x},${-transform.y+this.margin.top})`)
@@ -618,10 +629,17 @@ export default {
           let tmp = data.getElementsByTagName('g')[0]
           d3.select("#new").remove()
           d3.select('#viz').node().append(tmp)
-          d3.select("#new").attr("transform", this.transform)
+          this.createInitMarkBox()
+          this.transform = this.center()
+          this.layers_num = this.$common.getLayersNum() + 1
+          this.layers_threshold = (this.scale_max - this.scale_min) / this.layers_num
+          this.pre_threshold = parseInt(this.transform.k / this.layers_threshold) + 1 
+          d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity.translate(this.transform.x, this.transform.y).scale(this.transform.k))
           this.svg = d3.select("#new")
-          this.dragElements()
         })
+    },
+    async updateSymbols(){
+      await this.initSymbols()
     },
     selectedItem(item){
       this.done()
@@ -640,21 +658,7 @@ export default {
         this.addSymbolSvg(item)
       }
     },
-    async queryBackendData(){
-      await axios.get(this.url_get_bind_data)
-        .then(response => {
-          this.items = [JSON.parse(pako.inflate(window.atob(response.data.content[0]), { to: 'string' }))]
-          // this.items = response.data.content
-        })
-    },
-    async queryInsEnv(){
-      await axios.get(this.url_get_ins_env)
-      
-        .then(response => {
-          this.environment_list = response.data.content
-        })
-    },
-    async addSymbolSvg (item) {
+    async addSymbolSvg (item, operate_type="insert", recursion_list=[]) {
       await this.$http.get(this.$urls.babel_get, {
         params: {
             operate: 'get_symbol',
@@ -662,19 +666,76 @@ export default {
         },
         })
         .then(response => {
-          this.insertSvg(response.data.content.content)
+          if (operate_type === "insert") {
+            this.insertSvg(response.data.content.content, 'symbol', item.id)
+          }else{
+            let tmp = d3.select('#' + item.id)
+            let attr_id = tmp.attr('id')
+            let attr_class = tmp.attr('class')
+            let attr_transform = tmp.attr('transform')
+            let node_parent = this.$common.getNodeParent(tmp)
+            tmp.remove()
+
+            let symbol_data = JSON.parse(response.data.content.node_data)
+            Object.keys(symbol_data).forEach((key) => {
+              this.node_data[key] = symbol_data[key]
+            })
+
+            d3.xml(response.data.content.content)
+              .then(data => {
+                let tmp = data.documentElement
+                tmp.setAttribute("id", attr_id)
+                tmp.setAttribute("class", attr_class)
+                tmp.setAttribute("transform", attr_transform)
+                tmp.setAttribute("name", response.data.content.category +'_'+ response.data.content.symbol_name)
+                // console.log(response.data.content.category +'_'+ response.data.content.symbol_name)
+                node_parent.node().append(tmp)
+              })
+
+            if (recursion_list.length != 0) {
+              this.addSymbolSvg({'id': recursion_list.pop()}, "replace", recursion_list)
+            }else{
+              this.initEndProcess()
+            }
+          }
         })
     },
-    createCheckBox(elm,x,y,w,h) {
-      elm.append('rect')
-        .attr("class", "check_box")
-        .attr('x',x)
-        .attr('y',y)
-        .attr('width',w)
-        .attr('height',h)
-        .attr('fill','none')
-        .style('stroke', "#0000FF50")
-        .style('stroke-width', 2)
+    createInitMarkBox(){
+      d3.select('#viz').append('rect')
+        .attr('x',0)
+        .attr('y',0)
+        .attr('width',this.canvas_width)
+        .attr('height',this.canvas_height)
+        .attr("class", "init_mask")
+        .attr('fill', "#FFFFFF")
+    },
+    createCheckBox(elm,x,y,w,h,fill=false,text='') {
+      let tmp = elm.append('rect')
+                  .attr("id", "id"+this.$common.generateUUID())
+                  .attr('x',x-5)
+                  .attr('y',y-5)
+                  .attr('width',w+10)
+                  .attr('height',h+10)
+      if (fill == false) {
+        tmp.attr("class", "check_box")
+          .attr('fill', 'none')
+          .style('stroke', "#0000FF50")
+          .style('stroke-width', 2)
+      }else{
+        tmp.attr("class", "layer_mask_rect")
+          .attr('fill', "#E6E6FA")
+          .style('stroke', "#0000FF50")
+          .style('stroke-width', 4)
+        elm.append('text')
+          .attr("id", this.$common.generateUUID())
+          .attr('x',x)
+          .attr('y',y + h - this.font_size)
+          .attr("fill", "#000000")
+          .attr("font-weight", "bold")
+          .attr("class", "layer_mask_text")
+          .style("font-size", this.font_size / this.transform.k + "px")
+          .text(text)
+      }
     },
     createPath() {
       let tmp = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
@@ -704,58 +765,30 @@ export default {
           .attr("class", "children")
           .attr("dom_type", 'text')
           .attr("fill", this.hexa)
-          // .attr("font-weight", "bold")
+          .attr("font-weight", "bold")
+          .style("font-size", this.font_size + "px")
           .text(this.text)
       this.$common.historyOperatePush(this.history_operate_pool, 'create', tmp)
     },
-    createData(){
-      this.data = this.$common.jsonSearchId(this.items, this.bind_data)
-      // let uuid = this.$common.generateUUID()
-      let content = ''
-      Object.keys(this.data).forEach((key) => {
-        if (key == 'id') {
-          content += ' '+key+'='+this.data[key]
-        }else{
-          content += ' '+key+'='+window.btoa(this.data[key])
-        }
-      })
-      let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
-      g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
-      this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
-      // g.attr("pointer-events", "all")
-        // .on("mouseenter", (event, d) => {
-        //   g.append('text').attr("class", "tip").attr('x',0).attr('y',-20).style('fill', "#000000").text(g.select('path').attr('name'))
-        // })
-        // .on("mouseleave", (event, d) => {
-        //   g.selectAll('.tip').remove()
-        // })
-    },
-    createCustomData(){
-      let uuid = this.$common.generateUUID()
-      let content = ' id='+uuid+' value='+window.btoa('0')+' mode='+window.btoa('normal')
-      let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+    createMark(){
+      this.done()
+      let g = this.svg.append('g').attr("class", "data").attr("id", this.$common.generateUUID()).attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+      g.html('<path class="children" dom_type="data" d="' + this.$common.getLandmarkSvgPath() +'" fill="#FF0000" stroke="#000000" stroke-width="1" ></path>')
 
-      if (this.custom_mode === 'expression'){
-        g.html('<path class="children" dom_type="data" d="M 0,0 m-10,0 a10,10 0 1,0 20,0 a10,10 0 1,0 -20,0" fill="#7FFF0050" stroke="#00000050" stroke-width="1" '+content+'></path>')
-        this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
-        return
-      }
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
+    },
+    createEchart(){
+      this.done()
+      let uuid = this.$common.generateUUID()
+      let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
 
       g.append("foreignObject")
-          .attr("width", 40)
-          .attr("height", 20)
-        .html('<div id='+uuid+' class="children" dom_type="data"'+content+'>')
+          .attr("width", 300)
+          .attr("height", 200)
+        .html('<div id='+uuid+' class="children" dom_type="chart" style="background:white;width: 300px;height:200px;" >')
       this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
-
-      if(this.custom_mode === 'string'){
-        this.$common.createStringVar(d3.select("#"+uuid))
-      }else if (this.custom_mode === 'list'){
-        this.$common.createSelectVar(d3.select("#"+uuid), ["init1","init2","init3"])
-      }else if (this.custom_mode === 'chart'){
-        d3.select("#"+uuid).select(function() { return this.parentNode }).attr("width", 300).attr("height", 200)
-        d3.select("#"+uuid).attr("dom_type","chart").attr("bind_id",window.btoa("id")).attr("style", "background:white;width: 300px;height:200px;")
-      }
     },
+    
     updateColor(){
       if (this.run_flag === true){
         d3.selectAll('.tip').call(g => g.style("fill", this.hexa))
@@ -804,24 +837,50 @@ export default {
         data.innerHTML = this.data_name+":"+this.data_value
       }
     },
-    // updateComVar(){
-    //   if (this.elm !== ''){
-    //     this.elm.select(function() { return this.parentNode }).attr('params', JSON.stringify(this.comVar))
-    //   }
-    // },
-    updateBindId(){
-      if (this.elm !== ''){
-        this.elm.select('div').attr('bind_id', window.btoa(this.chart_text) )
+    updateEchartApiUrl(){
+      let that = this
+      if (this.interval == ''){
+        if (this.elm !== ''){
+          if (this.echart_api_url !== '') {
+
+            this.interval = setInterval(function() {
+              axios.get(that.echart_api_url, {
+                params: {
+                    operate: 'get_test_data',
+                },
+                })
+                .then(response => {
+                  let series = []
+                  let names = []
+                  let tmp = []
+                  Object.keys(response.data.content).forEach((key) => {
+                    if (Object.keys(that.history_data_pool).indexOf(key) == -1) {
+                      that.history_data_pool[key] = []
+                    }
+                    that.history_data_pool[key].push(response.data.content[key])
+                    tmp = that.$common.sliceYAxisQueueHandle(that.history_data_pool[key], 30)
+                    series.push({'name':key, 'type':'line', 'showSymbol':false, 'data':tmp})
+                  })
+                  Object.keys(that.history_data_pool).forEach((key) => {
+                    names.push(key)
+                  })
+                  let ins = echarts.getInstanceByDom(that.elm.select('div').node())
+                  if (ins == null){
+                    echarts.init(that.elm.select('div').node()).setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)))
+                  }else{
+                    ins.setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
+                  }
+                })
+              },this.refresh_interval)
+          }
+        }
+      }else{
+        clearInterval(this.interval)
+        this.interval = ''
       }
     },
-    updateSymbolsUrl(val){
-      this.url_get_bind_data = val
-    },
-    updateViewersUrl(val){
-      if(typeof(val) !== 'undefined'){
-        this.url_get_ins_env = val['url_get_ins_env']
-        this.externalUrls = val['externalUrls']
-      }
+    updateNodeData(val){
+      this.node_data = val
     },
     unlock(){
       if (this.elm !== ''){
@@ -863,7 +922,7 @@ export default {
       if (this.copy_elm !== ''){
         let tmp = this.copy_elm.clone([true])
         let position = {'x': tmp.attr("transform").split(' ')[4], 'y': tmp.attr("transform").split(' ')[5].replace(')', '')}
-        await tmp.attr("transform", `matrix(1 0 0 1 ${position.x + Math.round(Math.random()*100)} ${position.y + Math.round(Math.random()*100)})`)
+        await tmp.attr("transform", `matrix(1 0 0 1 ${parseInt(position.x) + Math.round(Math.random()*100)} ${parseInt(position.y) + Math.round(Math.random()*100)})`)
         this.$common.historyOperatePush(this.history_operate_pool, 'create', tmp)
         this.dragElements()
       }
@@ -873,6 +932,8 @@ export default {
         this.elm.select('.check_box').remove()
       }
       this.elm = ''
+      this.copy_elm = ''
+      this.external_data_selected = []
       this.select_mode = 'scene'
     },
     clear(){
@@ -884,440 +945,40 @@ export default {
       d3.select("#viz").call(this.zoom.transform, d3.zoomIdentity)
     },
     async back(){
-      await this.save()
+      this.save()
       this.dialogBack = false
-      setTimeout(() =>{
-        this.$emit('dialogClose')
-      },1100)
     },
     async save(){
       this.done()
-      // let params = []
-      // if(this.items.length > 0){
-      //   this.items[0].params.forEach((key) => {
-      //     params.push({'name': key.name, 'value': 'content'})
-      //   })
-      //   d3.select("#new").attr("params", JSON.stringify(params))
-      //   d3.select("#new").attr("docid", this.items[0].id)
-      //   d3.select("#new").attr("server", this.items[0].server)
-      // }
-      if(this.is_viewer === true){
-        await this.saveApiViewer()
-        setTimeout(() => {
-          this.$emit('saveToServer', d3.select("#new"))
-        }, 100)
-      }else{
-        this.$emit('saveToServer', d3.select("#new"), this.url_get_bind_data)
-      }
-    },
-    async saveApiBindData(){
-      if(this.flagUpdateOrAdd === true){
-        await this.$emit('saveApiBindData', this.url_get_bind_data)
-      }
-      this.queryBackendData()
-    },
-    async saveApiViewer(){
-      let api_url = {}
-      api_url['url_get_ins_env'] = this.url_get_ins_env
-      api_url['externalUrls'] = this.externalUrls
-      if(this.flagUpdateOrAdd === true){
-        await this.$emit('saveApiViewer', api_url)
-      }
-      this.queryInsEnv()
+      this.$emit('saveToServer', d3.select("#new"), this.node_data)
+      this.history_operate_pool = []
     },
     async log(){
-      // let that = this
-      // console.log(d3.select("#ssh\\.root\\@10\\.166\\.147\\.40"))
+      // console.log(this.external_data_selected)
+      // console.log("https11"[])
+      console.log(this.external_data_selected)
       console.log(d3.select("#new").node())
       // console.log(this.history_operate_pool)
     },
-    expression(){
-      this.dialogExpression = true
-    },
-    checkExpression(){
-      if (this.elm !== ''){
-        let data = {}
-        let new_express = this.express
-        let tmp = this.express.match(/\$\{.*?\}/g)
-        if (tmp !== null){
-          tmp.forEach((elm) => {
-            new_express = new_express.replace(elm,'$')
-          })
-        }
-        try{
-          const node = math.parse(new_express)
-          if (this.elm.node().getElementsByTagName('path').length > 0){
-            data = this.elm.node().getElementsByTagName('path')[0]
-          }else{
-            data = this.elm.node().getElementsByTagName('div')[0]
-          }
-          this.info_color = 'success'
-          this.is_success = true
-          if (this.express === ''){
-            data.removeAttribute('expression')
-          }else{
-            data.setAttribute("expression", window.btoa(this.express))
-          }
-        }catch(err){
-          this.error_flag = true
-          this.error_messages = err.toString()
-        }
-      }
-    },
-    coverToList(){
-      let tmp = []
-      if(this.environment_list.length > 0){
-        JSON.stringify(this.environment_list).match(/\"name\":\"(.*?)\"/g).forEach((elm) => {
-          tmp.push(elm.split(":")[1].replace(/\"/g,''))
-        })
-      }
-      return tmp
-    },
-    syncEnvironment(){
-      this.environment_list.forEach((e) => {
-        if (e['name'] === this.selected_environment) {
-          if(!d3.select("#"+e['id'].replaceAll('.','\\.').replaceAll('@','\\@')).empty()){
-            d3.select("#"+e['id'].replaceAll('.','\\.').replaceAll('@','\\@')).node().append(this.elm.node())
-          }else{
-            d3.select("#new").append('g')
-            .attr("id", e['id'])
-            .attr("environment_name", e['name'])
-            // .attr("params", this.elm.attr('params'))
-            // .attr("docid", this.elm.attr('docid'))
-            // .attr("server", e['server'])
-            .attr("class", "environment")
-            .node().append(this.elm.node())
-          }
-          this.$common.clearGNode()
-          this.env_pool.push(e['id'])
-          this.env_pool = this.$common.dedupe(this.env_pool)
-        }
-      })
-    },
-    initCtrlElm(){
-      if (this.elm !== ''){
-        if(this.elm.attr('dom_type') === 'g'){
-          this.elm.attr('id', this.fill_id)
-        }else if(!this.elm.select('div').empty()){
-          this.elm.select('div')
-            .attr('id', this.fill_id)
-            .attr('mode', window.btoa(this.selected))
-          if(this.elm.select('div').node().hasAttribute('range')){
-            this.elm.select('select').remove()
-            this.$common.createSelectVar(this.elm.select('div'),this.fill_range.split(','))
-          }
-        }else if(!this.elm.select('path').empty()){
-          this.elm.select('path')
-            .attr('id', this.fill_id)
-            .attr('value', window.btoa(this.fill_param))
-            .attr('mode', window.btoa(this.selected))
-        }else{
-
-        }
-      }
-    },
-    async runOrStop(){
-      if(this.run_flag === false){
-        let that = this
-        this.run_flag = true
-        // this.query_data_pool = []
-
-        d3.selectAll(".environment").each(function(d, i) {
-          that.history_data_pool[d3.select(this).attr('id')] = []
-        })
-
-        this.interval = setInterval(function() {
-          d3.selectAll(".environment").each(function(d, i) {
-            let env = this
-            let config = {
-              headers: {
-              'Content-Type': 'multipart/form-data'
-              }
-            }
-            // console.log(that.$common.getNodeChildNotCustomModular(d3.select(env)))
-            that.$common.getNodeChildNotCustomModular(d3.select(env)).each(function(d, i) {
-              let params = that.$common.getModularCommonVarAndKeys(d3.select(this), d3.select(env))
-              let formData = new FormData()
-              params['coms'].forEach((com) =>{
-                formData.append(com['id'], com['value'])
-              })
-              formData.append('username', that.username)
-              formData.append('operate', "hardware_environment_save_config")
-              formData.append('sid', d3.select(env).attr('id'))
-              formData.append('key', that.$common.dedupe(params['ids']).join(','))
-              axios.post(formData.get('api'), formData, config)
-              .then(
-                (response)=>{
-                  let he = response.data
-                  // console.log(he)
-                  // let data_slice = {}
-                  d3.select(this).selectAll("path").each(function(d, i) {
-                    if(d3.select(this).attr('dom_type') === 'data'){
-                      let data = d3.select(this).node()
-                      if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
-                        data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
-                      }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") === -1) {
-                        let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
-                        data.setAttribute("value", window.btoa(temp))
-                      }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") !== -1 ) {
-                        let expression = window.atob(data.getAttribute('expression'))
-                        let vars = expression.match(/(\$\{(.*?)\})/g)
-                        if (vars !== null) {
-                          vars.forEach((v) => {
-                            expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he, hardware))
-                          })
-                          try{
-                            let result = that.$common.calExpressDepend(window.btoa(expression), he, env)
-                            if(typeof(result) === 'undefined'){
-                              data.setAttribute("value", window.btoa(expression))
-                            }else{
-                              data.setAttribute("value", window.btoa(result))
-                            }
-                          }catch(err){
-                            data.setAttribute("value", window.btoa(expression))
-                          }
-                        }else{
-                          let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, env)
-                          data.setAttribute("value", window.btoa(temp))
-                        }
-                      }
-                      // data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
-                    }
-                  })
-                  that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,he)
-                  
-              }, (error) => {
-                console.log(error)
-              })
-            })
-
-            setTimeout(() =>{
-              // console.log(that.$common.getNodeChildCustomModular(d3.select(env)))
-              that.$common.getNodeChildCustomModular(d3.select(env)).each(function(d, i) {
-                let data_slice = {}
-                let modular = d3.select(this)
-                modular.selectAll("path").each(function(d, i) {
-                  if(d3.select(this).attr('dom_type') === 'data'){
-                    let data = d3.select(this).node()
-                    if(data.getAttribute('expression') !== null) {
-                      let temp = that.$common.calExpressDependVersion2(data.getAttribute('expression'), env, that.history_data_pool)
-                      data.setAttribute("value", window.btoa(temp))
-                      data_slice[data.getAttribute('id')] = temp
-                    }
-                  }
-                })
-                that.$common.pushModularDataToHistoryPool(d3.select(env),d3.select(this),that.history_data_pool,data_slice)
-              })
-              // console.log(that.history_data_pool)
-              d3.select(env).selectAll('.tip').each(function(d, i) {
-                let path = d3.select(this.parentNode).select('path')
-                d3.select(this).text(window.atob(path.attr('value')))
-              })
-
-              d3.select(this).selectAll('.children').each(function(d, i) {
-                if(d3.select(this).attr('dom_type') === 'chart'){
-                  let series = []
-                  let names = []
-                  if(d3.select(this).attr('bind_id') !== null){
-                    window.atob(d3.select(this).attr('bind_id')).split(',').forEach((id) => {
-                      let tmp = []
-                      let ids = id.split('.')
-                      names.push(id)
-                      that.history_data_pool[d3.select(env).attr('id')][ids.slice(0, ids.length-1).join('.')].forEach((slice) => {
-                        tmp.push(slice[ids.slice(-1)[0]])
-                      })
-                      tmp = that.$common.sliceYAxisQueueHandle(tmp, 30)
-                      series.push({'name':id, 'type':'line', 'showSymbol':false, data:tmp})
-                    })
-                    let ins = echarts.getInstanceByDom(d3.select(this).node())
-                    if (ins == null){
-                      echarts.init(d3.select(this).node()).setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)))
-                    }else{
-                      ins.setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
-                    }
-                  }
-                }
-              })
-            }, 100)
-            // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
-          })
-        },this.refresh_interval)
-      }else{
-        clearInterval(this.interval)
-        this.run_flag = false
-      }
-    },
-    // async runOrStop(){
-    //   if(this.run_flag === false){
-    //     let that = this
-    //     this.run_flag = true
-    //     this.query_data_pool = []
-    //     d3.selectAll(".environment").each(function(d, i) {
-    //       that.history_data_pool[d3.select(this).attr('id')] = []
-    //     })
-    //     this.interval = setInterval(function() {
-    //       d3.selectAll(".environment").each(function(d, i) {
-    //         let hardware = this
-    //         let query_struc = {
-    //           'username': that.username,
-    //           'operate': "hardware_environment_save_config",
-    //           'url': d3.select(hardware).attr('server'),
-    //           'sid': d3.select(hardware).attr("id"),
-    //           'docid': d3.select(hardware).attr("docid"),
-    //           'params':d3.select(hardware).attr('params'),
-    //         }
-
-    //         d3.select(hardware).selectAll("path").each(function(d, i) {
-    //           if(d3.select(this).attr('dom_type') === 'data'){
-    //             let data = d3.select(this).node()
-    //             if (data.getAttribute('expression') !== null) {
-    //               that.$common.getRootVar(data.getAttribute("expression"), that.query_data_pool)
-    //             }else{
-    //               if (data.getAttribute('mode') === null) {
-    //                 that.query_data_pool.push(data.getAttribute("id"))
-    //               }
-    //             }
-    //           }
-    //         })
-    //         JSON.parse(query_struc['params']).forEach((key) =>{
-    //           query_struc["addr_map"] = key.value
-    //         })
-    //         query_struc["key"] = that.$common.dedupe(that.query_data_pool).join(',')
-    //         // formData.append("addr_map", 'x:0x1090000000 + (x&0xFFFFFFF)')
-    //         let config = {
-    //           headers: {
-    //           'Content-Type': 'multipart/form-data'
-    //           }
-    //         }
-    //         let formData = new FormData()
-    //         for ( let key in query_struc) {
-    //             formData.append(key, query_struc[key])
-    //         }
-    //         axios.post(query_struc['url'], formData, config)
-    //         .then(
-    //           (response)=>{
-    //             let he = response.data
-    //             // console.log(he)
-    //             let data_slice = {}
-    //             d3.select(hardware).selectAll("path").each(function(d, i) {
-    //               if(d3.select(this).attr('dom_type') === 'data'){
-    //                 let data = d3.select(this).node()
-    //                 if (data.getAttribute('expression') === null && data.getAttribute('mode') === null){
-    //                   data.setAttribute("value", window.btoa(he[data.getAttribute("id")]))
-    //                 }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") === -1) {
-    //                   let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
-    //                   data.setAttribute("value", window.btoa(temp))
-    //                 }else if(data.getAttribute('expression') !== null && window.atob(data.getAttribute('expression')).indexOf("$") !== -1 ) {
-    //                   let expression = window.atob(data.getAttribute('expression'))
-    //                   let vars = expression.match(/(\$\{(.*?)\})/g)
-    //                   if (vars !== null) {
-    //                     vars.forEach((v) => {
-    //                       expression = expression.replace(v, that.$common.calExpressDepend(window.btoa(v.replace('$','').replace('{','').replace('}','')), he, hardware))
-    //                     })
-    //                     try{
-    //                       let result = that.$common.calExpressDepend(window.btoa(expression), he, hardware)
-    //                       if(typeof(result) === 'undefined'){
-    //                         data.setAttribute("value", window.btoa(expression))
-    //                       }else{
-    //                         data.setAttribute("value", window.btoa(result))
-    //                       }
-    //                     }catch(err){
-    //                       data.setAttribute("value", window.btoa(expression))
-    //                     }
-    //                   }else{
-    //                     let temp = that.$common.calExpressDepend(data.getAttribute('expression'), he, hardware)
-    //                     data.setAttribute("value", window.btoa(temp))
-    //                   }
-    //                 }
-    //                 data_slice[data.getAttribute('id')] = window.atob(data.getAttribute("value"))
-    //               }
-    //             })
-    //             that.history_data_pool[d3.select(hardware).attr('id')].push(data_slice)
-    //             d3.select(hardware).selectAll('.tip').each(function(d, i) {
-    //               let path = d3.select(this.parentNode).select('path')
-    //               d3.select(this).text(window.atob(path.attr('value')))
-    //             })
-    //             d3.select(hardware).selectAll('.children').each(function(d, i) {
-    //               if(d3.select(this).attr('dom_type') === 'chart'){
-    //                 let series = []
-    //                 let names = []
-    //                 if(d3.select(this).attr('bind_id') !== null){
-    //                   window.atob(d3.select(this).attr('bind_id')).split(',').forEach((id) => {
-    //                     let tmp = []
-    //                     names.push(id)
-    //                     that.history_data_pool[d3.select(hardware).attr('id')].forEach((slice) => {
-    //                       tmp.push(slice[id])
-    //                     })
-    //                     tmp = that.$common.sliceYAxisQueueHandle(tmp, 30)
-    //                     series.push({'name':id, 'type':'line', 'showSymbol':false, data:tmp})
-    //                   })
-    //                   let ins = echarts.getInstanceByDom(document.getElementById(d3.select(this).attr('id')))
-    //                   if (ins == null){
-    //                     echarts.init(document.getElementById(d3.select(this).attr('id'))).setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)))
-    //                   }else{
-    //                     ins.setOption(that.$common.getChartConfig(names, series, that.$common.sliceXAxisQueueHandle(that.refresh_interval, 30)), true)
-    //                   }
-    //                 }
-    //               }
-    //             })
-    //         }, (error) => {
-    //           console.log(error)
-    //         })
-    //       })
-    //     },this.refresh_interval)
-    //   }else{
-    //     clearInterval(this.interval)
-    //     this.run_flag = false
-    //   }
-    // },
-    // async interactive(){
-    //   let res = []
-
-    //   let formData = new FormData()
-    //   let parent = this.elm.select(function() { return this.parentNode })
-    //   formData.append("username", this.username)
-    //   formData.append("sid", parent.attr("id"))
-    //   formData.append("docid", parent.attr("docid"))
-
-    //   parent.selectAll(".children").each(function(d, i) {
-    //     if(d3.select(this).attr('dom_type') === 'data'){
-    //       let tmp = {}
-    //       let data = d3.select(this).node()
-    //       if (window.atob(data.getAttribute("mode")) === 'interactive'){
-    //         tmp['id'] = data.getAttribute("id")
-    //         tmp['value'] = window.atob(data.getAttribute("value"))
-    //         tmp['expression'] = data.getAttribute("expression") !== null ? window.atob(data.getAttribute("expression")) : ""
-    //         res.push(tmp)
-    //       }
-    //     }
-    //   })
-    //   formData.append("key", JSON.stringify(res))
-
-    //   let config = {
-    //     headers: {
-    //     'Content-Type': 'multipart/form-data'
-    //     }
-    //   }
-    //   await axios.post(parent.attr("server"), formData, config).then(
-    //     (response)=>{
-    //     console.log(response.data.content)
-    //   })
-    // },
     importSvg(){
       document.getElementById('fileInput').click()
     },
-    insertSvg(svg){
+    insertSvg(svg, type="svg" , instance_id=this.$common.generateUUID()+'operate_element'){
       let that = this
       d3.xml(svg)
       .then(data => {
-        let instance_id = this.$common.generateUUID()+'operate_element'
-        let tmp = data.documentElement
+        let tmp = type === 'svg' ? that.svg.append('g').node() : data.documentElement
         tmp.setAttribute("id", instance_id)
+        tmp.setAttribute("class", type === "svg" ? "svg" : "symbol")
         tmp.setAttribute("xmlns", "http://www.w3.org/2000/svg")
         tmp.setAttribute("transform", that.matrix)
         tmp.setAttribute("dom_type", 'g')
         tmp.setAttribute("drag_event", 'true')
-        d3.select('#new').node().append(tmp)
+        if (type === 'svg'){
+          tmp.append(data.documentElement)
+        }else{
+          d3.select('#new').node().append(tmp)
+        }
         that.$common.historyOperatePush(that.history_operate_pool, 'create', d3.select('#'+instance_id))
         that.dragElements()
       })
@@ -1332,10 +993,230 @@ export default {
         this.svgIns = []
       }
     },
-    autocomplete(){
-      this.error_flag = false
-      this.error_messages = ''
+    backHandle(){
+      if (this.history_operate_pool.length > 0) {
+        this.dialogBack = true
+      }else{
+        this.$emit('dialogClose')
+      }
     },
+    async bind(){
+      this.external_data_selected = []
+      this.external_data_show = []
+      await this.requestExternalDataAll()
+      this.refreshExternalDataSelected()
+      this.dialogDataBind = true
+      this.showSummaryInfo()
+    },
+    async aiAutomaticMatch(){
+      await this.$http.get(this.$urls.algorithm_get, {
+        params: {
+          operate: 'match_keywords_to_info_source',
+          keywords: this.matched_keywords
+        },
+        })
+        .then(response => {
+          response.data.content.forEach((key) => {         
+            if(!this.node_data.hasOwnProperty(this.elm.attr("id"))){
+              this.node_data[this.elm.attr("id")] = {}
+            }
+            this.node_data[this.elm.attr("id")][key['id']] = key['top_results']
+          })
+          this.elm.attr('keywords', this.matched_keywords)
+          this.refreshExternalDataSelected()
+        })
+    },
+    changeExternalData(){
+      this.applyData()
+      this.refreshExternalDataSelected()
+    },
+    refreshExternalDataSelected(){
+      this.external_data_list.forEach((key) => {
+        if(key['name'] === this.external_data_selected_source['name']){
+          this.external_data_selected_source = {'id': key['id'], 'name':key['name']}
+          this.external_data_selected_items = [key]
+          setTimeout(() =>{
+            if(this.node_data.hasOwnProperty(this.elm.attr("id"))){
+              if(this.node_data[this.elm.attr("id")].hasOwnProperty(key['id'])){
+                this.external_data_selected = this.node_data[this.elm.attr("id")][key['id']]             
+              }
+            }
+            this.refreshExternalDataShow()
+          }, 200)
+        }
+      })
+    },
+    refreshExternalDataShow(){
+      if(this.node_data.hasOwnProperty(this.elm.attr("id"))){
+        this.external_data_show = this.node_data[this.elm.attr("id")]
+      }
+    },
+    applyData(){
+      if(!this.node_data.hasOwnProperty(this.elm.attr("id"))){
+        this.node_data[this.elm.attr("id")] = {}
+      }
+      this.editor_data.save().then((data) => {
+        this.node_data[this.elm.attr("id")]['summary'] = data
+      })
+      if (this.external_data_selected !== []){
+        this.node_data[this.elm.attr("id")][this.external_data_selected_source['id']] = this.external_data_selected
+      }
+    },
+    showSummaryInfo(){
+      setTimeout(() =>{
+        if (this.editor_data === ''){
+          if(this.node_data.hasOwnProperty(this.elm.attr("id"))){
+            this.editor_data = new EditorJS(this.$common.getEditorJSConfig('editor',  this.node_data[this.elm.attr("id")].hasOwnProperty('summary') ? this.node_data[this.elm.attr("id")]['summary'] : {}, false))
+          }else{
+            this.editor_data = new EditorJS(this.$common.getEditorJSConfig('editor', {}, false))
+          }
+        }else{
+          if(this.node_data.hasOwnProperty(this.elm.attr("id"))){
+            this.editor_data.blocks.render(this.node_data[this.elm.attr("id")].hasOwnProperty('summary') ? this.node_data[this.elm.attr("id")]['summary'] : {})
+          }else{
+            this.editor_data.blocks.clear()
+          }
+        }
+      }, 200)
+    },
+    showExternalDataInfo(item){
+      this.dialogEditorjs = true
+      this.$nextTick(function(){
+        if (this.show_data === ''){
+          this.show_data = new EditorJS(this.$common.getEditorJSConfig('show', {'time':(new Date()).valueOf(), 'blocks': item.value instanceof Object ? item.value : JSON.parse(item.value), 'version': '2.22.2'}, true))
+        }else{
+          this.show_data.blocks.render({'time':(new Date()).valueOf(), 'blocks': item.value instanceof Object ? item.value : JSON.parse(item.value), 'version': '2.22.2'})
+        }
+      })
+    },
+    async requestExternalDataAll(){
+      await this.$http.get(this.$urls.babel_get, {
+        params: {
+          operate: 'get_datas_all',
+        },
+        })
+        .then(response => {
+          this.external_data_list = response.data.content
+          this.external_data_list.forEach((key, index) => {
+            this.external_data_selected_source_list.push(key['name'])
+            if(index == 0){
+              this.external_data_selected_source = {'id': key['id'], 'name':key['name']}
+              this.external_data_selected_items = [key]
+            }
+          })
+        })
+    },
+    createTestButton(){
+      this.done()
+      let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+
+      g.append("foreignObject")
+          .attr("width", 40)
+          .attr("height", 20)
+        .html('<div id="test_button" class="children" >')
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
+      this.createButtonVar(d3.select("#test_button"))
+    },
+    createButtonVar(node){
+      let that = this
+      let custom_elm = node.append('button')
+      custom_elm.text("click")
+                .style("border-style", "solid")
+                .style("width", "40px")
+      custom_elm.on("click", function(d) {
+        let ins = echarts.getInstanceByDom(d3.select('#test_echart').node())
+        ins.setOption(that.createTestThermodynamicDiagram())
+      })
+    },
+
+    createTestEchart(){
+      this.done()
+      let g = this.svg.append('g').attr("drag_event", 'true').attr("transform", this.matrix).call(this.drag)
+
+      g.append("foreignObject")
+          .attr("width", 800)
+          .attr("height", 1200)
+        .html('<div id="test_echart" class="children" dom_type="chart" style="background:white;width: 800px;height:1200px;" >')
+      echarts.init(d3.select('#test_echart').node()).setOption(this.createTestThermodynamicDiagram())
+      this.$common.historyOperatePush(this.history_operate_pool, 'create', g)
+    },
+    createTestThermodynamicDiagram(){
+      function getVirtulData(year) {
+        year = year || '2017';
+        var date = +echarts.number.parseDate(year + '-01-01');
+        var end = +echarts.number.parseDate(+year + 1 + '-01-01');
+        var dayTime = 3600 * 24 * 1000;
+        var data = [];
+        for (var time = date; time < end; time += dayTime) {
+          data.push([
+            echarts.format.formatTime('yyyy-MM-dd', time),
+            Math.floor(Math.random() * 1000)
+          ]);
+        }
+        return data;
+      }
+
+      var option = {
+        tooltip: {
+          position: 'top',
+          formatter: function (p) {
+            var format = echarts.format.formatTime('yyyy-MM-dd', p.data[0]);
+            return format + ': ' + p.data[1];
+          }
+        },
+        visualMap: {
+          min: 0,
+          max: 1000,
+          calculable: true,
+          orient: 'vertical',
+          left: '670',
+          top: 'center'
+        },
+        calendar: [
+          {
+            orient: 'vertical',
+            range: '2015'
+          },
+          {
+            left: 300,
+            orient: 'vertical',
+            range: '2016'
+          },
+          {
+            left: 520,
+            cellSize: [20, 'auto'],
+            bottom: 10,
+            orient: 'vertical',
+            range: '2017',
+            dayLabel: {
+              margin: 5
+            }
+          }
+        ],
+        series: [
+          {
+            type: 'heatmap',
+            coordinateSystem: 'calendar',
+            calendarIndex: 0,
+            data: getVirtulData('2015')
+          },
+          {
+            type: 'heatmap',
+            coordinateSystem: 'calendar',
+            calendarIndex: 1,
+            data: getVirtulData('2016')
+          },
+          {
+            type: 'heatmap',
+            coordinateSystem: 'calendar',
+            calendarIndex: 2,
+            data: getVirtulData('2017')
+          }
+        ]
+      }
+
+      return option
+    }
   },
 }
 </script>
