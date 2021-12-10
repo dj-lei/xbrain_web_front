@@ -13,6 +13,8 @@ export const urls = {
     feedback_get: "feedback/get",
     babel_save: "babel/save",
     babel_get: "babel/get",
+    db_tool_get: "db_tool/get",
+    db_tool_save: "db_tool/save",
     algorithm_get: "algorithm/get",
 	  user_management_get: "user_management/get",
     user_management_save: "user_management/save",

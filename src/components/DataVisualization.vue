@@ -64,11 +64,10 @@ export default {
         })
         .then(response => {
           this.data = response.data.content
-          // console.log(this.data)
           this.createChart()
           this.createDynamicUpdate()
           this.createInteractiveEvent()
-          // this.logs()
+          this.logs()
         })
     },
     createChart () {
@@ -122,11 +121,11 @@ export default {
         .data(this.links)
         .enter().append("text")
           .attr("font-family", "Verdana")
-          .attr("font-size", "12")
+          .attr("font-size", "8")
           .style('fill', "#008000")
         .append("textPath")
           .attr("xlink:xlink:href", d => `#${d.type}`)
-          .attr("startOffset", "50%")
+          .attr("startOffset", "30%")
           .text(d => d.type)
 
       this.node = this.svg.append("g")
@@ -137,13 +136,13 @@ export default {
         .selectAll("g")
         .data(this.nodes)
         .join("g")
-          .attr("id",  d => `${d.id}`)
+          .attr("id",  d => `node${d.index}`)
           .call(this.createDrag(this.simulation));
 
       this.node.append("rect")
           .attr('fill', '#32CD32')
-          .attr('width',d => `${d.width}`)
-          .attr('height',d => `${d.height}`)
+          .attr('width',100)
+          .attr('height',60)
           .style('stroke', "#C0C0C0")
           .style('stroke-width', 2)
 
@@ -158,8 +157,8 @@ export default {
           .attr("stroke-width", 3);
 
       this.simulation.on("tick", () => {
-        this.node.attr("transform", d => `translate(${d.location_x},${d.location_y})`);
         this.defs.attr("d", linkArc);
+        this.node.attr("transform", d => `translate(${d.x},${d.y})`);
       });
 
       function linkArc(d) {
@@ -171,8 +170,8 @@ export default {
           that.index_pos = 0
         }
         return `
-          M ${d.source.location_x},${d.source.location_y + that.index_pos * 20} 
-          L ${d.target.location_x},${d.target.location_y + that.index_pos * 20}
+          M ${d.source.x},${d.source.y + that.index_pos * 10} 
+          L ${d.target.x},${d.target.y + that.index_pos * 10}
         `;
       }
       
@@ -236,11 +235,11 @@ export default {
         this.interval2 = setInterval(function() {        
           if(flag == true){
             d3.select("#Ethernet0").attr("stroke", "#DC143C")
-            d3.select("#EO0").select("rect").attr("fill", "#DC143C")
+            d3.select("#node3").select("rect").attr("fill", "#DC143C")
             flag = false
           }else{
             d3.select("#Ethernet0").attr("stroke", "#32CD32")
-            d3.select("#EO0").select("rect").attr("fill", "#32CD32")
+            d3.select("#node3").select("rect").attr("fill", "#32CD32")
             flag = true
           }
         },this.refresh_interval)
